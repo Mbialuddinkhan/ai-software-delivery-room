@@ -1,0 +1,30 @@
+# Runtime state (populated at runtime, not committed as templates)
+.harness/traces/*.log
+.harness/eval-reports/*.md
+.harness/decisions/*.jsonl
+.harness/risk-reports/*.md
+
+# Keep gitkeep placeholders but not runtime outputs
+!.harness/traces/.gitkeep
+!.harness/eval-reports/.gitkeep
+!.harness/decisions/.gitkeep
+!.harness/risk-reports/.gitkeep
+
+# Project-specific runtime state (created per project, not in template)
+sprints.json
+.harness/progress.json
+.harness/contract.md
+.harness/done.md
+
+# Env files
+.env
+.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db
