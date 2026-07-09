@@ -54,6 +54,15 @@ output path.
   referenced anywhere is present in `.env.example`. State minimum contents
   for monitoring (which signal, where it goes) and for backup/restore (what,
   how often, how to restore) — the role promises both.
+  Also write the **git & repository workflow** to `docs/07-git-workflow.md`
+  from `.harness/templates/git-workflow.md`: branching strategy (one
+  short-lived branch per sprint off `main`), Conventional-Commit convention,
+  the per-sprint PR + required-checks policy (CI green **and** evaluator PASS),
+  what-to-commit / what-not (never `.env` or secrets), branch protection, and
+  SemVer tagging. Then copy that file's "Conventions the build loop follows"
+  block into `CLAUDE.md`'s Project facts so the generator applies it every
+  sprint. Undefined git conventions are exactly where features land
+  inconsistently and drift.
 - **Release gate**: verify, don't trust. Actually run `docker build`,
   validate the compose file, diff `.env.example` against the variables the
   code reads. Paste command output into the readiness doc as evidence —
