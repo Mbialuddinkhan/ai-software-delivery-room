@@ -40,6 +40,12 @@ SPECS = {
         "allowed": {"pass", "revise"},
         "required": ["stage", "verdict", "failed_checks"],
     },
+    "integrity": {
+        "field": "integrity",
+        "allowed": {"in-sync", "drifted", "broken", "incomplete"},
+        "required": ["integrity", "uncovered_requirements", "drifted_requirements",
+                     "broken_requirements", "orphan_sprints", "reason"],
+    },
 }
 
 
@@ -60,6 +66,8 @@ def parse_scalars(block):
 
 
 def infer_type(fields):
+    if "integrity" in fields:
+        return "integrity"
     if "classification" in fields:
         return "risk"
     if "failed_checks" in fields or ("stage" in fields and "attempt" not in fields

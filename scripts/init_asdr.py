@@ -77,6 +77,15 @@ def main() -> int:
     if not sprints.exists():
         sprints.write_text("[]\n")
 
+    # Product-integrity traceability matrix (seeded empty; the
+    # product-integrity-qa agent fills it after discovery).
+    trace = root / ".harness" / "traceability.json"
+    if not trace.exists():
+        trace.write_text(json.dumps({
+            "version": 1, "last_updated": None,
+            "outcomes": [], "use_cases": [], "requirements": [],
+        }, indent=2) + "\n")
+
     claude_md = root / "CLAUDE.md"
     template = root / ".harness" / "templates" / "CLAUDE-template.md"
     if not claude_md.exists() and template.exists():
