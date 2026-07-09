@@ -63,6 +63,13 @@ output path.
   block into `CLAUDE.md`'s Project facts so the generator applies it every
   sprint. Undefined git conventions are exactly where features land
   inconsistently and drift.
+  Also write the **live E2E testing plan** to `docs/08-e2e-testing.md` from
+  `.harness/templates/e2e-testing.md`. For web-UI products, scaffold Cypress so
+  runs are watchable: a `cypress.config.js` with `video: true` and
+  `screenshotOnRunFailure: true`, a `cypress/e2e/` folder with a sample spec,
+  and an npm `test:e2e` script. This full E2E suite is what the evaluator
+  re-runs each sprint and again at the release gate, so it must run headless in
+  CI.
 - **Release gate**: verify, don't trust. Actually run `docker build`,
   validate the compose file, diff `.env.example` against the variables the
   code reads. Paste command output into the readiness doc as evidence —

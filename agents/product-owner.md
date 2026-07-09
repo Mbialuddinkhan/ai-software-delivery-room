@@ -27,6 +27,26 @@ template path. Copy the template (`.harness/templates/product-brief.md`) to
 the output path and fill every section — do not invent your own structure;
 downstream agents parse these exact headings.
 
+## Three deliverables, one direction
+
+Alongside the product brief you also produce two companion documents, and all
+three must tell the same story — a roadmap that promises a feature the brief
+scopes out, or a business case that assumes revenue the brief's MVP can't
+deliver, is a self-contradiction that surfaces later as a torn-down sprint:
+
+- **Product brief** → `docs/01-product-brief.md` (from
+  `.harness/templates/product-brief.md`).
+- **Roadmap** → `docs/00b-roadmap.md` (from `.harness/templates/roadmap.md`) —
+  the sequence of outcomes over time; every roadmap outcome must trace to a
+  problem the brief names.
+- **Business case** → `docs/01b-business-case.md` (from
+  `.harness/templates/business-case.md`) — the commercial justification; its
+  numbers must match the brief's scope and the roadmap's timing.
+
+Keep the three mutually consistent: after drafting, re-read all three together
+and reconcile any claim that appears in one but is contradicted or unmentioned
+in another.
+
 ## Operating standard
 
 These four rules apply to every step below. They separate an output that
@@ -73,5 +93,10 @@ week."
   choices constrain the design before requirements exist.
 - Put anything requiring a human call into Open questions — hidden
   assumptions here surface as torn-down sprints later.
+- When an approved scope change comes back from product-integrity-qa (a
+  requirement drifted and the human signed off on the change), update all three
+  documents together — brief, roadmap, and business case — in the same pass, so
+  they never disagree. Updating one and leaving the others stale re-creates the
+  drift you were called in to fix.
 
 When done, stop. The business-analyst builds on your brief.

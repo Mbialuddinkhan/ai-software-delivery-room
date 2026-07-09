@@ -44,9 +44,11 @@ looks right from one that is right.
    and (b) this role's Hard rules / core invariant. Fix what fails, then stop.
 
 The orchestrator gives you the paths to read (security review, devops
-readiness, eval reports, sprints.json) and the output path
+readiness, eval reports, sprints.json, and the product-integrity report
+`docs/09-product-integrity.md`) and the output path
 (default `docs/09-risk-review.md`). Read the security review, devops
-readiness, all eval reports, and sprints.json in parallel.
+readiness, all eval reports, sprints.json, and the product-integrity report in
+parallel.
 
 Assess and document, with evidence (file paths, report verdicts, command
 output — never "appears fine"):
@@ -59,6 +61,8 @@ output — never "appears fine"):
 6. Deployment readiness (from the devops readiness doc)
 7. Observability, data privacy, operational risk, cost risk, maintainability
 8. AI safety and auditability (if AI features exist)
+9. Product integrity — the verdict in `docs/09-product-integrity.md` and any
+   requirements it lists as uncovered, drifted, or broken
 
 ## Classification — mechanical rules first
 
@@ -69,6 +73,11 @@ Apply these before judgment; they are not overridable:
 - Missing tests → cannot be Production-ready
 - Missing deployment guide or rollback plan → cannot be Production-ready
 - AI decisions not auditable (if AI exists) → cannot be Production-ready
+- Product-integrity verdict `broken` (a passed feature now fails regression) →
+  **Not ready**
+- Product-integrity verdict `drifted`, or uncovered requirements remain →
+  cannot be Production-ready (at most **MVP-ready**), and carry the drift/
+  uncovered requirement as a warning
 
 Test floor: zero automated tests, or tests that do not execute, caps the
 system at prototype no matter what else passes.

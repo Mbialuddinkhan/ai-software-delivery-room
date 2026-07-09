@@ -25,6 +25,23 @@ template path. Read the brief first. Copy the template
 (`.harness/templates/requirements.md`) to the output path and fill every
 section — downstream agents parse these exact headings.
 
+## Second deliverable: the use-case catalogue
+
+Alongside the requirements you also produce the **use-case catalogue** →
+`docs/02b-use-cases.md` (from `.harness/templates/use-cases.md`). Requirements
+say what the system must do; use cases say how a real actor walks through it to
+get value, and the two must agree — a requirement no use case exercises is
+probably dead, and a use case no requirement supports is unbuildable.
+
+- Every use case links to at least one requirement id AND at least one outcome
+  — an unlinked use case has no evidence it will ever be built or that it
+  matters. product-integrity-qa later checks these links.
+- Keep the catalogue in sync with the requirements: if you add, split, or cut a
+  requirement, walk the affected use cases in the same pass.
+- On an approved scope change (a requirement drifted and the human signed off),
+  update the use-case catalogue together with the requirements so the two never
+  disagree.
+
 ## Operating standard
 
 These four rules apply to every step below. They separate an output that

@@ -102,19 +102,33 @@ that survive this test — this is what 'adversarial' means in practice.
 4. Grade every criterion independently: PASS or FAIL, no partial credit.
    Partial credit is how broken software accumulates.
 5. Every row gets Evidence: the command and its actual output, or file:line.
+   For any user-facing criterion, unit-level evidence is not enough — require
+   E2E (Cypress) evidence that drives the real UI, and capture the recorded
+   video/screenshot path as the evidence for that row. A user-facing feature
+   that only passes a unit test has not been shown to work for a user.
 
 Example row:
 
 | 3 | Wrong password shows "Invalid credentials" | PASS | Error message shown, fields not leaked | `curl -s -d 'pw=x' /login` → `{"error":"Invalid credentials"}` |
 
-5. End the report with the exact verdict block from the template
+6. Cross-sprint regression — after grading this sprint's criteria, run the
+   ENTIRE accumulated test suite, not just this sprint's: every spec in
+   `.harness/tests/` and the project's own test dir, INCLUDING the Cypress/E2E
+   suite. A sprint that passes its own criteria but breaks a feature an earlier
+   sprint shipped has made the product worse, not better. Any previously-passing
+   test that now fails means this sprint CANNOT be marked done: record the
+   failing test and its evidence (command + actual output, or the failed-run
+   video/screenshot path), and return FAIL with a `regression:` note naming the
+   broken test(s). Never override a regression to declare pass.
+
+7. End the report with the exact verdict block from the template
    (`verdict`, `sprint`, `attempt`, `failed_criteria`, `required_next_action`).
-6. Update state — you are the only role allowed to:
+8. Update state — you are the only role allowed to:
    - On pass: set the sprint's status to `done` in `sprints.json`.
    - On teardown: set it to `torn-down`.
    - Always: set `last_eval_result` and `awaiting` in `.harness/progress.json`
      (`awaiting: null` on pass/teardown, `awaiting: build` on fail).
-7. Log it: `python3 .harness/scripts/trace.py evaluator evaluate-<sprint-id> "verdict=<v> attempt=<n>"`
+9. Log it: `python3 .harness/scripts/trace.py evaluator evaluate-<sprint-id> "verdict=<v> attempt=<n>"`
 
 ## Teardown rule
 
