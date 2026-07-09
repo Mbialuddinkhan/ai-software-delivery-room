@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -48,7 +48,10 @@ Use these exact paths everywhere. Agents receive their output path from you
 | # | Document | Path | Agent | Template |
 |---|---|---|---|---|
 | 1 | Product brief | `docs/01-product-brief.md` | product-owner | product-brief.md |
+| 1b | Business case | `docs/01b-business-case.md` | product-owner | business-case.md |
+| 0b | Roadmap | `docs/00b-roadmap.md` | product-owner | roadmap.md |
 | 2 | Requirements | `docs/02-requirements.md` | business-analyst | requirements.md |
+| 2b | Use cases | `docs/02b-use-cases.md` | business-analyst | use-cases.md |
 | 3 | Discovery critique | `docs/critique-discovery.md` | critic | critique.md |
 | 4 | Discovery decision | `docs/decision-discovery.md` | judge | decision.md |
 | 5 | Architecture | `docs/03-architecture.md` | solution-architect | architecture.md |
@@ -58,7 +61,11 @@ Use these exact paths everywhere. Agents receive their output path from you
 | 9 | Architecture critique | `docs/critique-architecture.md` | critic | critique.md |
 | 10 | Architecture decision | `docs/decision-architecture.md` | judge | decision.md |
 | 11 | Blueprint digest | `docs/00-blueprint-summary.md` | you | blueprint-summary.md |
+| 12 | E2E testing plan | `docs/08-e2e-testing.md` | devops | e2e-testing.md |
+| 13 | Traceability matrix | `docs/traceability.md` (+ `.harness/traceability.json`) | product-integrity-qa | traceability.md |
+| 14 | Product integrity (gate) | `docs/09-product-integrity.md` | product-integrity-qa | integrity-report.md |
 
+Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
 Templates live in `.harness/templates/`.
 
 ## Validators
@@ -106,7 +113,10 @@ The critic and judge still run at the end of each phase in every rigor mode.
 | Stage id | Executor agent | Artifact path | Tier |
 |---|---|---|---|
 | `product-brief` | product-owner | docs/01-product-brief.md | high |
+| `business-case` | product-owner | docs/01b-business-case.md | high |
+| `roadmap` | product-owner | docs/00b-roadmap.md | med |
 | `requirements` | business-analyst | docs/02-requirements.md | high |
+| `use-cases` | business-analyst | docs/02b-use-cases.md | high |
 | `architecture` | solution-architect | docs/03-architecture.md | high |
 | `agent-design` | ai-architect | docs/04-agent-design.md | high (AI only) |
 | `security-design` | security-compliance | docs/05-security.md | high |
@@ -128,10 +138,17 @@ first two agents.
 
 1. **product-owner** — pass the idea verbatim + row 1 paths. Run this stage
    via the Stage execution protocol (executor: product-owner, stage-id:
-   product-brief, artifact: docs/01-product-brief.md).
+   product-brief, artifact: docs/01-product-brief.md). The product-owner ALSO
+   writes the business case `docs/01b-business-case.md` (rows 1b, template
+   business-case.md) and the roadmap `docs/00b-roadmap.md` (row 0b, template
+   roadmap.md) — run each via the Stage execution protocol (stage-ids
+   `business-case`, `roadmap`).
 2. **business-analyst** — pass row 1 output as input + row 2 paths. Run this
    stage via the Stage execution protocol (executor: business-analyst,
-   stage-id: requirements, artifact: docs/02-requirements.md).
+   stage-id: requirements, artifact: docs/02-requirements.md). The
+   business-analyst ALSO writes the use-case catalogue `docs/02b-use-cases.md`
+   (row 2b, template use-cases.md) via the Stage execution protocol (stage-id
+   `use-cases`).
 3. **critic** — pass rows 1–2 as inputs + row 3 paths. Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-discovery.md`;
    if it errors, re-invoke the critic with those lines (max 2 rounds).
@@ -173,7 +190,12 @@ After the blueprint is approved:
     sprint; the full docs stay available for lookups.
 12. Update the "Project facts" section of `CLAUDE.md` (stack, run/test/lint
     commands, conventions) from the approved architecture.
-13. Log: `python3 .harness/scripts/trace.py orchestrator blueprint-approved "phase 1 done"`
+13. Invoke **product-integrity-qa** in SEED mode to build the traceability
+    matrix (`.harness/traceability.json` + `docs/traceability.md`) from the
+    strategic docs (brief, business case, roadmap, requirements, use cases),
+    then run `python3 .harness/scripts/validate_traceability.py
+    .harness/traceability.json --sprints sprints.json`.
+14. Log: `python3 .harness/scripts/trace.py orchestrator blueprint-approved "phase 1 done"`
 
 ### User checkpoint
 
@@ -200,6 +222,16 @@ Drive the loop with the script — after every agent invocation:
 3. When it says `activate`: update `sprints.json` and `progress.json` as
    instructed, then rerun the script.
 4. When invoking generator/evaluator, pass: sprint id, mode, and attempt.
+5. After each sprint the evaluator marks `done`, invoke **product-integrity-qa**
+   in UPDATE mode to refresh `.harness/traceability.json` +
+   `docs/traceability.md` and write the snapshot `docs/integrity-<sprint>.md`,
+   then run `python3 .harness/scripts/validate_traceability.py
+   .harness/traceability.json --sprints sprints.json`. If it reports
+   DRIFT/ORPHAN/BROKEN, STOP and surface it to the user. Only on the user's
+   approval, re-invoke **product-owner** and **business-analyst** to update
+   every affected strategic doc (brief, roadmap, business case, requirements,
+   use cases) consistently, then have **product-integrity-qa** re-baseline the
+   matrix before the loop continues.
 
 The script encodes the rules — contract before build, evaluator-only
 ratification, max 4 negotiation rounds then force-ratify, attempt > 5
@@ -231,11 +263,17 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
 3. **documentation** — the six-doc default set. Run this stage via the Stage
    execution protocol (executor: documentation, stage-id: documentation,
    artifact: the six-doc set; low tier — use `--no-plan` under standard).
-4. **risk-manager** — inputs: both 09-docs, eval reports, sprints.json;
-   output `docs/09-risk-review.md`. Then run
+4. **product-integrity-qa** — GATE mode: run the full regression (all sprints)
+   and emit the integrity verdict to `docs/09-product-integrity.md` (template
+   integrity-report.md). Then run `python3 .harness/scripts/validate_verdict.py
+   docs/09-product-integrity.md --type integrity`; if it errors, re-invoke to
+   fix the block. A `broken` or `drifted` integrity verdict is a release
+   blocker.
+5. **risk-manager** — inputs: both 09-docs, `docs/09-product-integrity.md`,
+   eval reports, sprints.json; output `docs/09-risk-review.md`. Then run
    `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
    --type risk`; if it errors, re-invoke the risk-manager to fix the block.
-5. Read the risk-manager's fenced classification block. Only if
+6. Read the risk-manager's fenced classification block. Only if
    `mvp-ready` or `production-ready`: invoke **release-manager**.
    Otherwise skip packaging and report the blockers.
 
