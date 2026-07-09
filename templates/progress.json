@@ -1,0 +1,14 @@
+{
+  "phase": "strategic",
+  "sprint": null,
+  "attempt": 0,
+  "awaiting": null,
+  "negotiation_rounds": 0,
+  "last_eval_result": null,
+  "last_updated": null,
+  "_enums": {
+    "phase": "strategic | planning | execution | final-gates | done",
+    "awaiting": "null | negotiate | ratify | build | evaluate",
+    "last_eval_result": "null | pass | fail | teardown"
+  }
+}

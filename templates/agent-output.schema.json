@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentOutput",
+  "type": "object",
+  "required": ["agent_name", "task_id", "summary", "confidence", "findings", "risks", "recommendation"],
+  "properties": {
+    "agent_name": { "type": "string" },
+    "task_id": { "type": "string" },
+    "summary": { "type": "string" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "findings": { "type": "array", "items": { "type": "string" } },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source", "claim"],
+        "properties": {
+          "source": { "type": "string" },
+          "claim": { "type": "string" },
+          "url_or_ref": { "type": "string" }
+        }
+      }
+    },
+    "risks": { "type": "array", "items": { "type": "string" } },
+    "recommendation": { "type": "string" },
+    "requires_human_review": { "type": "boolean" }
+  }
+}

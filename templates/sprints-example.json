@@ -1,0 +1,12 @@
+[
+  {
+    "id": "sprint-01",
+    "goal": "A logged-out visitor can create an account and land on an empty dashboard.",
+    "status": "pending"
+  },
+  {
+    "id": "sprint-02",
+    "goal": "A signed-in user can create an invoice and see it listed with its payment status.",
+    "status": "pending"
+  }
+]
