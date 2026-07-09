@@ -6,7 +6,7 @@ description: >
   or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -47,7 +47,10 @@ The critic and judge still run at the end of each phase in every rigor mode.
 | Stage id | Executor agent | Artifact path | Tier |
 |---|---|---|---|
 | `product-brief` | product-owner | docs/01-product-brief.md | high |
+| `business-case` | product-owner | docs/01b-business-case.md | high |
+| `roadmap` | product-owner | docs/00b-roadmap.md | med |
 | `requirements` | business-analyst | docs/02-requirements.md | high |
+| `use-cases` | business-analyst | docs/02b-use-cases.md | high |
 
 ## Phase 1 — Initialize
 
@@ -65,12 +68,22 @@ Invoke **product-owner** with: the user's idea verbatim, output
 protocol (executor: product-owner, stage-id: product-brief, artifact:
 docs/01-product-brief.md).
 
+The product-owner ALSO writes two brief companions: the business case to
+`docs/01b-business-case.md` (template `.harness/templates/business-case.md`)
+and the product roadmap to `docs/00b-roadmap.md` (template
+`.harness/templates/roadmap.md`). Run each via the Stage execution protocol
+(stage-ids `business-case` and `roadmap`).
+
 ## Phase 3 — Requirements engineering
 
 Invoke **business-analyst** with: input `docs/01-product-brief.md`, output
 `docs/02-requirements.md`, template `.harness/templates/requirements.md`. Run
 this stage via the Stage execution protocol (executor: business-analyst,
 stage-id: requirements, artifact: docs/02-requirements.md).
+
+The business-analyst ALSO writes the use-case catalogue to
+`docs/02b-use-cases.md` (template `.harness/templates/use-cases.md`). Run it
+via the Stage execution protocol (stage-id `use-cases`).
 
 ## Phase 4 — Critique
 
@@ -97,7 +110,17 @@ read the fenced verdict block at the end of the decision doc:
 - `required_changes` non-empty → re-invoke the responsible agent
   (product-owner or business-analyst) with exactly those changes, then
   re-invoke the judge. Max 2 repair rounds, then stop and ask the user.
-- `verdict: go` with no changes → proceed to summary.
+- `verdict: go` with no changes → proceed to seed traceability.
+
+## Phase 5b — Seed the traceability matrix
+
+Only after the judge returns `verdict: go`: invoke **product-integrity-qa**
+in SEED mode to build `.harness/traceability.json` and `docs/traceability.md`
+from the brief (`docs/01-product-brief.md`), business case
+(`docs/01b-business-case.md`), roadmap (`docs/00b-roadmap.md`), requirements
+(`docs/02-requirements.md`), and use cases (`docs/02b-use-cases.md`). Then run
+`python3 .harness/scripts/validate_traceability.py .harness/traceability.json
+--sprints sprints.json`; feed any error lines back to product-integrity-qa.
 
 ## Phase 6 — Output summary
 
