@@ -95,7 +95,11 @@ Invoke **devops** with: inputs `docs/03-architecture.md` and
 `docs/05-security.md`, output `docs/06-devops.md`, template
 `.harness/templates/devops.md`. Context: architecture phase — also create
 `Dockerfile`, `docker-compose.yml`, `.env.example`,
-`.github/workflows/ci.yml`. Run this stage via the Stage execution protocol
+`.github/workflows/ci.yml`, and the **git & repository workflow** at
+`docs/07-git-workflow.md` (from `.harness/templates/git-workflow.md`) —
+branching, commit/PR conventions, what-to-commit, branch protection, and
+SemVer tagging — copying its "Conventions the build loop follows" block into
+`CLAUDE.md`. Run this stage via the Stage execution protocol
 (executor: devops, stage-id: devops-design, artifact: docs/06-devops.md).
 
 ## Phase 5 — Critique
