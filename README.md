@@ -196,27 +196,49 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.0.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.1.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v3 change log
-agents/                      ← 16 agent definitions (incl. stage-planner, stage-qa)
+CHANGELOG.md                 ← full v2.1 → v3 → v3.1 change log
+agents/                      ← 17 agent definitions (incl. stage-planner, stage-qa,
+                               product-integrity-qa)
 skills/                      ← 6 orchestrator skills (asdr, discover, architect,
                                longhorizon, riskgate, release)
 scripts/
-  init_asdr.py               ← project initializer (seeds harness + rigor dial)
+  init_asdr.py               ← project initializer (seeds harness + rigor dial + matrix)
   next_action.py             ← sprint state machine (self-healing circuit breakers)
   stage_status.py            ← per-stage triad driver (plan → execute → QA)
   trace.py                   ← append-only trace log
   validate_contract.py       ← contract structure gate
   validate_sprints.py        ← sprint schema gate (high-precision tech denylist)
-  validate_verdict.py        ← judge / eval / risk / qa verdict-block gate
+  validate_verdict.py        ← decision / eval / risk / qa / integrity block gate
   validate_critique.py       ← critique structure + counts + floor gate
-templates/                   ← fill-in templates (contract, plan, qa-report,
-                               eval-report, critique, decision, security-baseline, …)
+  validate_traceability.py   ← traceability matrix: drift, orphans, coverage (v3.1)
+templates/                   ← fill-in templates: contract, plan, qa-report,
+                               eval-report, critique, decision, security-baseline,
+                               roadmap, business-case, use-cases, traceability,
+                               integrity-report, git-workflow, e2e-testing, … (v3.1)
 docs/
   AI_SOFTWARE_DELIVERY_ROOM_OPERATING_MANUAL.md
   TRIAD_ARCHITECTURE.md      ← the v3 triad + rigor dial design
 ```
+
+## The 17 agents at a glance
+
+**Triad + integrity (v3 / v3.1):** `stage-planner` sets each stage's acceptance
+checklist, the specialist executor builds to it, `stage-qa` grades it
+independently, and `product-integrity-qa` verifies the whole product against
+the vision/roadmap/requirements every sprint (drift + regression).
+
+**Strategic (11):** `product-owner` (brief, roadmap, business case),
+`business-analyst` (requirements, use cases), `solution-architect`,
+`ai-architect`, `security-compliance`, `devops` (Docker/CI + git-workflow + E2E),
+`critic`, `judge`, `documentation`, `risk-manager`, `release-manager`.
+
+**Execution (3):** `planner` (user-visible sprints), `generator` (contract +
+build), `evaluator` (adversarial QA + cross-sprint regression; the only role
+that can declare a sprint done).
+
+No agent signs off its own work — a *different* agent always reviews it.
 
 Project state created by `init_asdr.py`:
 
