@@ -1,0 +1,11 @@
+{
+  "name": "ai-software-delivery-room",
+  "version": "3.0.0",
+  "description": "A complete multi-agent software delivery system for Claude — idea discovery, architecture, script-driven sprint execution with contract negotiation and adversarial QA, risk gating, and release packaging. Designed to run reliably on smaller models: the state machine lives in bundled scripts and templates, not in the model's memory.",
+  "author": {
+    "name": "Bilal Khan",
+    "email": "mbilaluddinkhan@gmail.com"
+  },
+  "homepage": "https://github.com/Mbialuddinkhan/ai-software-delivery-room",
+  "keywords": ["sdlc", "multi-agent", "software-delivery", "long-horizon", "harness", "sprints", "qa"]
+}
