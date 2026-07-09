@@ -3,6 +3,52 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.1.0] — product integrity, richer discovery, git workflow, live E2E
+
+Attacks feature drift: keeps the built product provably in sync with the
+vision, roadmap, brief, business case, use cases, and requirements.
+
+### Added — product-integrity QA
+- **`agents/product-integrity-qa.md`** — independent product-level QA (opus).
+  Runs after discovery (seed), after each sprint (update + drift check), and at
+  the final gate (full verification). Emits an `in-sync | drifted | broken |
+  incomplete` integrity verdict the risk-manager honors.
+- **Living traceability matrix** — `.harness/traceability.json` (seeded by
+  `init_asdr.py`) + readable mirror `docs/traceability.md`, mapping outcome →
+  requirement → use case → sprint → criteria → tests → status.
+- **`scripts/validate_traceability.py`** — mechanically flags uncovered
+  requirements (at the gate), orphan sprints, uncovered use cases, `broken`
+  rows, and **drift** (a requirement's text changed after a sprint built to it,
+  detected via a stored hash). `--gate` and `--requirements` modes.
+- **`scripts/validate_verdict.py`** — extended with `--type integrity`.
+- **Drift handling**: on drift, the run STOPS and surfaces the exact
+  requirement(s); only on your approval do product-owner + business-analyst
+  update every affected strategic doc, then the matrix is re-baselined.
+
+### Added — cross-sprint regression + live E2E
+- The **evaluator** now re-runs the ENTIRE accumulated test suite each sprint
+  (including the Cypress/E2E suite); a previously-passing test that now fails
+  blocks the sprint. The full suite runs again at the release gate.
+- **`templates/e2e-testing.md`** + devops scaffolding: **Cypress** with
+  `video: true` and screenshots so you can watch the tests run
+  (`cypress open` / `run --headed` locally, headless with artifacts in CI).
+
+### Added — richer discovery (first-class, traceable)
+- **`templates/roadmap.md`** (`docs/00b-roadmap.md`, product-owner),
+  **`templates/business-case.md`** (`docs/01b-business-case.md`, product-owner),
+  **`templates/use-cases.md`** (`docs/02b-use-cases.md`, business-analyst).
+  Kept in sync on approved scope changes.
+
+### Added — git & repository workflow
+- **`templates/git-workflow.md`** (`docs/07-git-workflow.md`, devops):
+  branching strategy, Conventional Commits, per-sprint PR + required checks,
+  what-to-commit, branch protection, SemVer tagging.
+
+### Changed
+- `agents/{product-owner,business-analyst,evaluator,risk-manager,devops}.md`,
+  `skills/{discover,architect,asdr,riskgate}` wired to the above.
+- `scripts/init_asdr.py` seeds `.harness/traceability.json`.
+
 ## [3.0.0] — universal triad with a rigor dial
 
 Adds independent per-stage review: every authoring stage runs as

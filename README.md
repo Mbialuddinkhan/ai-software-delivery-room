@@ -1,15 +1,21 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.0.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.1.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
-completion, security gaps, and broken production releases.
+completion, feature drift, security gaps, and broken production releases.
 
-**What's new in v3:** every stage now runs as an independent triad
+**What's new in v3.1:** a **product-integrity** layer keeps the build provably
+in sync with the vision/roadmap/brief/business-case/use-cases/requirements — a
+living traceability matrix, drift detection, cross-sprint regression, and live
+**Cypress** E2E you can watch run — plus first-class roadmap / business-case /
+use-case discovery docs and a git & repository workflow. See `CHANGELOG.md`.
+
+**From v3.0:** every stage runs as an independent triad
 (planner → executor → a *separate* QA), tunable with a single **rigor dial**,
-on top of self-healing safety limits and Opus-tuned agents. See
-`CHANGELOG.md` and `docs/TRIAD_ARCHITECTURE.md` for the full story.
+on self-healing safety limits and Opus-tuned agents. See
+`docs/TRIAD_ARCHITECTURE.md`.
 
 ---
 
@@ -29,6 +35,28 @@ safety limits that stop runaway loops now read the truth from disk, so they
 can't be silently switched off.
 
 ---
+
+## What's new in v3.1 — product integrity (stops feature drift)
+
+- **Living traceability matrix** (`.harness/traceability.json` + readable
+  `docs/traceability.md`): outcome → requirement → use case → sprint →
+  acceptance criterion → test → status, seeded after discovery and updated
+  every sprint.
+- **`product-integrity-qa`** — a separate product-level QA agent that verifies
+  the whole build against the strategic intent and emits an
+  `in-sync | drifted | broken | incomplete` verdict the risk-manager honors.
+- **Drift detection** (`validate_traceability.py`): if a requirement's text
+  changes after a sprint built to it, the run **stops and surfaces it**; only on
+  your approval are the brief, roadmap, business case, requirements, and use
+  cases updated together and the matrix re-baselined.
+- **Cross-sprint regression**: the evaluator re-runs the entire test suite each
+  sprint (and at the gate), so an earlier feature breaking is caught at once.
+- **Live E2E** with **Cypress** — video + screenshots so you can watch the tests
+  run (`cypress open` / `run --headed` locally; headless with artifacts in CI).
+- **Richer discovery**: first-class **roadmap**, **business case**, and
+  **use-case** docs, kept in sync on approved changes.
+- **Git & repository workflow** doc: branching, Conventional Commits, per-sprint
+  PR + required checks, what-to-commit, branch protection, SemVer tagging.
 
 ## What's new in v3 (vs v1.1 / v2.x)
 
@@ -132,13 +160,14 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 
 ---
 
-## Agents (16)
+## Agents (17)
 
-### Triad roles (new in v3)
+### Triad + integrity roles (new in v3 / v3.1)
 | Agent | Role |
 |---|---|
 | `stage-planner` | Writes each stage's acceptance checklist before the executor runs |
 | `stage-qa` | Independent per-stage reviewer — grades the artifact, returns pass/revise |
+| `product-integrity-qa` | Product-level QA (v3.1) — traceability matrix, drift + regression, integrity verdict |
 
 ### Strategic layer
 | Agent | Role |
