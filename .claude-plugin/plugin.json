@@ -1,7 +1,7 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.0.0",
-  "description": "A complete multi-agent software delivery system for Claude — idea discovery, architecture, script-driven sprint execution with contract negotiation and adversarial QA, risk gating, and release packaging. Designed to run reliably on smaller models: the state machine lives in bundled scripts and templates, not in the model's memory.",
+  "version": "3.1.0",
+  "description": "A complete multi-agent software delivery system for Claude — idea discovery (brief, roadmap, business case, use cases), architecture, script-driven sprint execution with a universal plan→build→independent-QA triad, product-integrity traceability with drift detection and cross-sprint regression, live E2E (Cypress) testing, git workflow, risk gating, and release packaging. The state machine lives in bundled scripts and templates, not the model's memory.",
   "author": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com"
