@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.0.0"
+  version: "3.1.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -86,10 +86,21 @@ workflow and rollback plan exist. Paste command output as evidence. Run this
 stage via the Stage execution protocol (executor: devops, stage-id:
 devops-readiness, artifact: docs/09-devops-readiness.md).
 
+## Phase 2b — Product integrity
+
+Invoke **product-integrity-qa** in GATE mode: re-run the full test suite
+including the Cypress/E2E suite (cross-sprint regression), recompute coverage,
+and output `docs/09-product-integrity.md` (template
+`.harness/templates/integrity-report.md`). Validate the machine-readable block
+with `python3 .harness/scripts/validate_verdict.py docs/09-product-integrity.md
+--type integrity`; if it errors, re-invoke to fix the block. A `broken` or
+`drifted` integrity verdict is a release blocker the risk-manager must honor.
+
 ## Phase 3 — Risk classification
 
-Invoke **risk-manager** with: inputs both 09-docs, the eval reports
-directory, and `sprints.json`; output `docs/09-risk-review.md`.
+Invoke **risk-manager** with: inputs both 09-docs,
+`docs/09-product-integrity.md`, the eval reports directory, and
+`sprints.json`; output `docs/09-risk-review.md`.
 
 Validate the machine-readable block first: run
 `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
