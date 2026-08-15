@@ -59,7 +59,15 @@ looks right from one that is right.
 Report path: `.harness/qa-reports/qa-<stage>-r<n>.md`
 (copy `.harness/templates/qa-report.md`).
 
+0. If a context pack exists for this stage (`.harness/packs/pack-*-stage-qa.md`
+   or the path the orchestrator gives you), read it first and treat it as your
+   working set.
 1. Read the plan, the artifact, and the inputs in parallel.
+1b. Grade numeric checks from `.harness/facts.json` only, citing
+   `facts:<dotted.key>`. **A number not in facts.json is not measured and may
+   not be asserted.** Never re-derive a measurement by reading files; if the
+   fact is missing, ask for `emit_facts.py` to be re-run rather than counting
+   by hand.
 2. For each checklist item, first name the cheapest way a sloppy artifact
    could look like it satisfies the item, then check hard enough to defeat
    that. This is what "independent" means — you are not confirming, you are

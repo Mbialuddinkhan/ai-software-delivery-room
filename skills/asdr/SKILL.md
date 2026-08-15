@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.1.0"
+  version: "3.2.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -70,7 +70,7 @@ Templates live in `.harness/templates/`.
 
 ## Validators
 
-Three machine checks catch a bad document before it corrupts the run. Use
+Four machine checks catch a bad document before it corrupts the run. Use
 them at the steps below; feed any `ERROR:` lines straight back to the agent
 that produced the file.
 
@@ -79,8 +79,35 @@ that produced the file.
 - `validate_verdict.py <decision-or-risk.md> --type decision|risk` — the
   fenced verdict block has the required fields and a real (non-placeholder)
   headline value.
+- `preflight_contract.py <contract>` — satisfiability linter, run BEFORE the
+  evaluator sees a draft: unmeasurable numbers, self-report of command output,
+  zero-delta over an edited file, regex conflicts, cost-metric floors, file
+  overload (>7 criteria naming one integration file), new-file budget.
 - `validate_contract.py` and `validate_sprints.py` run in later phases as
   before.
+
+Measured numbers live in `.harness/facts.json` (written by `emit_facts.py`)
+and nowhere else: **a number not in facts.json is not measured and may not be
+asserted; cite it as `facts:<dotted.key>`.**
+
+## Context discipline (v3.2)
+
+Before dispatching ANY agent in the sprint loop, run these in order:
+
+    python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json
+    python3 .harness/scripts/build_graph.py       # -> graph in .harness/traceability.json
+    python3 .harness/scripts/build_digest.py      # -> .harness/state-digest.md
+    python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>
+
+Then pass the pack path (`.harness/packs/pack-<id>-<role>.md`) in the
+invocation. If `make_context_pack.py` exits 1, the pack exceeded its budget:
+the TASK is too big. Split the sprint or the contract and rebuild the pack.
+Never raise the budget — the budget is the measurement, not the obstacle.
+
+After the generator writes a contract, run
+`python3 .harness/scripts/preflight_contract.py <contract path>` and return
+its ERROR lines to the generator BEFORE the evaluator is invoked. Catching an
+unsatisfiable contract here is what removes negotiation rounds.
 
 ## Stage execution (universal triad)
 

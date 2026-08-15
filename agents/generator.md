@@ -56,11 +56,19 @@ looks right from one that is right.
 
 ## Start of every invocation
 
+0. If `.harness/packs/pack-<sprint-id>-generator.md` exists, read THAT FIRST
+   and treat it as the scope of the task: it is your working set. Read other
+   files only when a step needs their contents. Do not scan the repo — a pack
+   exists precisely so you don't have to.
 1. Read `CLAUDE.md` (project facts, conventions, file map).
 2. Read `docs/00-blueprint-summary.md` — this one page is your primary
    context. Open the full docs in `docs/` only when you need a specific
    detail; reading everything every sprint wastes your context on repetition.
 3. Read the active sprint's goal in `sprints.json`.
+
+Measured numbers come from `.harness/facts.json` only (written by
+`emit_facts.py`): **a number not in facts.json is not measured and may not be
+asserted; cite it as `facts:<dotted.key>`.**
 
 ## NEGOTIATE mode
 
@@ -80,9 +88,18 @@ Example of the standard:
 - BAD: "Login works correctly and handles errors." (two claims, neither testable)
 - GOOD: "Submitting a wrong password shows 'Invalid credentials' without revealing which field was wrong."
 
-4. Self-check before handoff:
-   `python3 .harness/scripts/validate_contract.py <contract path>` — fix
-   every ERROR line before finishing.
+3b. Every numeric criterion must cite the fact key that makes it gradeable —
+   `facts:<dotted.key>` from `.harness/facts.json`. A number with no fact key
+   is unmeasurable and will be rejected. Never write a criterion that asks any
+   agent to transcribe command output; the measurement belongs to
+   `emit_facts.py`, not to a reader.
+
+4. Self-check before handoff — run BOTH, fix every ERROR line before finishing:
+   `python3 .harness/scripts/validate_contract.py <contract path>`
+   `python3 .harness/scripts/preflight_contract.py <contract path>`
+   (preflight is the satisfiability linter: unmeasurable numbers,
+   self-reported command output, zero-delta over an edited file, regex
+   conflicts, cost-metric floors, file overload, new-file budget.)
 5. Log it: `python3 .harness/scripts/trace.py generator negotiate-<sprint-id> "contract written"`
 6. Stop. The evaluator ratifies; you never set `Status: ratified` yourself,
    because a contract the builder ratifies alone tests nothing.
@@ -107,8 +124,14 @@ Only enter when the contract says `Status: ratified`.
    criterion: for each, name the file:line or command that satisfies it. A
    criterion with no corresponding code means you are not done — build it
    before handoff, because the evaluator will FAIL it.
-7. Log it: `python3 .harness/scripts/trace.py generator build-<sprint-id> "attempt <n> handed to evaluator"`
-8. Stop.
+7. Never derive a number by reading files. If a number you need isn't in
+   `.harness/facts.json`, ask for `emit_facts.py` to be re-run and cite the
+   resulting `facts:<key>`; a hand-counted number is a guess wearing a digit.
+8. Commit your own work before you stop. Uncommitted output from a
+   context-exhausted agent is the most expensive failure mode there is — a
+   commit makes partial work recoverable instead of re-verifiable.
+9. Log it: `python3 .harness/scripts/trace.py generator build-<sprint-id> "attempt <n> handed to evaluator"`
+10. Stop.
 
 ## After a FAIL verdict
 

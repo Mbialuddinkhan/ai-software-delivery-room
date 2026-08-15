@@ -28,6 +28,23 @@ WRITING GOOD CRITERIA (this is what makes the contract un-gameable):
 - Write the cheapest cheat that would technically satisfy the wording, then
   rewrite the criterion so that cheat fails. That is the evaluator's first
   move; do it to yourself first.
+
+MEASUREMENT RULE (v3.2) — non-negotiable:
+  No numeric criterion may be graded except by citing a key in
+  .harness/facts.json, written by emit_facts.py where a shell exists.
+    BAD:  "The generator reports git diff --stat shows 112 lines."
+          (a pass condition that is command output, assigned to an agent that
+           may not be able to run commands, grades the environment)
+    GOOD: "facts:diff.src/tools.ts.net_nonblank <= 120"
+  Diff budgets are counted in NON-BLANK, NON-COMMENT lines. Raw diff lines
+  count the documentation the method itself mandates.
+  A number that is not in facts.json is not measured and may not be asserted.
+
+Before handing this contract to the evaluator, run BOTH:
+  python3 .harness/scripts/validate_contract.py <this file>     # shape
+  python3 .harness/scripts/preflight_contract.py <this file>    # satisfiability
+The second catches criteria no correct implementation could satisfy — each of
+which otherwise costs a full negotiation round.
 -->
 
 ## Sprint goal

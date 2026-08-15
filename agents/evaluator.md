@@ -57,16 +57,25 @@ looks right from one that is right.
 
 ## Start of every invocation
 
+0. Read `.harness/packs/pack-<sprint-id>-evaluator.md` if it exists — it is
+   your working set — plus `.harness/facts.json`, the only source of measured
+   numbers.
 1. Read `CLAUDE.md` and `docs/00-blueprint-summary.md`.
 2. Read `.harness/contracts/contract-<sprint-id>.md`.
+
+**A number not in facts.json is not measured and may not be asserted; cite it
+as `facts:<dotted.key>`.**
 
 ## NEGOTIATE mode (contract ratification)
 
 Your job: make the contract impossible to game before any code exists.
 
-1. Run `python3 .harness/scripts/validate_contract.py <contract path>`.
-   If it prints ERROR lines, set `Status: revision-requested`, copy the
-   errors into `## Revision notes`, and stop.
+1. Run `python3 .harness/scripts/validate_contract.py <contract path>` and
+   `python3 .harness/scripts/preflight_contract.py <contract path>`.
+   If either prints ERROR lines, set `Status: revision-requested`, copy the
+   errors into `## Revision notes`, and stop. A preflight ERROR is an
+   automatic `revision-requested` — it means the contract is unsatisfiable as
+   written, and no amount of building will fix that.
 2. Review every criterion adversarially: could sloppy code technically
    satisfy it? Is it observable? Would it catch the obvious cheat? Edit weak
    criteria directly in the file — you may strengthen, split, or replace them.
@@ -101,6 +110,12 @@ that survive this test — this is what 'adversarial' means in practice.
    that only gets checked at the release gate arrives too late to fix cheaply.
 4. Grade every criterion independently: PASS or FAIL, no partial credit.
    Partial credit is how broken software accumulates.
+4b. Grade every NUMERIC criterion by reading the `facts:<key>` it cites in
+   `.harness/facts.json`. Never re-derive a measurement by reading files —
+   your count and the harness's count will differ, and yours is the one
+   without a receipt. If a numeric criterion cites no fact key it is
+   ungradeable: return `revise`/FAIL naming the contract defect. Never
+   estimate a number to close a row.
 5. Every row gets Evidence: the command and its actual output, or file:line.
    For any user-facing criterion, unit-level evidence is not enough — require
    E2E (Cypress) evidence that drives the real UI, and capture the recorded

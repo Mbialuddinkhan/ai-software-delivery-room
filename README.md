@@ -1,10 +1,22 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.1.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.2.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
+
+**What's new in v3.2 — context discipline.** Agents stop re-deriving what a
+command already knows. `emit_facts.py` writes `.harness/facts.json` and **no
+numeric criterion may be graded except by citing a fact key**, so a criterion
+can never again ask an agent to transcribe command output it cannot run.
+`preflight_contract.py` catches contracts no correct implementation could
+satisfy *before* the evaluator sees them — each one used to cost a negotiation
+round. And a script-maintained dependency graph feeds **budgeted per-task
+context packs**: each agent gets files-in-scope, blast radius, fixture risks and
+the facts slice instead of "go read the repo" — and if a pack busts its budget
+the run stops and tells you to split the task, rather than discovering it when
+an agent exhausts context mid-build. See `CONTEXT_ARCHITECTURE.md`.
 
 **What's new in v3.1:** a **product-integrity** layer keeps the build provably
 in sync with the vision/roadmap/brief/business-case/use-cases/requirements — a

@@ -28,6 +28,7 @@ DIRS = [
     ".harness/templates",
     ".harness/plans",       # stage-planner acceptance checklists (triad)
     ".harness/qa-reports",  # stage-qa review reports (triad)
+    ".harness/packs",       # generated per-task context packs (v3.2)
     "docs",
     "evals",
 ]
@@ -95,6 +96,12 @@ def main() -> int:
     print("State files: sprints.json, .harness/progress.json, CLAUDE.md")
     print("Validators:  .harness/scripts/  Templates: .harness/templates/")
     print("Rigor dial:  progress.json -> \"rigor\" (paranoid | standard | lite)")
+    print()
+    print("Context discipline (v3.2) — run these before dispatching any agent:")
+    print("  python3 .harness/scripts/emit_facts.py --base <ref> --test-cmd '<cmd>'")
+    print("  python3 .harness/scripts/build_graph.py")
+    print("  python3 .harness/scripts/build_digest.py")
+    print("  python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>")
     print("Next: python3 .harness/scripts/next_action.py")
     return 0
 

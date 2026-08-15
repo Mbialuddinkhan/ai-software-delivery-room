@@ -3,6 +3,84 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.2.0] — context discipline: measured facts, contract pre-flight, context packs
+
+Answers a field review of a real 7-sprint run in which 50 subagent runs consumed
+more effective tokens than every directly-executed action combined, and the
+largest constraint was environmental: agents were asked to measure things they
+had no ability to measure.
+
+### Added — Phase 0: measurement (nothing else works without this)
+- **`scripts/emit_facts.py`** → `.harness/facts.json`, the single source of
+  MEASURED truth: per-file diff (`added`/`removed`/**`net_nonblank`**), file
+  census, per-file assertion counts, test results, commit. Runs where a shell
+  exists (CI or an operator terminal). Degrades gracefully — missing git, tests
+  or coverage yields a null section and a note, never a crash.
+- **Measurement rule, enforced:** *no numeric criterion may be graded except by
+  citing a key in `facts.json`* — written `facts:<dotted.key>`. This
+  mechanically kills the "generator transcribes `git diff --stat`" criterion
+  class, which grades the environment rather than the code.
+- **Diff budgets now count non-blank, non-comment lines.** Raw diff lines count
+  the documentation the method itself mandates (observed: 221/67/32/9/44 →
+  112/28/9/1/25).
+
+### Added — Phase 1: contract satisfiability
+- **`scripts/preflight_contract.py`** — runs BEFORE the evaluator sees a draft.
+  `validate_contract.py` checks shape; this checks whether a correct
+  implementation could satisfy the contract at all. Ten checks, every one a
+  violation class observed in the field: unmeasurable numbers (P01), unresolved
+  `file:line` (P02), zero-delta over a file the same criterion edits (P03),
+  self-report of command output (P04), a regex forbidding a literal another
+  criterion requires (P05), a floor on a cost metric a better build would fail
+  (P06), absolute clock vs clamped fixture (P07), >7 criteria naming one
+  integration file (P08), new-file budget (P09), undefined derivation (P10).
+  Unsatisfiable first drafts were costing a full negotiation round each.
+
+### Added — Phase 2: the knowledge/dependency graph and context packs
+- **`scripts/build_graph.py`** — extends `.harness/traceability.json` with a
+  `graph` section: modules, imports, **dependents (blast radius)**,
+  file→criteria, file→requirements, and **fixture_risk** (global-unique keys,
+  contended keys, FK-ordered deletes, `afterAll` cleanup, absolute counts).
+  A script cannot hallucinate an edge; an agent can.
+- **`scripts/build_digest.py`** → `.harness/state-digest.md`, one page of
+  authoritative state derived from state files — replaces re-reading a stack of
+  eval reports. Machine-generated, so a wrong digest is a findable bug rather
+  than a silent hallucination copied into every brief.
+- **`scripts/make_context_pack.py`** → `.harness/packs/pack-<sprint>-<role>.md`:
+  files in scope, blast radius, requirements served, fixture risks, the relevant
+  facts slice and the last verdict — **paths and fact keys, never file
+  contents**. **Exits 1 when the pack exceeds its budget**, which converts
+  context overflow from a silent mid-task failure into a cheap planning-time
+  signal: the task is too big, split it — never raise the budget.
+
+### Changed
+- `agents/generator.md` — reads its context pack first as task scope; numeric
+  criteria must cite `facts:`; runs both validators before handoff; never
+  derives a number by reading files; **commits its own work before stopping**
+  (uncommitted output from an exhausted agent was the most expensive observed
+  failure mode).
+- `agents/evaluator.md` — reads pack + facts; grades numeric criteria from the
+  cited fact key and never re-derives; a numeric criterion with no fact key is
+  ungradeable (contract defect, not an estimate); runs `preflight_contract.py`
+  at ratification, ERRORs are automatic `revision-requested`.
+- `agents/stage-qa.md` — pack-aware; numeric checks from `facts.json` only.
+- `skills/asdr`, `skills/longhorizon` — new **Context discipline** section:
+  `emit_facts` → `build_graph` → `build_digest` → `make_context_pack` before any
+  dispatch; pre-flight feedback to the generator before the evaluator is invoked.
+- `templates/contract.md` — the measurement rule at the point of authoring.
+- `scripts/init_asdr.py` — seeds `.harness/packs/` and prints the context-discipline
+  sequence.
+
+### Deliberately not built
+A central "development manager" agent that holds the knowledge graph. Subagents
+share no context, so the manager's knowledge must be serialised into every
+prompt anyway (no saving); it adds a coordination hop; it becomes the broadest,
+most-called agent in the system; and it centralises hallucination — today two
+roles derive independently and disagree, which is exactly the check that caught
+a cap wrong by 60. The graph is therefore a **file a script maintains**, not an
+agent that remembers. A thin dispatcher role remains a candidate for a later
+version, once the measured effect of Phases 0–2 is known.
+
 ## [3.1.0] — product integrity, richer discovery, git workflow, live E2E
 
 Attacks feature drift: keeps the built product provably in sync with the

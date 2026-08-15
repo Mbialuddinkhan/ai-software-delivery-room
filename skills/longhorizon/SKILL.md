@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "2.0.0"
+  version: "3.2.0"
 ---
 
 # Long Horizon — Execution Harness Orchestrator
@@ -16,6 +16,29 @@ Ask the user for a one-line build prompt if not provided.
 You are the orchestrator. The state machine lives in scripts, not in your
 memory: when unsure what to do next, run
 `python3 .harness/scripts/next_action.py` and do exactly what it says.
+
+## Context discipline (v3.2)
+
+Before dispatching ANY agent in the sprint loop, run these in order:
+
+    python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json
+    python3 .harness/scripts/build_graph.py       # -> graph in .harness/traceability.json
+    python3 .harness/scripts/build_digest.py      # -> .harness/state-digest.md
+    python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>
+
+Then pass the pack path (`.harness/packs/pack-<id>-<role>.md`) in the
+invocation. If `make_context_pack.py` exits 1, the pack exceeded its budget:
+the TASK is too big. Split the sprint or the contract and rebuild the pack.
+Never raise the budget — the budget is the measurement, not the obstacle.
+
+`facts.json` is the only source of measured numbers: **a number not in
+facts.json is not measured and may not be asserted; cite it as
+`facts:<dotted.key>`.**
+
+After the generator writes a contract, run
+`python3 .harness/scripts/preflight_contract.py <contract path>` and return
+its ERROR lines to the generator BEFORE the evaluator is invoked. Catching an
+unsatisfiable contract here is what removes negotiation rounds.
 
 ## 1. Initialize
 
