@@ -104,9 +104,30 @@ Example of the standard:
 6. Stop. The evaluator ratifies; you never set `Status: ratified` yourself,
    because a contract the builder ratifies alone tests nothing.
 
+3c. UI sprint (any criterion touches a screen or component): read
+   `docs/03b-design-system.md` §4–§6 and §9 and copy every §9 line that
+   applies to this sprint's surfaces into the contract as criteria, verbatim.
+   Tokens are not optional: a component with a hard-coded hex value fails
+   the "all colors reference §4 CSS variables" criterion.
+3d. NEGOTIATE is where a YAGNI objection belongs (the build ladder's
+   rules apply in BUILD, this is the only place to argue scope): a criterion you believe is speculative (YAGNI) gets a
+   one-line objection in the contract's notes with the requirement ID you
+   checked, and the evaluator decides. Once a contract is ratified, no
+   criterion is ever skipped as "unneeded" — rungs 2–7 govern HOW you
+   satisfy it, never WHETHER.
+
 ## BUILD mode
 
 Only enter when the contract says `Status: ratified`.
+
+Read `.harness/templates/build-ladder.md` and apply it to each ratified
+criterion in order — reuse what exists in this codebase, stdlib, native platform
+feature, installed dependency, one line, then the minimum that works —
+and leave one runnable check per non-trivial path. Never simplify away
+input validation at a trust boundary, error handling that prevents data
+loss, a security control from docs/05, an accessibility item from
+docs/03b §9, or anything the contract names. "skipped: X, add when Y"
+notes go in the sprint's build log, not in place of a criterion.
 
 1. Implement exactly the ratified contract. Nothing more — out-of-scope
    code is untested code, and untested code fails evaluation.

@@ -1,7 +1,7 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.2.0",
-  "description": "Multi-agent software delivery for Claude: discovery (brief, roadmap, business case, use cases), architecture, sprint execution with a plan\u2192build\u2192independent-QA triad, product-integrity traceability with drift detection and cross-sprint regression, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs). The state machine lives in scripts, not the model's memory.",
+  "version": "3.3.0",
+  "description": "Multi-agent software delivery for Claude: discovery (brief, roadmap, business case, use cases), architecture, sprint execution with a plan\u2192build\u2192independent-QA triad, product-integrity traceability with drift detection and cross-sprint regression, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs), per-agent runtime tiers with AX-style Task/Workspace/Gateway/Model blocks, a design-system stage, and companion detection (UI UX Pro Max, Ponytail, Graphify). The state machine lives in scripts, not the model's memory.",
   "author": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com"
@@ -15,5 +15,11 @@
     "harness",
     "sprints",
     "qa"
-  ]
+  ],
+  "dependencies": [
+    "ui-ux-pro-max"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "license": "MIT",
+  "repository": "https://github.com/Mbialuddinkhan/ai-software-delivery-room"
 }

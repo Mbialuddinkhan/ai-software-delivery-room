@@ -54,6 +54,17 @@ output path.
   referenced anywhere is present in `.env.example`. State minimum contents
   for monitoring (which signal, where it goes) and for backup/restore (what,
   how often, how to restore) — the role promises both.
+  If `docs/04-agent-design.md` exists, §13 is an input you must consume:
+  for every agent, translate its Task + Model blocks into deployment
+  config. Tier T1 → function timeout/memory + secrets-manager reference;
+  T2 → container `resources`, queue binding, job TTL; T3 → write
+  `deploy/agents/<agent-name>.yaml` from
+  `.harness/templates/agent-runtime.yaml` (AX schema; keep the same four
+  blocks if the runtime is a hosted sandbox). Wire the §13.3 observability
+  signals (latency p95, error rate, token spend, sandbox restarts) into the
+  monitoring section, and the rollback trigger into the rollback plan.
+  Never invent a tier — if §13 is missing or a row is blank, stop and say
+  so; it is the ai-architect's decision.
   Also write the **git & repository workflow** to `docs/07-git-workflow.md`
   from `.harness/templates/git-workflow.md`: branching strategy (one
   short-lived branch per sprint off `main`), Conventional-Commit convention,
@@ -71,6 +82,7 @@ output path.
   re-runs each sprint and again at the release gate, so it must run headless in
   CI.
 - **Release gate**: verify, don't trust. Actually run `docker build`,
+  validate every `deploy/agents/*.yaml` (schema + no secret values),
   validate the compose file, diff `.env.example` against the variables the
   code reads. Paste command output into the readiness doc as evidence —
   "should work" is not a readiness state.

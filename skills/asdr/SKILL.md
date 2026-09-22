@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.2.0"
+  version: "3.3.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -32,6 +32,30 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    PLUGIN_ROOT/templates into `.harness/scripts/` and `.harness/templates/`;
    seed `.harness/progress.json` from `.harness/templates/progress.json`;
    create `CLAUDE.md` from `.harness/templates/CLAUDE-template.md`.
+4. Detect companions: `python3 .harness/scripts/detect_companions.py`
+   (-> `.harness/companions.json`). Surface every `WARN:` line to the user
+   verbatim before continuing. ASDR never bundles third-party plugins; it
+   adapts to what the host session has installed (see "Companions" below).
+   Append a one-line "Companions:" summary to the Project facts in
+   `CLAUDE.md` (e.g. `Companions: uupm 2.13.0, ponytail (scoped), graphify;
+   rtk absent`).
+5. Check for updates: `python3 .harness/scripts/check_updates.py --json
+   --plugin-root PLUGIN_ROOT`. If `updates` is non-empty, show the user one
+   block per item — name, installed → latest, the "benefits" text verbatim
+   (it is the top of that project's changelog), and whether it is optional
+   — then ask, per item, whether to install now. Rules:
+   - Never install without a yes. A "no" is final for this run; do not
+     re-ask. Skip the question entirely when the user said to run
+     end-to-end without stopping (note the available updates instead).
+   - On yes, run the item's `update_command` via Bash, then tell the user
+     to run `/reload-plugins` and re-invoke `/asdr`; the harness state on
+     disk survives, so this is a resume, not a restart.
+   - An ASDR update mid-run changes the scripts the state machine depends
+     on: offer it only at Phase 0 (fresh or resumed), never inside Phase 3.
+   - `skipped` entries with "not installed" are fine (optional companions).
+     "upstream unreachable" means offline — say so in one line and move on.
+   The SessionStart hook runs the same check once a day and only prints a
+   one-line notice; this step is where the user actually decides.
 
 ### Resume protocol
 
@@ -55,7 +79,9 @@ Use these exact paths everywhere. Agents receive their output path from you
 | 3 | Discovery critique | `docs/critique-discovery.md` | critic | critique.md |
 | 4 | Discovery decision | `docs/decision-discovery.md` | judge | decision.md |
 | 5 | Architecture | `docs/03-architecture.md` | solution-architect | architecture.md |
-| 6 | Agent design (AI only) | `docs/04-agent-design.md` | ai-architect | agent-design.md |
+| 5b | Design system (UI only) | `docs/03b-design-system.md` | solution-architect | design-system.md |
+| 6 | Agent design (AI only) — incl. §13 runtime/deployment | `docs/04-agent-design.md` | ai-architect | agent-design.md |
+| 6b | Agent runtime manifests (T3 agents only) | `deploy/agents/<agent>.yaml` | devops | agent-runtime.yaml |
 | 7 | Security | `docs/05-security.md` | security-compliance | security.md |
 | 8 | DevOps | `docs/06-devops.md` | devops | devops.md |
 | 9 | Architecture critique | `docs/critique-architecture.md` | critic | critique.md |
@@ -145,6 +171,7 @@ The critic and judge still run at the end of each phase in every rigor mode.
 | `requirements` | business-analyst | docs/02-requirements.md | high |
 | `use-cases` | business-analyst | docs/02b-use-cases.md | high |
 | `architecture` | solution-architect | docs/03-architecture.md | high |
+| `design-system` | solution-architect | docs/03b-design-system.md | med (UI only; `--no-plan` under standard) |
 | `agent-design` | ai-architect | docs/04-agent-design.md | high (AI only) |
 | `security-design` | security-compliance | docs/05-security.md | high |
 | `devops-design` | devops | docs/06-devops.md | high |
@@ -153,7 +180,7 @@ The critic and judge still run at the end of each phase in every rigor mode.
 | `documentation` | documentation | six-doc set | low (`--no-plan` under standard) |
 
 Phase 1 authoring stages are `product-brief`, `requirements`, `architecture`,
-`agent-design`, `security-design`, `devops-design`. Phase 4 gate-authoring
+`design-system`, `agent-design`, `security-design`, `devops-design`. Phase 4 gate-authoring
 stages are `security-final`, `devops-readiness`, `documentation`.
 
 ## Phase 1 — Strategic SDLC Room
@@ -190,20 +217,44 @@ first two agents.
 5. **solution-architect** — inputs rows 1–2 + row 5 paths. Run this stage via
    the Stage execution protocol (executor: solution-architect, stage-id:
    architecture, artifact: docs/03-architecture.md).
+5b. **solution-architect (design-system)** — invoke only if
+   `docs/02-requirements.md` or `docs/02b-use-cases.md` describes a user
+   interface (web, mobile, desktop, embedded screen), judged by meaning.
+   If `.harness/companions.json` says `uupm.installed: true`, first run
+   `python3 .harness/scripts/uupm_design_system.py --query "<product type>
+   <industry> <2-4 keywords from the brief>" --project "<name>"` to draft
+   `docs/03b-design-system.md`; exit 2 means not installed — the executor
+   writes it by hand from the template. Then run this stage via the Stage
+   execution protocol (executor: solution-architect, stage-id:
+   design-system, artifact: docs/03b-design-system.md, `--no-plan` under
+   standard). Tell the executor and stage-qa explicitly: the draft is
+   keyword-matched, so the thing to grade is FIT against docs/01 (§10
+   fit review filled, pattern/style justified, every text pair ≥ 4.5:1),
+   not formatting. If no UI, skip and note you evaluated and found no UI
+   surface.
 6. **ai-architect** — invoke only if `docs/02-requirements.md` describes any
    AI/LLM/agent/RAG/ML capability, judged by meaning not keywords (e.g.
    "semantic search", "smart recommendations", "summarization", "chat
    assistant" all count); inputs rows 2 and 5 + row 6 paths. If none, skip
    and note you evaluated and found no AI surface. When invoked, run this
    stage via the Stage execution protocol (executor: ai-architect, stage-id:
-   agent-design, artifact: docs/04-agent-design.md).
-7. **security-compliance** — inputs rows 5–6 + row 7 paths. Run this stage via
+   agent-design, artifact: docs/04-agent-design.md). Pass row 5b as an
+   extra input when it exists. Tell the executor that §13 (runtime and
+   deployment: tier per agent + Task/Workspace/Gateway/Model blocks) is
+   mandatory and is what devops and security-compliance build from.
+7. **security-compliance** — inputs rows 5–6 + row 7 paths; point it at
+   the §13.2 Gateway blocks in row 6 (default-deny egress per agent). Run this stage via
    the Stage execution protocol (executor: security-compliance, stage-id:
    security-design, artifact: docs/05-security.md).
-8. **devops** — inputs rows 5 and 7 + row 8 paths. Run this stage via the
+8. **devops** — inputs rows 5, 6 and 7 + row 8 paths. For every T3 agent
+   in row 6 §13.1 it also writes `deploy/agents/<agent>.yaml` from
+   `.harness/templates/agent-runtime.yaml` (row 6b). Run this stage via the
    Stage execution protocol (executor: devops, stage-id: devops-design,
    artifact: docs/06-devops.md).
-9. **critic** — inputs rows 5–8 + row 9 paths. Then run
+9. **critic** — inputs rows 5, 5b, 6, 7, 8 + row 9 paths. Its mandatory
+   checks on row 6 §13 (tier justified, no untrusted code at T1, allowlist
+   per agent, no secret values) and on row 5b (fit vs brief, contrast) are
+   in the critic's own instructions. Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-architecture.md`;
    if it errors, re-invoke the critic (max 2 rounds).
 10. **judge** — inputs rows 5–9 + row 10 paths. Run
@@ -213,7 +264,9 @@ first two agents.
 After the blueprint is approved:
 
 11. **You** write `docs/00-blueprint-summary.md` from the template — one
-    page max. This digest is what the generator and evaluator read every
+    page max. Include the agent tier table from row 6 §13.1 (one line per
+    agent) and the path to row 5b when it exists — the generator reads
+    both every UI or agent sprint. This digest is what the generator and evaluator read every
     sprint; the full docs stay available for lookups.
 12. Update the "Project facts" section of `CLAUDE.md` (stack, run/test/lint
     commands, conventions) from the approved architecture.
@@ -260,6 +313,31 @@ Drive the loop with the script — after every agent invocation:
    use cases) consistently, then have **product-integrity-qa** re-baseline the
    matrix before the loop continues.
 
+### Companion rules in the sprint loop
+
+- **UI sprints**: the generator copies the relevant §9 checklist lines
+  from `docs/03b-design-system.md` into the contract as criteria and reads
+  §4–§6 tokens before writing any component. A UI contract with none of
+  §9 in it is incomplete — send it back in negotiation.
+- **Build ladder**: the generator reads `.harness/templates/build-ladder.md`
+  in BUILD mode; it does not need the Ponytail plugin.
+- **Ponytail (if installed anyway)**: only the generator may run under it,
+  and only in BUILD mode against a ratified contract. If `companions.json` shows
+  `ponytail.installed: true` and `scoped_to_generator: false`, STOP before
+  the first sprint and tell the user to set
+  `PONYTAIL_SUBAGENT_MATCHER='^generator$'` (docs/COMPANIONS.md) and
+  restart, or disable the plugin. A YAGNI ladder inside the critic, judge,
+  evaluator or security-compliance is an independent reviewer told to do
+  less reviewing.
+- **Graphify** (optional): on brownfield entry run `/graphify . --update`
+  once before Phase 1 so `build_graph.py` and the packs see the existing
+  code; after each sprint the evaluator marks `done`, `--update` is cheap
+  (AST only) and keeps "already in this codebase?" answerable. Never
+  substitute a graphify query for `emit_facts.py` as a measurement.
+- **RTK**: if `companions.json` shows it installed, remind the evaluator
+  and stage-qa every invocation that shell output is compressed and only
+  `facts:` keys count as evidence.
+
 The script encodes the rules — contract before build, evaluator-only
 ratification, max 4 negotiation rounds then force-ratify, attempt > 5
 forces a planner split, two teardowns stops for the human. It now derives
@@ -284,7 +362,8 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    execution protocol (executor: security-compliance, stage-id:
    security-final, artifact: docs/09-security-review-final.md).
 2. **devops** — output `docs/09-devops-readiness.md`; template devops.md;
-   release-gate context: run the builds, paste evidence. Run this stage via
+   release-gate context: run the builds, validate every
+   `deploy/agents/*.yaml` against docs/04 §13.2, paste evidence. Run this stage via
    the Stage execution protocol (executor: devops, stage-id: devops-readiness,
    artifact: docs/09-devops-readiness.md).
 3. **documentation** — the six-doc default set. Run this stage via the Stage
@@ -317,3 +396,18 @@ Set phase to `done`. Print:
 
 Never claim production-ready unless the risk-manager's block says
 `production-ready` — that word is its authority alone.
+
+## Companions (v3.3)
+
+Third-party skills ASDR uses. UI UX Pro Max installs with ASDR (a plugin
+dependency in the `asdr` marketplace); the rest are detected in Phase 0
+step 4 and used only when present. Version checks are Phase 0 step 5. Full install notes
+and the reasoning behind each rule: `docs/COMPANIONS.md`.
+
+| Companion | Used in | Rule |
+|---|---|---|
+| UI UX Pro Max | `design-system` stage (row 5b) | Installed automatically as an ASDR dependency; drafts tokens/checklist; executor reviews fit; stage-qa grades fit vs docs/01 |
+| Build ladder (built in) | generator BUILD mode | `templates/build-ladder.md`; YAGNI objections go in NEGOTIATE, never skip a ratified criterion |
+| Ponytail (optional) | generator only | Listed in the `asdr` marketplace, disabled by default; needs `PONYTAIL_SUBAGENT_MATCHER='^generator$'` |
+| Graphify | brownfield entry, post-sprint `--update` | Navigation aid only; never a measurement source |
+| RTK | — (warned, not used) | Compresses evidence commands; `facts:` keys are the only measured numbers |

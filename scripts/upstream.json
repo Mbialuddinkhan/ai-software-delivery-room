@@ -1,0 +1,34 @@
+{
+  "_comment": "Where check_updates.py looks for the latest version of ASDR and each companion. Edit when you re-pin a companion in marketplace.json.",
+  "ai-software-delivery-room": {
+    "kind": "claude-plugin",
+    "marketplace": "asdr",
+    "manifest_url": "https://raw.githubusercontent.com/Mbialuddinkhan/ai-software-delivery-room/main/.claude-plugin/plugin.json",
+    "changelog_url": "https://raw.githubusercontent.com/Mbialuddinkhan/ai-software-delivery-room/main/CHANGELOG.md",
+    "update_command": "claude plugin update ai-software-delivery-room@asdr"
+  },
+  "ui-ux-pro-max": {
+    "kind": "claude-plugin",
+    "marketplace": "asdr",
+    "manifest_url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/.claude-plugin/plugin.json",
+    "changelog_url": "https://raw.githubusercontent.com/nextlevelbuilder/ui-ux-pro-max-skill/main/CHANGELOG.md",
+    "update_command": "claude plugin update ui-ux-pro-max@asdr",
+    "pinned_note": "Pinned by sha in the asdr marketplace. A newer upstream version means the ASDR maintainer should re-pin; users get it with the next asdr release."
+  },
+  "ponytail": {
+    "kind": "claude-plugin",
+    "marketplace": "asdr",
+    "optional": true,
+    "manifest_url": "https://raw.githubusercontent.com/DietrichGebert/ponytail/main/.claude-plugin/plugin.json",
+    "changelog_url": "https://raw.githubusercontent.com/DietrichGebert/ponytail/main/CHANGELOG.md",
+    "update_command": "claude plugin update ponytail@asdr"
+  },
+  "graphify": {
+    "kind": "pypi",
+    "optional": true,
+    "package": "graphifyy",
+    "manifest_url": "https://pypi.org/pypi/graphifyy/json",
+    "changelog_url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/main/CHANGELOG.md",
+    "update_command": "python3 -m pip install -U graphifyy --break-system-packages"
+  }
+}

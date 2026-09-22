@@ -3,6 +3,55 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.3.0] — agent runtime tiers, design-system stage, companion detection
+
+### Added
+- `docs/04-agent-design.md` §13 **Runtime and deployment**: a tier decision
+  table per agent (T1 function / T2 container worker / T3 sandboxed actor
+  runtime) and four runtime blocks per agent — Task, Workspace, Gateway,
+  Model — the primitives of AX (google/ax), used as the design vocabulary
+  for every tier. devops consumes Task + Model + topology; security-compliance
+  consumes Gateway (default-deny egress allowlist, gateway-injected secrets).
+- `templates/agent-runtime.yaml` — T3 reference manifest in AX `v1alpha1`
+  schema; devops writes `deploy/agents/<agent>.yaml` per T3 agent.
+- `design-system` stage (row 5b, `docs/03b-design-system.md`,
+  `templates/design-system.md`) — runs after architecture when the product
+  has a UI surface. Its §9 checklist becomes UI sprint contract criteria.
+- `scripts/detect_companions.py` — Phase 0 detection of UI UX Pro Max,
+  Ponytail, Graphify and RTK → `.harness/companions.json`, with warnings.
+- `scripts/uupm_design_system.py` — drafts 03b via UI UX Pro Max when
+  installed (exit 2 when not → hand-written from template).
+- `docs/COMPANIONS.md` — install and scoping notes; the Ponytail
+  `PONYTAIL_SUBAGENT_MATCHER='^generator$'` requirement; why RTK is not used.
+
+### Changed
+- critic: mandatory findings for §13 (unjustified T3, untrusted code at T1,
+  missing allowlist, secret values) and for 03b (fit vs brief, contrast).
+- generator: UI sprints copy 03b §9 into the contract; Ponytail rules —
+  YAGNI objections belong in NEGOTIATE, a ratified criterion is never
+  skipped.
+- devops inputs now include 04; release gate validates `deploy/agents/*.yaml`.
+- `init_asdr.py` creates `deploy/agents/`; `CLAUDE-template.md` gains
+  Companions / Design system / Agent runtime tiers lines.
+
+### Added — packaging and updates
+- `.claude-plugin/marketplace.json`: the repo is now the `asdr` marketplace.
+  `ui-ux-pro-max` is a declared dependency (installs with ASDR, pinned by
+  SHA); `ponytail` is listed but disabled by default.
+- `scripts/check_updates.py` + `scripts/upstream.json`: compares installed
+  vs upstream versions for ASDR, UI UX Pro Max, Ponytail and Graphify,
+  pulls each changelog's top section as "what it adds", and reports. Runs
+  as a once-a-day SessionStart notice (`hooks/hooks.json`) and as Phase 0
+  step 5, where the orchestrator asks per item before running the update.
+- `templates/build-ladder.md`: the generator's BUILD-mode ladder, adapted
+  from Ponytail (MIT), so the plugin is no longer needed for the generator.
+- `docs/PUBLISHING.md`: marketplace layout, release checklist, tagging,
+  re-pinning companions, directory submission.
+
+### Not added (deliberately)
+- RTK: rewrites the evaluator's evidence commands; detected and warned only.
+- Vendoring any companion: all MIT, all fast-moving; detection over forks.
+
 ## [3.2.0] — context discipline: measured facts, contract pre-flight, context packs
 
 Answers a field review of a real 7-sprint run in which 50 subagent runs consumed

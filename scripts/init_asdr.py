@@ -31,6 +31,7 @@ DIRS = [
     ".harness/packs",       # generated per-task context packs (v3.2)
     "docs",
     "evals",
+    "deploy/agents",      # T3 agent runtime manifests (v3.3)
 ]
 
 PROGRESS_SEED = {
