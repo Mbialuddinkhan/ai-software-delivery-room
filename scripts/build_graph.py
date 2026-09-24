@@ -25,11 +25,14 @@ cheap; safe to run in CI on every commit.
 """
 import argparse
 import json
+import posixpath
 import re
 import sys
 from pathlib import Path
 
 CODE_EXT = {".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rb", ".java", ".rs"}
+JS_EXT = [".ts", ".tsx", ".js", ".jsx"]
+FACT_REF = re.compile(r"facts:[A-Za-z0-9_./\[\]-]+")
 SKIP = {".git", "node_modules", "dist", "build", ".next", "coverage",
         "__pycache__", ".venv", "venv", ".harness"}
 
@@ -66,20 +69,63 @@ def module_of(rel):
     return "." if d == "" else d
 
 
-def resolve(spec, importer, root, known):
-    """Resolve a relative import to a repo path, best-effort."""
-    if not spec.startswith("."):
-        return None  # third-party / stdlib
-    base = (Path(importer).parent / spec).as_posix()
-    base = str(Path(base).resolve().relative_to(Path(root).resolve())) \
-        if Path(base).is_absolute() else base
-    cands = [base] + [f"{base}{e}" for e in CODE_EXT] + \
-            [f"{base}/index{e}" for e in CODE_EXT]
+def _first_known(cands, known):
     for c in cands:
-        norm = Path(c).as_posix().replace("./", "")
+        norm = posixpath.normpath(c)
+        if norm.startswith("../"):
+            continue  # escaped the repo root
         if norm in known:
             return norm
     return None
+
+
+def resolve(spec, importer, root, known):
+    """Resolve an import specifier to a repo path, best-effort.
+
+    Handles three families, all of which the field data showed being missed:
+      JS/TS relative   './x', '../db/lead'   -> normalised path + ext/index
+      Python relative  '.utils', '..pkg.mod' -> leading dots climb directories
+      Python absolute  'pkg.utils'           -> tried from the repo root and
+                                                from every ancestor of the
+                                                importer (src/ layouts)
+    Third-party and stdlib specifiers resolve to nothing, which is correct: they
+    are not edges inside the repository. Paths are normalised with
+    posixpath.normpath so '../' segments collapse instead of being mangled.
+    """
+    importer_dir = posixpath.dirname(importer)
+    is_py = importer.endswith(".py")
+
+    if spec.startswith(("./", "../")) or spec in (".", ".."):
+        base = posixpath.join(importer_dir, spec) if importer_dir else spec
+        cands = [base] + [f"{base}{e}" for e in JS_EXT + [".py"]] + \
+                [f"{base}/index{e}" for e in JS_EXT] + [f"{base}/__init__.py"]
+        return _first_known(cands, known)
+
+    if is_py and spec.startswith("."):
+        dots = len(spec) - len(spec.lstrip("."))
+        rest = spec[dots:].replace(".", "/")
+        base = importer_dir
+        for _ in range(dots - 1):
+            base = posixpath.dirname(base)
+        target = posixpath.join(base, rest) if rest else base
+        cands = [f"{target}.py", f"{target}/__init__.py"] if rest else \
+                [f"{target}/__init__.py"]
+        return _first_known(cands, known)
+
+    if is_py and re.fullmatch(r"[\w.]+", spec):
+        rest = spec.replace(".", "/")
+        roots = [""]
+        d = importer_dir
+        while d:
+            roots.append(d)
+            d = posixpath.dirname(d)
+        cands = []
+        for r in roots:
+            t = posixpath.join(r, rest) if r else rest
+            cands += [f"{t}.py", f"{t}/__init__.py"]
+        return _first_known(cands, known)
+
+    return None  # bare JS specifier: third-party package
 
 
 def main() -> int:
@@ -142,7 +188,12 @@ def main() -> int:
                 m = re.match(r"^\s*(\d+)\.\s+(.*)$", line)
                 if m and cat:
                     cid = f"{sprint}#{cat}:{m.group(1)}"
-                    for f in set(FILE_REF.findall(m.group(2))):
+                    # Strip `facts:<key>` citations first: a key like
+                    # `facts:diff.src/pay.ts.net_nonblank` otherwise reads as
+                    # a file called `diff.src/pay.ts` (same fix as the pack
+                    # builder and the pre-flight linter).
+                    scan = FACT_REF.sub(" ", m.group(2))
+                    for f in set(FILE_REF.findall(scan)):
                         file_to_criteria.setdefault(f, []).append(cid)
 
     # Requirements -> files, inherited through the sprints that touch each file.

@@ -165,7 +165,10 @@ def main() -> int:
         return out("ORCHESTRATOR", "activate", nxt, 1,
                    f"Mark {nxt} active in sprints.json, set progress.json to "
                    f'{{"phase":"execution","sprint":"{nxt}","attempt":1,'
-                   f'"awaiting":null,"negotiation_rounds":0}}, then rerun this script.')
+                   f'"awaiting":null,"negotiation_rounds":0,'
+                   f'"sprint_base_ref":"<output of git rev-parse HEAD>"}} '
+                   "(emit_facts.py diffs against sprint_base_ref, so the diff "
+                   "survives the generator committing), then rerun this script.")
 
     return out("ORCHESTRATOR", "final-gates", None, 0,
                "All sprints are done. Proceed to final gates: security-compliance, "

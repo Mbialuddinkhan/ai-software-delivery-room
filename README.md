@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.2.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.2.1
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -100,10 +100,22 @@ can't be silently switched off.
 
 ## Quick install
 
-**As a plugin (recommended).** This repo is a Claude plugin — its manifest is
-`.claude-plugin/plugin.json`. Install it into Claude Code / Cowork as a plugin,
-then trigger a skill (e.g. ask to "run the full ASDR workflow" or use the
-trigger phrases below).
+**Claude Code.** This repo is both a plugin (`.claude-plugin/plugin.json`)
+and a one-plugin marketplace (`.claude-plugin/marketplace.json`), so it
+installs in two commands:
+
+```bash
+claude plugin marketplace add Mbialuddinkhan/ai-software-delivery-room   # or a local clone path
+claude plugin install ai-software-delivery-room@asdr
+```
+
+Update later with `claude plugin marketplace update asdr` followed by
+`claude plugin update ai-software-delivery-room@asdr`.
+
+**Cowork.** Zip the repo (without `.git`) as `ai-software-delivery-room.plugin`
+and add it in the Claude desktop app, or accept the `.plugin` package when
+Claude hands it to you in chat. Then trigger a skill (e.g. ask to "run the
+full ASDR workflow" or use the trigger phrases below).
 
 **Or copy into a project** and run the initializer:
 
@@ -208,9 +220,9 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.1.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.2.1)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → v3.1 change log
+CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.2.1 change log
 agents/                      ← 17 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa)
 skills/                      ← 6 orchestrator skills (asdr, discover, architect,
@@ -225,6 +237,11 @@ scripts/
   validate_verdict.py        ← decision / eval / risk / qa / integrity block gate
   validate_critique.py       ← critique structure + counts + floor gate
   validate_traceability.py   ← traceability matrix: drift, orphans, coverage (v3.1)
+  emit_facts.py              ← measured facts: diff, census, assertions, tests (v3.2)
+  preflight_contract.py      ← contract satisfiability linter, 10 checks (v3.2)
+  build_graph.py             ← dependency graph + blast radius + fixture risk (v3.2)
+  build_digest.py            ← one-page machine-generated state digest (v3.2)
+  make_context_pack.py       ← budgeted per-task context packs, exit 1 over budget (v3.2)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -232,6 +249,9 @@ templates/                   ← fill-in templates: contract, plan, qa-report,
 docs/
   AI_SOFTWARE_DELIVERY_ROOM_OPERATING_MANUAL.md
   TRIAD_ARCHITECTURE.md      ← the v3 triad + rigor dial design
+  CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
+tests/
+  test_context_discipline.py ← unit tests for the v3.2 scripts (python3 -m unittest)
 ```
 
 ## The 17 agents at a glance

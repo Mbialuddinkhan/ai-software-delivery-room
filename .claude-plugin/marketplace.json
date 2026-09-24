@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "asdr",
+  "description": "AI Software Delivery Room — multi-agent SDLC harness for Claude Code and Cowork",
+  "owner": {
+    "name": "Bilal Khan",
+    "email": "mbilaluddinkhan@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "ai-software-delivery-room",
+      "description": "Multi-agent software delivery for Claude: discovery, architecture, sprint execution with a plan→build→independent-QA triad, product-integrity traceability, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs).",
+      "version": "3.2.1",
+      "author": {
+        "name": "Bilal Khan",
+        "email": "mbilaluddinkhan@gmail.com"
+      },
+      "category": "development",
+      "keywords": ["sdlc", "multi-agent", "software-delivery", "long-horizon", "harness", "sprints", "qa"],
+      "source": "./"
+    }
+  ]
+}

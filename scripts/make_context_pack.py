@@ -60,7 +60,8 @@ def contract_files(contract_path):
     # citations are the most precise statement of what the sprint touches.
     from_facts = set()
     for key in re.findall(r"facts:([A-Za-z0-9_./\[\]-]+)", body):
-        m = re.match(r"diff\.(.+?)\.(?:added|removed|net_nonblank)$", key)
+        m = re.match(r"diff\.(.+?)\.(?:added|removed|net_nonblank|added_nonblank|"
+                     r"removed_nonblank|file_nonblank|untracked)$", key)
         if m:
             from_facts.add(m.group(1))
 

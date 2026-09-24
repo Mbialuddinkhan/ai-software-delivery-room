@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "3.2.0"
+  version: "3.2.1"
 ---
 
 # Long Horizon — Execution Harness Orchestrator
@@ -21,7 +21,8 @@ memory: when unsure what to do next, run
 
 Before dispatching ANY agent in the sprint loop, run these in order:
 
-    python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json
+    python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json (diffs against
+                                                  #    progress.json -> sprint_base_ref)
     python3 .harness/scripts/build_graph.py       # -> graph in .harness/traceability.json
     python3 .harness/scripts/build_digest.py      # -> .harness/state-digest.md
     python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>
@@ -30,6 +31,13 @@ Then pass the pack path (`.harness/packs/pack-<id>-<role>.md`) in the
 invocation. If `make_context_pack.py` exits 1, the pack exceeded its budget:
 the TASK is too big. Split the sprint or the contract and rebuild the pack.
 Never raise the budget — the budget is the measurement, not the obstacle.
+
+When you activate a sprint, record its starting commit in
+`.harness/progress.json` as `"sprint_base_ref"` (`git rev-parse HEAD`).
+`emit_facts.py` diffs against that ref, so the measured diff survives the
+generator committing its own work; a diff against HEAD after that commit is
+empty. Diff budgets cite `facts:diff.<file>.net_nonblank` (non-blank,
+non-comment lines added minus removed) — `file_nonblank` is the whole file.
 
 `facts.json` is the only source of measured numbers: **a number not in
 facts.json is not measured and may not be asserted; cite it as

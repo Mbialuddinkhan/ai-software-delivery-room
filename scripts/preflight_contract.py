@@ -41,8 +41,18 @@ from pathlib import Path
 FACT_REF = re.compile(r"facts:([A-Za-z0-9_./\[\]-]+)")
 NUMERIC = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s*(ms|s|kb|mb|lines?|rows?|reads?|"
                      r"writes|queries|bytes|chars|files?|calls?)?\b", re.I)
+# Every phrasing of a bound the field data used. Missing "under"/"within" let
+# the contract template's own GOOD example ("under 300ms") through unmeasured.
 COMPARATOR = re.compile(r"(<=|>=|<|>|≤|≥|at most|no more than|at least|exactly|"
-                        r"must not exceed|fewer than|greater than)", re.I)
+                        r"must not exceed|fewer than|greater than|less than|"
+                        r"more than|under|within|below|up to|no later than|"
+                        r"not exceed|maximum of|minimum of|no fewer than)", re.I)
+# Numbers that are identifiers, not measurements: HTTP status codes, ports,
+# error codes, version strings. They are never "unmeasurable"; a criterion
+# saying "returns exactly HTTP 404" needs no facts.json key.
+IDENT_NUM = re.compile(r"\b(?:HTTP|status(?:\s+code)?|port|error(?:\s+code)?|code|"
+                       r"v)\s*\d+(?:\.\d+)*\b", re.I)
+URL = re.compile(r"\bhttps?://\S+", re.I)
 CMD_OUTPUT = re.compile(r"(git\s+diff|--stat|wc\s+-l|npm\s+(?:run\s+)?test|pytest|"
                         r"docker\s+build|coverage\s+report|\bls\b)", re.I)
 SELF_REPORT = re.compile(r"(generator|builder|implementer)\s+(must\s+)?"
@@ -51,21 +61,34 @@ ZERO_CLAIM = re.compile(r"(zero|no|0)\s+(removed|deleted|new|added|changed)\s+"
                         r"[`'\"]?([\w()]+)", re.I)
 FILE_REF = re.compile(r"([\w./-]+\.(?:ts|tsx|js|jsx|py|go|rb|java|rs|sql|md|json))"
                       r"(?::(\d+))?")
-REGEX_LIT = re.compile(r"/((?:[^/\\\n]|\\.)+)/[gimsuy]*")
-COST_WORDS = re.compile(r"(database|db|network|http|api|disk|query|queries|read|"
-                        r"reads|write|writes|call|calls|request|requests)", re.I)
-CLOCK_WORDS = re.compile(r"(utc|midnight|timezone|tz|next day|epoch|Date\.now|"
-                         r"clamped|frozen clock)", re.I)
+# Source files only — the new-file budget (P09) measures fixture-isolation
+# risk, which docs and JSON config do not carry.
+CODE_FILE_REF = re.compile(r"([\w./-]+\.(?:ts|tsx|js|jsx|py|go|rb|java|rs|sql))")
+# A regex literal /.../ must not be a path segment: `src/4/legacy.ts` is not
+# the regex /4/. The opening slash may not follow a path character.
+REGEX_LIT = re.compile(r"(?<![\w./])/((?:[^/\\\n]|\\.)+)/[gimsuy]*(?![\w/])")
+# Word-bounded: without \b, "already" matched "read" and "called" matched
+# "call", turning ordinary sentences into P06 errors.
+COST_WORDS = re.compile(r"\b(database|db|network|http|api|disk|query|queries|read|"
+                        r"reads|write|writes|call|calls|request|requests)\b", re.I)
+CLOCK_WORDS = re.compile(r"\b(utc|midnight|timezone|tz|next day|epoch|Date\.now|"
+                         r"clamped|frozen clock)\b", re.I)
 
 
 def strip_fact_refs(body):
-    """Remove `facts:<key>` tokens before scanning for file paths.
+    """Remove `facts:<key>` tokens and URLs before scanning for file paths.
 
     A dotted fact key like `facts:diff.src/tools.ts.net_nonblank` otherwise
     looks like a file path to FILE_REF and produces a bogus 'does not exist'
-    warning. Fact keys are validated separately against facts.json.
+    warning, and `https://api.example.com/v1/users.json` would count as a new
+    file. Fact keys are validated separately against facts.json.
     """
-    return FACT_REF.sub(" ", body)
+    return URL.sub(" ", FACT_REF.sub(" ", body))
+
+
+def measurable_numbers(body):
+    """Numbers in a criterion that are measurements, not identifiers."""
+    return [n for n, _u in NUMERIC.findall(IDENT_NUM.sub(" ", body))]
 
 
 def split_criteria(text):
@@ -163,7 +186,7 @@ def main() -> int:
 
         # P01/P10 numeric claim with no fact key and no derivation
         has_cmp = bool(COMPARATOR.search(body))
-        nums = [n for n, _u in NUMERIC.findall(body)]
+        nums = measurable_numbers(body)
         if has_cmp and nums and not cited:
             if re.search(r"derivation|derived|because|since|=\s*\d+\s*[-+]", low):
                 warns.append(f"WARN: {cid}: P10 numeric bound has a derivation but "
@@ -217,7 +240,7 @@ def main() -> int:
 
         # P06 floor on a cost metric — a better build would fail it
         if re.search(r"(at least|no fewer than|minimum of|>=|≥)\s*\d+", low) \
-                and COST_WORDS.search(body):
+                and COST_WORDS.search(IDENT_NUM.sub(" ", body)):
             errors.append(f"ERROR: {cid}: P06 sets a FLOOR on a cost metric "
                           "(reads/queries/calls); a strictly better implementation "
                           "would fail it — use a ceiling")
@@ -236,8 +259,9 @@ def main() -> int:
                           f"(max {args.max_per_file}) — one fixture slip fails all "
                           "of them and hides whether it is a product defect")
 
-    # P09 new-file budget
-    new_files = {f for f, _l in FILE_REF.findall(strip_fact_refs(text))
+    # P09 new-file budget — source files only; docs and config carry no
+    # fixture-isolation risk, and a URL is not a file.
+    new_files = {f for f in CODE_FILE_REF.findall(strip_fact_refs(text))
                  if not (root / f).exists()}
     if len(new_files) > args.max_new_files:
         errors.append(f"ERROR: P09 contract introduces {len(new_files)} new files "

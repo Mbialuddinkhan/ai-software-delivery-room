@@ -5,6 +5,15 @@ Usage:
   python3 emit_facts.py [--base <git-ref>] [--out .harness/facts.json]
                         [--test-cmd "npm test -- --json"] [--no-tests]
 
+  --base defaults to `sprint_base_ref` in .harness/progress.json (the commit
+  the active sprint started from), then HEAD. Per-file diff keys:
+    added / removed                 raw lines, as `git diff --numstat`
+    added_nonblank / removed_nonblank  non-blank, non-comment lines in the patch
+    net_nonblank                    added_nonblank − removed_nonblank (the
+                                    unit a diff budget is written in)
+    file_nonblank                   whole-file substantive line count
+    untracked: true                 a new file git does not know yet
+
 Why this exists
 ---------------
 Agents without a shell cannot measure. Asked for a line count they read whole
@@ -72,8 +81,34 @@ def substantive_lines(text):
     return n
 
 
+def hunk_counts(base, path, root):
+    """Substantive lines added and removed in the patch for one file.
+
+    `net_nonblank` is a DIFF measure (added − removed, non-blank non-comment),
+    which is what a diff budget bounds. The whole-file count is reported
+    separately as `file_nonblank` so the two can never be confused again.
+    """
+    ok, out = run(["git", "diff", "-U0", "--no-color", base, "--", path], cwd=root)
+    if not ok:
+        return None, None
+    added = removed = 0
+    for line in out.splitlines():
+        if line.startswith(("+++", "---", "@@", "diff ", "index ")):
+            continue
+        if line.startswith("+"):
+            added += substantive_lines(line[1:])
+        elif line.startswith("-"):
+            removed += substantive_lines(line[1:])
+    return added, removed
+
+
 def diff_facts(base, root):
-    """Per-file added/removed, plus net substantive lines of the working tree."""
+    """Per-file added/removed (raw and substantive) versus `base`.
+
+    Includes untracked files: a generator's brand-new module is exactly the
+    file a diff budget must see, and `git diff` alone omits it until staged.
+    Harness bookkeeping under `.harness/` is skipped, as the census skips it.
+    """
     if not have("git"):
         return None, "git not available"
     ok, _ = run(["git", "rev-parse", "--is-inside-work-tree"], cwd=root)
@@ -90,18 +125,41 @@ def diff_facts(base, root):
         if len(parts) != 3:
             continue
         added, removed, path = parts
-        if added == "-" or removed == "-":
-            continue  # binary
+        if added == "-" or removed == "-" or path.startswith(".harness/"):
+            continue  # binary, or harness bookkeeping
         entry = {"added": int(added), "removed": int(removed)}
+        a, r = hunk_counts(base, path, root)
+        entry["added_nonblank"] = a
+        entry["removed_nonblank"] = r
+        entry["net_nonblank"] = (a - r) if a is not None else None
         f = Path(root) / path
         if f.is_file():
             try:
-                entry["net_nonblank"] = substantive_lines(f.read_text(errors="ignore"))
+                entry["file_nonblank"] = substantive_lines(f.read_text(errors="ignore"))
             except OSError:
-                entry["net_nonblank"] = None
+                entry["file_nonblank"] = None
         else:
-            entry["net_nonblank"] = 0  # deleted
+            entry["file_nonblank"] = 0  # deleted
         files[path] = entry
+
+    ok, out = run(["git", "ls-files", "--others", "--exclude-standard"], cwd=root)
+    if ok:
+        for path in out.splitlines():
+            path = path.strip()
+            if not path or path.startswith(".harness/") or path in files:
+                continue
+            f = Path(root) / path
+            if not f.is_file() or f.suffix not in CODE_EXT:
+                continue
+            try:
+                text = f.read_text(errors="ignore")
+            except OSError:
+                continue
+            n = substantive_lines(text)
+            files[path] = {"added": len(text.splitlines()), "removed": 0,
+                           "added_nonblank": n, "removed_nonblank": 0,
+                           "net_nonblank": n, "file_nonblank": n,
+                           "untracked": True}
     return files, None
 
 
@@ -169,7 +227,9 @@ def test_facts(test_cmd, root):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", default="HEAD", help="git ref to diff against")
+    ap.add_argument("--base", default=None,
+                    help="git ref to diff against (default: sprint_base_ref in "
+                         ".harness/progress.json, else HEAD)")
     ap.add_argument("--out", default=".harness/facts.json")
     ap.add_argument("--test-cmd", default=None)
     ap.add_argument("--no-tests", action="store_true")
@@ -177,6 +237,23 @@ def main() -> int:
 
     root = Path.cwd()
     notes = []
+
+    # The generator commits its own work (v3.2), so a diff against HEAD is
+    # empty by the time the evaluator reads it. Prefer the sprint's start ref
+    # when the orchestrator recorded one in progress.json.
+    base = args.base
+    if not base:
+        try:
+            prog = json.loads((root / ".harness" / "progress.json").read_text())
+            base = prog.get("sprint_base_ref") or None
+        except (OSError, ValueError):
+            base = None
+    if not base:
+        base = "HEAD"
+        notes.append("diff: no --base and no sprint_base_ref in progress.json; "
+                     "using HEAD — if the generator already committed, this "
+                     "diff is empty; pass --base <sprint-start-ref>")
+    args.base = base
 
     diff, err = diff_facts(args.base, root)
     if err:

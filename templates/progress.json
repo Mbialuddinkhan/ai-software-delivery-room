@@ -5,6 +5,7 @@
   "awaiting": null,
   "negotiation_rounds": 0,
   "last_eval_result": null,
+  "sprint_base_ref": null,
   "last_updated": null,
   "_enums": {
     "phase": "strategic | planning | execution | final-gates | done",

@@ -3,6 +3,77 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.2.1] — context-discipline fixes found by testing the v3.2 scripts
+
+A test pass over the five v3.2 scripts (fake repo with git history, tests, a
+contract, a sprint and an eval report; every check exercised on a true
+positive and probed for false positives) found the two headline features
+weaker than documented. No crashes; no change to agent roles, verdict formats
+or state-file schemas. `tests/test_context_discipline.py` now covers all of it
+(`python3 -m unittest discover tests`).
+
+### Fixed — `build_graph.py` (blast radius)
+- Imports that climb a directory (`../db/lead`) never resolved: the path was
+  "normalised" with `.replace("./", "")`, turning `src/voice/../db/lead` into
+  `src/voice/.db/lead`. Now `posixpath.normpath`. Every cross-module edge and
+  every test-file→source edge was missing from the blast radius.
+- Python imports never resolved (`from .utils import x`, `from pkg.utils import
+  x`, `import pkg.utils`): only `./`-style specifiers were handled. Relative
+  dots now climb directories; absolute dotted names are tried from the repo
+  root and from each ancestor of the importer (`src/` layouts). Python
+  projects previously produced a graph with zero edges.
+- `facts:<key>` citations are stripped before file-path scanning, as the pack
+  builder and the linter already did; a phantom `diff.src/...` file no longer
+  appears in `file_to_criteria` / `file_to_requirements`.
+
+### Fixed — `preflight_contract.py` (satisfiability linter)
+- **P06** cost-metric words are word-bounded. "already" matched `read` and
+  "called" matched `call`, so ordinary criteria were rejected as cost floors —
+  costing exactly the negotiation round the linter exists to save.
+- The comparator list gains `under`, `within`, `below`, `less than`, `more
+  than`, `up to`, `no later than`, `not exceed`, `maximum of`, `minimum of`,
+  `no fewer than`. The contract template's own GOOD example ("under 300ms")
+  passed pre-flight with no fact key; the measurement rule is now enforced
+  for those phrasings.
+- **P01** no longer treats identifiers as measurements: `HTTP 404`, `status
+  code 201`, `port 5432`, `error 500`, `v2.1` need no `facts.json` key.
+- **P09** new-file budget counts source files only (`.md`, `.json` and URLs
+  are not fixture-isolation risk) and URLs are stripped before any path scan.
+- **P05** regex literals may not start after a path character, so
+  `src/4/legacy.ts` is no longer read as the regex `/4/`.
+
+### Fixed — `emit_facts.py` (measured facts)
+- `diff.<file>.net_nonblank` measured the WHOLE FILE, not the change: a
+  5-line edit to a 400-line file reported 400, so every "diff budget" was a
+  file-size cap. It is now `added_nonblank − removed_nonblank` computed from
+  `git diff -U0` hunks (the unit `CONTEXT_ARCHITECTURE.md`'s own example
+  uses: 112 added, 8 removed, net 104). The whole-file count is kept as
+  `file_nonblank`; `added_nonblank` / `removed_nonblank` are also emitted.
+- Untracked new files are included (`git ls-files --others`), flagged
+  `"untracked": true`. A generator's brand-new module was invisible to the
+  diff until staged.
+- `.harness/` bookkeeping (contracts, packs, facts.json itself) is skipped in
+  the diff, as the census already skipped it.
+- `--base` defaults to `sprint_base_ref` in `.harness/progress.json`, then
+  `HEAD` with a note. The v3.2 generator commits its own work, after which a
+  diff against `HEAD` is empty and every `facts:diff.*` citation dangles.
+  `next_action.py`'s activate step, `init_asdr.py`, `templates/progress.json`
+  and the `asdr` / `longhorizon` skills now carry `sprint_base_ref`.
+
+### Changed
+- `make_context_pack.py` recognises the new diff keys in citations.
+- `.claude-plugin/marketplace.json` added: the repo is its own one-plugin
+  marketplace (`asdr`), so Claude Code installs it with
+  `claude plugin marketplace add Mbialuddinkhan/ai-software-delivery-room`
+  + `claude plugin install ai-software-delivery-room@asdr`.
+- README package contents list the v3.2 scripts, `CONTEXT_ARCHITECTURE.md`
+  and the test file; manifest and all skills bumped to 3.2.1.
+
+### Known, unchanged
+- `.claude/` (14 v1.1 agents + slash commands) and the root `CLAUDE.md` are
+  the original v1.1 files and are not part of the plugin. Opening this repo
+  itself in Claude Code loads them as project-level agents.
+
 ## [3.2.0] — context discipline: measured facts, contract pre-flight, context packs
 
 Answers a field review of a real 7-sprint run in which 50 subagent runs consumed

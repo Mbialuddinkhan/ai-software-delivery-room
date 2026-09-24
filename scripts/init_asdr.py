@@ -40,6 +40,9 @@ PROGRESS_SEED = {
     "awaiting": None,
     "negotiation_rounds": 0,
     "last_eval_result": None,
+    # Commit the active sprint started from; emit_facts.py diffs against it
+    # (v3.2.1). Set by the orchestrator when a sprint is activated.
+    "sprint_base_ref": None,
     # Universal-triad rigor dial: paranoid | standard | lite
     #   paranoid = full plan->execute->QA on every stage
     #   standard = full triad on high-stakes stages, light execute->QA elsewhere
