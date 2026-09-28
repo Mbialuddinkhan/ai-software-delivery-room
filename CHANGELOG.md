@@ -69,10 +69,13 @@ or state-file schemas. `tests/test_context_discipline.py` now covers all of it
 - README package contents list the v3.2 scripts, `CONTEXT_ARCHITECTURE.md`
   and the test file; manifest and all skills bumped to 3.2.1.
 
-### Known, unchanged
-- `.claude/` (14 v1.1 agents + slash commands) and the root `CLAUDE.md` are
-  the original v1.1 files and are not part of the plugin. Opening this repo
-  itself in Claude Code loads them as project-level agents.
+### Removed (repo hygiene, after the v3.2.1 tag)
+- `.claude/` (14 v1.1 agents, 6 v1.1 slash commands, 1 v1.1 skill) and the
+  root `.harness/` (v1.1 template copies, three of them stale) — not part of
+  the plugin, and opening this repo in Claude Code loaded the v1.1 agents as
+  project-level agents. The root `CLAUDE.md` (v1.1 charter for a *project*)
+  is replaced by a charter for this *repository*: layout, change rules,
+  release steps. Plugin content is unchanged; the version stays 3.2.1.
 
 ## [3.2.0] — context discipline: measured facts, contract pre-flight, context packs
 
