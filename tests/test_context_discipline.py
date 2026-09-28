@@ -303,6 +303,12 @@ class TestPreflight(unittest.TestCase):
         self.assertBlocks("P01", "### Happy path\n1. The first page returns in under 300ms.")
         self.assertBlocks("P01", "### Happy path\n1. The response arrives within 500ms.")
 
+    def test_p01_over_and_above_are_bounds_only_before_a_number(self):
+        self.assertBlocks("P01", "### Happy path\n1. A cold start takes over 300ms.")
+        self.assertBlocks("P01", "### Happy path\n1. Memory never goes above 512 mb.")
+        self.assertPasses("### Happy path\n1. All traffic goes over HTTPS on port 443 "
+                          "and returns HTTP 200.")
+
     def test_p01_unknown_fact_key(self):
         self.assertBlocks("P01", "### Happy path\n1. facts:diff.src/nope.ts.net_nonblank <= 5")
 

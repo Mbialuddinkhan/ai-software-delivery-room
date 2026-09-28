@@ -46,7 +46,8 @@ NUMERIC = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?)\s*(ms|s|kb|mb|lines?|rows?|read
 COMPARATOR = re.compile(r"(<=|>=|<|>|≤|≥|at most|no more than|at least|exactly|"
                         r"must not exceed|fewer than|greater than|less than|"
                         r"more than|under|within|below|up to|no later than|"
-                        r"not exceed|maximum of|minimum of|no fewer than)", re.I)
+                        r"not exceed|maximum of|minimum of|no fewer than|"
+                        r"over(?=\s*\d)|above(?=\s*\d))", re.I)
 # Numbers that are identifiers, not measurements: HTTP status codes, ports,
 # error codes, version strings. They are never "unmeasurable"; a criterion
 # saying "returns exactly HTTP 404" needs no facts.json key.

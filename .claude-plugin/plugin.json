@@ -1,6 +1,6 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "Multi-agent software delivery for Claude: discovery (brief, roadmap, business case, use cases), architecture, sprint execution with a plan\u2192build\u2192independent-QA triad, product-integrity traceability with drift detection and cross-sprint regression, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs). The state machine lives in scripts, not the model's memory.",
   "author": {
     "name": "Bilal Khan",

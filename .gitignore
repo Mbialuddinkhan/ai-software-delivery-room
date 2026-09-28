@@ -1,20 +1,7 @@
-# Runtime state (populated at runtime, not committed as templates)
-.harness/traces/*.log
-.harness/eval-reports/*.md
-.harness/decisions/*.jsonl
-.harness/risk-reports/*.md
-
-# Keep gitkeep placeholders but not runtime outputs
-!.harness/traces/.gitkeep
-!.harness/eval-reports/.gitkeep
-!.harness/decisions/.gitkeep
-!.harness/risk-reports/.gitkeep
-
-# Project-specific runtime state (created per project, not in template)
+# Runtime state created by scripts/init_asdr.py if someone runs it inside this
+# repo. None of it belongs here — the plugin ships templates, not state.
+.harness/
 sprints.json
-.harness/progress.json
-.harness/contract.md
-.harness/done.md
 
 # Env files
 .env

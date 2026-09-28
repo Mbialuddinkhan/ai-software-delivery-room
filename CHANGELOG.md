@@ -3,6 +3,24 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.2.2] — drop the v1.1 push script; two more bound phrasings
+
+### Removed
+- `scripts/github_push.sh` — the v1.1 one-time "create the GitHub repo" script.
+  `init_asdr.py` copies every file in `scripts/` into each project's
+  `.harness/scripts/`, so it was landing in every project that used the
+  plugin. The repo exists; the script had no remaining purpose.
+
+### Changed
+- `preflight_contract.py` — `over <n>` and `above <n>` count as bounds
+  (`over 300ms` now needs a `facts:` key). The lookahead requires a digit, so
+  "over HTTPS on port 443" is untouched. One test added (23 total).
+- `.gitignore` — reduced to `.harness/` + `sprints.json` (runtime state if
+  `init_asdr.py` is ever run inside this repo) plus env/Python/OS noise; the
+  v1.1 `.harness/contract.md` / `.gitkeep` entries referred to files that no
+  longer exist here.
+- Manifest, marketplace entry and all skills at 3.2.2.
+
 ## [3.2.1] — context-discipline fixes found by testing the v3.2 scripts
 
 A test pass over the five v3.2 scripts (fake repo with git history, tests, a

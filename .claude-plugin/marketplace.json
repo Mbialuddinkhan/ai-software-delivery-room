@@ -10,7 +10,7 @@
     {
       "name": "ai-software-delivery-room",
       "description": "Multi-agent software delivery for Claude: discovery, architecture, sprint execution with a plan→build→independent-QA triad, product-integrity traceability, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs).",
-      "version": "3.2.1",
+      "version": "3.2.2",
       "author": {
         "name": "Bilal Khan",
         "email": "mbilaluddinkhan@gmail.com"

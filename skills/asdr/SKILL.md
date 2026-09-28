@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.2.1"
+  version: "3.2.2"
 ---
 
 # ASDR — Full Workflow Orchestrator
