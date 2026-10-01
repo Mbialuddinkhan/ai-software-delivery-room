@@ -83,6 +83,27 @@ Example:
   a documented judgement rather than a silent gap.
 - Cover at least: contradictions, missing requirements, over/underengineering,
   security, UX, testing gaps, business-model weaknesses.
+- Mandatory checks when `docs/04-agent-design.md` is in the input set
+  (architecture critique). Each of these is a finding, not a note:
+  - §13.1 missing, or any agent from §1 without a tier row → High.
+  - A T3 tier with no "yes" in column 1 or 3, or a "yes" with no requirement
+    ID → High (unjustified sandbox = cost and ops burden with no forcing
+    requirement).
+  - A "yes" in column 1 (untrusted code) at tier T1 → Critical.
+  - Any agent whose §13.2 Gateway block has no allowlist, or a wildcard
+    host without an accepted-risk cross-reference to docs/05 → High.
+  - A secret VALUE anywhere in docs/04 → Critical.
+  - §13.3 with no rollback trigger, or a T3 cost line with neither a
+    `facts:` key nor an explicit "estimate" marker → Medium.
+- Mandatory checks when `docs/03b-design-system.md` is in the input set:
+  - The pattern/style recommendation does not match the product type and
+    audience stated in docs/01-product-brief.md (quote both) → High. This
+    doc may have been machine-drafted by keyword matching; fit is the thing
+    to falsify.
+  - Any color pair used for text fails 4.5:1 (cite the two hex values) →
+    High.
+  - The pre-delivery checklist is absent or not phrased as testable
+    assertions → Medium (it becomes UI sprint contract criteria).
 - No approval language ("overall solid", "looks good") — verdicts belong to
   the judge. You only produce findings and the summary block.
 

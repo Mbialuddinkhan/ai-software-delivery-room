@@ -1,23 +1,65 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "asdr",
-  "description": "AI Software Delivery Room — multi-agent SDLC harness for Claude Code and Cowork",
+  "description": "AI Software Delivery Room \u2014 17-agent SDLC harness with independent QA, plus the companion plugins it uses (UI UX Pro Max, Ponytail).",
   "owner": {
     "name": "Bilal Khan",
-    "email": "mbilaluddinkhan@gmail.com"
+    "email": "mbilaluddinkhan@gmail.com",
+    "url": "https://github.com/Mbialuddinkhan"
   },
   "plugins": [
     {
       "name": "ai-software-delivery-room",
-      "description": "Multi-agent software delivery for Claude: discovery, architecture, sprint execution with a plan→build→independent-QA triad, product-integrity traceability, live Cypress E2E, git workflow, and context discipline (measured facts, contract pre-flight, budgeted context packs).",
-      "version": "3.2.2",
-      "author": {
-        "name": "Bilal Khan",
-        "email": "mbilaluddinkhan@gmail.com"
-      },
+      "displayName": "AI Software Delivery Room",
+      "source": "./",
+      "description": "Idea \u2192 brief \u2192 architecture \u2192 sprint loop with contract-first builds and evaluator-only sign-off. Installs UI UX Pro Max automatically for the design-system stage.",
       "category": "development",
-      "keywords": ["sdlc", "multi-agent", "software-delivery", "long-horizon", "harness", "sprints", "qa"],
-      "source": "./"
+      "tags": [
+        "sdlc",
+        "multi-agent",
+        "harness",
+        "sprints",
+        "qa"
+      ],
+      "dependencies": [
+        "ui-ux-pro-max"
+      ]
+    },
+    {
+      "name": "ui-ux-pro-max",
+      "displayName": "UI UX Pro Max (companion)",
+      "source": {
+        "source": "github",
+        "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
+        "sha": "de5f12b400775997d213524ef02a7c7d2746806f"
+      },
+      "description": "Offline design-system generator (styles, palettes with contrast pairs, font pairings, checklist). Used by ASDR's design-system stage. Upstream: nextlevelbuilder/ui-ux-pro-max-skill, MIT.",
+      "version": "2.13.0",
+      "category": "design",
+      "tags": [
+        "ui",
+        "ux",
+        "design-system",
+        "companion"
+      ]
+    },
+    {
+      "name": "ponytail",
+      "displayName": "Ponytail (optional companion)",
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail",
+        "sha": "e3ba2aa6f1e6f0bc4d69eb09c9f0d0a93af56156"
+      },
+      "description": "YAGNI ladder via hooks. OPTIONAL: ASDR's generator already carries the ladder (templates/build-ladder.md). Install only if you want it outside ASDR, and set PONYTAIL_SUBAGENT_MATCHER='^generator$' (docs/COMPANIONS.md). Upstream: DietrichGebert/ponytail, MIT.",
+      "version": "4.10.0",
+      "category": "productivity",
+      "tags": [
+        "yagni",
+        "companion",
+        "optional"
+      ],
+      "defaultEnabled": false
     }
   ]
 }

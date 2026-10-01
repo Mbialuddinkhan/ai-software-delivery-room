@@ -2,6 +2,7 @@
 # repo. None of it belongs here — the plugin ships templates, not state.
 .harness/
 sprints.json
+deploy/agents/
 
 # Env files
 .env

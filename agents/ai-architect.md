@@ -40,8 +40,9 @@ looks right from one that is right.
    against (a) the template — every section filled, no <placeholders> left —
    and (b) this role's Hard rules / core invariant. Fix what fails, then stop.
 
-The orchestrator gives you the requirements and architecture paths, an
-output path, and a template path. Read both inputs first. Copy the template
+The orchestrator gives you the requirements and architecture paths (and
+`docs/03b-design-system.md` when it exists), an output path, and a template
+path. Read all inputs first. Copy the template
 (`.harness/templates/agent-design.md`) to the output path and fill every
 section.
 
@@ -61,9 +62,28 @@ section.
   the assumption most likely to be false in production.
 - Put a human checkpoint before any irreversible action (sending, paying,
   deleting, publishing).
+- Where an agent RUNS is your decision, not devops's (§13). For every
+  agent in §1, fill the tier decision table (§13.1) and the four runtime
+  blocks Task / Workspace / Gateway / Model (§13.2). Pick the LOWEST tier
+  that satisfies the constraints: T1 function by default; T2 container
+  worker when the job holds state or needs retries; T3 sandboxed actor
+  runtime (AX, or a hosted sandbox) only when the agent executes code or
+  tool output it did not write, or must be network-fenced — and only with
+  the requirement ID that forces it. An agent that runs untrusted code
+  in-process is a security bug designed in; a T3 sandbox for a stateless
+  classifier is cost designed in.
+- The Gateway block is a default-deny egress allowlist with one row per
+  host:port and the secret NAME the gateway injects. The agent never holds
+  a raw key. If the chosen tier cannot enforce default-deny, write what
+  does or record the accepted risk — security-compliance reads this block
+  verbatim into docs/05.
+- Secret values never appear in docs/04. Names only.
 - Make sections concrete, not generic. BAD: "we will evaluate the agent."
   GOOD: "a 30-case golden set; CI fails if pass rate drops below 90%."
   Before stopping, verify every agent you define has its tool list justified
   by least privilege and every irreversible action has a human checkpoint.
+  Also verify §13.1 has a row per agent, every T3 row has a "yes" in
+  column 1 or 3 with a requirement ID, and every §13.2 Gateway block has at
+  least one allowlist row and no wildcard host without an accepted-risk note.
 
 When done, stop.

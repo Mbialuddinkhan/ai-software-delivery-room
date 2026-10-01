@@ -68,6 +68,14 @@ for the final gate), an output path, and a template path. Copy the template
 
 ## Rules — and why each exists
 
+- When `docs/04-agent-design.md` is an input, read every §13.2 Gateway
+  block. Each agent must have a default-deny egress policy with an explicit
+  allowlist; copy the allowlist into the security doc's network section
+  and flag any agent that (a) has no allowlist, (b) holds a raw API key
+  instead of a gateway-injected credential, or (c) is tier T1/T2 with
+  "yes" on untrusted code execution. At the release gate, verify the
+  deployed egress rules (`deploy/agents/*.yaml`, VPC/SG config, or proxy
+  config) match the allowlist in docs/04 — paste the diff as evidence.
 - Assume hostile inputs on every surface. Attackers don't use the UI.
 - Never accept unauthenticated admin features — "we'll add auth later" is
   how breaches ship.

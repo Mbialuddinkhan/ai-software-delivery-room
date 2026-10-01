@@ -1,0 +1,87 @@
+# Agent runtime reference spec (Tier 3 — sandboxed actor runtime)
+#
+# Save as: deploy/agents/<agent-name>.yaml · Written by: devops (from
+# docs/04-agent-design.md §13.2). One file per T3 agent.
+#
+# Schema: AX (github.com/google/ax) v1alpha1 — the four primitives Task /
+# Workspace / Gateway / Model. AX is alpha and needs Kubernetes + Agent
+# Substrate; if the chosen T3 runtime is a hosted sandbox (E2B / Modal /
+# Daytona class) keep the SAME four blocks and translate them in a sibling
+# file — the blocks are the design contract, the vendor is a detail.
+#
+# Everything in <angle brackets> comes from docs/04 §13.2. Never put a
+# secret VALUE here; only secret NAMES.
+
+apiVersion: ax.io/v1alpha1
+kind: Model
+metadata:
+  name: <agent-name>-model
+spec:
+  provider: <anthropic|openai|vertex|…>
+  model: <model-id@pinned-version>           # 04 §13.2 Model → Model ID
+  parameters:
+    temperature: <0.0-1.0>
+    max_tokens: <n>
+  fallback:
+    model: <fallback-model-id>               # 04 §9 / §13.2 Model → Fallback
+  secretRef:
+    name: <secret-store-name>                # NAME only — injected by Gateway
+---
+apiVersion: ax.io/v1alpha1
+kind: Gateway
+metadata:
+  name: <agent-name>-gateway
+spec:
+  defaultPolicy: deny                        # 04 §13.2 Gateway → default deny
+  allow:                                     # one entry per allowlist row
+    - host: <api.model.example>
+      port: 443
+      purpose: model API
+      injectCredential: <secret-store-name>  # gateway adds the key; agent never holds it
+    - host: <vector-db.internal>
+      port: 5432
+      purpose: <retrieval store>
+      injectCredential: <secret-name>
+  # No wildcard hosts. If a wildcard is genuinely required, the reason and
+  # the requirement ID go in docs/05-security.md as an accepted risk.
+---
+apiVersion: ax.io/v1alpha1
+kind: Workspace
+metadata:
+  name: <agent-name>-workspace
+spec:
+  git:                                       # 04 §13.2 Workspace → repos
+    - repo: <https://…/repo.git>
+      branch: <branch>
+  mcpServers:                                # 04 §13.2 Workspace → tool servers
+    - name: <server-name>
+      endpoint: <https://…>
+      auth: <secret-name>
+  skills:
+    - <path-or-ref>
+  # Prefer a deterministic setup script. A plain-English `goal` is allowed
+  # ONLY with a verification step that fails the task if the env is wrong.
+  setup:
+    script: <./scripts/setup-workspace.sh>
+    verify: <command that exits non-zero if the environment is incomplete>
+---
+apiVersion: ax.io/v1alpha1
+kind: Task
+metadata:
+  name: <agent-name>
+spec:
+  workspaces:
+    - name: <agent-name>-workspace
+  gateway: <agent-name>-gateway
+  model: <agent-name>-model
+  resources:                                 # 04 §13.2 Task → ceilings
+    cpu: <e.g. "1">
+    memory: <e.g. "2Gi">
+  timeoutSeconds: <n>                        # 04 §13.2 Task → wall clock
+  suspend:
+    enabled: <true|false>                    # 04 §13.2 Task → suspend/resume
+    on: [model-wait, tool-wait, human-approval]
+  persist:                                   # 04 §13.2 Task → disposal
+    - path: /workspace/<state-dir>
+      to: <object-store-or-volume>
+  debug: false                               # true only outside production

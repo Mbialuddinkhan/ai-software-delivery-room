@@ -35,6 +35,9 @@ State lives in exactly two files:
 - Run tests: `<command>`
 - Lint: `<command>`
 - Conventions: <filled after architecture approval>
+- Companions: <filled in Phase 0 from .harness/companions.json>
+- Design system: <docs/03b-design-system.md, or "no UI surface">
+- Agent runtime tiers: <agent → T1/T2/T3, from docs/04 §13.1, or "no AI surface">
 
 ## Hard rules
 

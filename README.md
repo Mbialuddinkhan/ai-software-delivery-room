@@ -1,10 +1,24 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.2.2
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.3.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
+
+**What's new in v3.3 — runtime tiers, a design-system stage, companions,
+update checks.** The ai-architect now decides *where each agent runs* (T1
+function / T2 container worker / T3 sandboxed actor runtime) with four runtime
+blocks per agent — Task, Workspace, Gateway, Model — that devops and security
+build from; the critic rejects an unjustified sandbox or an agent with no
+egress allowlist. Products with a UI get a **design-system stage**
+(`docs/03b-design-system.md`) whose checklist becomes UI sprint criteria,
+drafted by **UI UX Pro Max** — which now installs with ASDR as a plugin
+dependency. The generator carries a built-in YAGNI **build ladder**
+(adapted from Ponytail, MIT), so that plugin is optional. A once-a-day
+**update check** tells you when ASDR or a companion has a newer version and
+what it adds; nothing installs without a yes. See `docs/COMPANIONS.md` and
+`docs/PUBLISHING.md`.
 
 **What's new in v3.2 — context discipline.** Agents stop re-deriving what a
 command already knows. `emit_facts.py` writes `.harness/facts.json` and **no
@@ -109,8 +123,10 @@ claude plugin marketplace add Mbialuddinkhan/ai-software-delivery-room   # or a 
 claude plugin install ai-software-delivery-room@asdr
 ```
 
-Update later with `claude plugin marketplace update asdr` followed by
-`claude plugin update ai-software-delivery-room@asdr`.
+The install also pulls in `ui-ux-pro-max` (a declared dependency, pinned by
+commit). Update later with `claude plugin marketplace update asdr` followed by
+`claude plugin update ai-software-delivery-room@asdr` — a SessionStart hook
+reminds you once a day when a newer version exists.
 
 **Cowork.** Zip the repo (without `.git`) as `ai-software-delivery-room.plugin`
 and add it in the Claude desktop app, or accept the `.plugin` package when
@@ -220,9 +236,9 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.2.2)
+.claude-plugin/plugin.json   ← plugin manifest (v3.3.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.2.x change log
+CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.3 change log
 agents/                      ← 17 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa)
 skills/                      ← 6 orchestrator skills (asdr, discover, architect,
@@ -242,14 +258,22 @@ scripts/
   build_graph.py             ← dependency graph + blast radius + fixture risk (v3.2)
   build_digest.py            ← one-page machine-generated state digest (v3.2)
   make_context_pack.py       ← budgeted per-task context packs, exit 1 over budget (v3.2)
+  detect_companions.py       ← Phase 0: UI UX Pro Max / Ponytail / Graphify / RTK detection (v3.3)
+  uupm_design_system.py      ← drafts docs/03b via UI UX Pro Max when installed (v3.3)
+  check_updates.py           ← installed vs upstream versions + changelog excerpt (v3.3)
+  upstream.json              ← where check_updates.py looks for each item's latest version
+hooks/hooks.json             ← SessionStart update notice, once a day, silent when current (v3.3)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
-                               integrity-report, git-workflow, e2e-testing, … (v3.1)
+                               integrity-report, git-workflow, e2e-testing (v3.1),
+                               design-system, agent-runtime.yaml, build-ladder (v3.3)
 docs/
   AI_SOFTWARE_DELIVERY_ROOM_OPERATING_MANUAL.md
   TRIAD_ARCHITECTURE.md      ← the v3 triad + rigor dial design
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
+  COMPANIONS.md              ← companion install/scoping rules (v3.3)
+  PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
 tests/
   test_context_discipline.py ← unit tests for the v3.2 scripts (python3 -m unittest)
 ```
