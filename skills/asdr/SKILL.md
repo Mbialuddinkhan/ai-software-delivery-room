@@ -54,8 +54,8 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
      on: offer it only at Phase 0 (fresh or resumed), never inside Phase 3.
    - `skipped` entries with "not installed" are fine (optional companions).
      "upstream unreachable" means offline — say so in one line and move on.
-   The SessionStart hook runs the same check once a day and only prints a
-   one-line notice; this step is where the user actually decides.
+   This step is the only place the check runs — ASDR makes no network
+   call at session start — and the only place the user decides.
 
 ### Resume protocol
 

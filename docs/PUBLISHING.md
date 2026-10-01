@@ -38,12 +38,13 @@ Team rollout without per-user steps — commit to a project's
   `ai-software-delivery-room` (source `./`, `dependencies: ["ui-ux-pro-max"]`),
   `ui-ux-pro-max` (github source pinned by `sha`), `ponytail` (pinned,
   `defaultEnabled: false`).
-- `.claude-plugin/plugin.json` — `dependencies`, `hooks`, `license`,
-  `repository` added. `version` lives ONLY here; the marketplace entry for
+- `.claude-plugin/plugin.json` — `dependencies`, `license`, `repository`
+  added. `version` lives ONLY here; the marketplace entry for
   ASDR deliberately has no `version` (Claude Code silently prefers
   plugin.json, so a stale duplicate would mask releases).
-- `hooks/hooks.json` — SessionStart update notice (cached 24h, silent when
-  current, off under `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`).
+- No hooks. The update check runs only inside `/asdr` (Phase 0 step 5);
+  `scripts/check_updates.py --hook` is available if you ever want a
+  SessionStart notice, but ASDR ships without one.
 - Keep executables under `scripts/`, never a top-level `bin/` (claude.ai
   org distribution rejects it).
 
@@ -55,8 +56,8 @@ Team rollout without per-user steps — commit to a project's
    ~12 lines of that section are what `check_updates.py` shows users as
    "what it adds", so lead with benefits, not internals.
 3. Bump `metadata.version` in every `skills/*/SKILL.md` to match.
-4. Validate: `claude plugin validate .` (checks marketplace.json, the
-   local plugin's plugin.json, hooks.json). Then
+4. Validate: `claude plugin validate .` (checks marketplace.json and the
+   local plugin's plugin.json). Then
    `claude plugin validate ./skills` and `./agents` for frontmatter.
 5. Test locally before pushing:
    ```text
@@ -72,7 +73,7 @@ Team rollout without per-user steps — commit to a project's
    tree is dirty). Also fine: `git tag ai-software-delivery-room--v3.3.0 && git push --tags`.
 7. Push `main`. Users see the update on their next `/plugin marketplace
    update asdr` or, if they enabled auto-update for the marketplace in
-   `/plugin`, automatically. The SessionStart hook tells them either way.
+   `/plugin`, automatically. Their next `/asdr` run shows what the update adds.
 
 ## Re-pinning a companion
 

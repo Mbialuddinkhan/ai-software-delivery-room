@@ -3,7 +3,8 @@
 
 Usage:
   python3 check_updates.py [--plugin-root DIR] [--force] [--json]
-  python3 check_updates.py --hook --plugin-root "$CLAUDE_PLUGIN_ROOT"   # SessionStart
+  python3 check_updates.py --hook --plugin-root "$CLAUDE_PLUGIN_ROOT"   # optional
+                                       # SessionStart notice; ASDR does not wire it
 
 What it does:
   1. Reads scripts/upstream.json (next to this file) for where each item's

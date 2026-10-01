@@ -41,9 +41,12 @@ Baseline is the shipped plugin at v2.0.0.
   default. `plugin.json` gains `dependencies`, `hooks`, `license`, `repository`.
 - `scripts/check_updates.py` + `scripts/upstream.json`: compares installed
   vs upstream versions for ASDR, UI UX Pro Max, Ponytail and Graphify,
-  pulls each changelog's top section as "what it adds", and reports. Runs
-  as a once-a-day SessionStart notice (`hooks/hooks.json`) and as Phase 0
-  step 5, where the orchestrator asks per item before running the update.
+  pulls each changelog's top section as "what it adds", and reports. It
+  runs only as Phase 0 step 5 of `/asdr`, where the orchestrator asks per
+  item before running the update. (The patch also shipped a once-a-day
+  SessionStart hook; it is deliberately not included — ASDR makes no
+  network call outside a run. `check_updates.py --hook` still exists for
+  anyone who wants to wire their own.)
 - `templates/build-ladder.md`: the generator's BUILD-mode ladder, adapted
   from Ponytail (MIT), so the plugin is no longer needed for the generator.
 - `docs/PUBLISHING.md`: marketplace layout, release checklist, tagging,

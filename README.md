@@ -16,8 +16,9 @@ egress allowlist. Products with a UI get a **design-system stage**
 drafted by **UI UX Pro Max** — which now installs with ASDR as a plugin
 dependency. The generator carries a built-in YAGNI **build ladder**
 (adapted from Ponytail, MIT), so that plugin is optional. A once-a-day
-**update check** tells you when ASDR or a companion has a newer version and
-what it adds; nothing installs without a yes. See `docs/COMPANIONS.md` and
+**update check** at the start of every `/asdr` run tells you when ASDR or a
+companion has a newer version and what it adds; nothing installs without a
+yes, and nothing runs outside a run. See `docs/COMPANIONS.md` and
 `docs/PUBLISHING.md`.
 
 **What's new in v3.2 — context discipline.** Agents stop re-deriving what a
@@ -125,8 +126,9 @@ claude plugin install ai-software-delivery-room@asdr
 
 The install also pulls in `ui-ux-pro-max` (a declared dependency, pinned by
 commit). Update later with `claude plugin marketplace update asdr` followed by
-`claude plugin update ai-software-delivery-room@asdr` — a SessionStart hook
-reminds you once a day when a newer version exists.
+`claude plugin update ai-software-delivery-room@asdr`. Each `/asdr` run checks
+for newer versions of ASDR and its companions at Phase 0 and asks before
+installing anything; there is no session-start hook or background traffic.
 
 **Cowork.** Zip the repo (without `.git`) as `ai-software-delivery-room.plugin`
 and add it in the Claude desktop app, or accept the `.plugin` package when
@@ -262,7 +264,6 @@ scripts/
   uupm_design_system.py      ← drafts docs/03b via UI UX Pro Max when installed (v3.3)
   check_updates.py           ← installed vs upstream versions + changelog excerpt (v3.3)
   upstream.json              ← where check_updates.py looks for each item's latest version
-hooks/hooks.json             ← SessionStart update notice, once a day, silent when current (v3.3)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
