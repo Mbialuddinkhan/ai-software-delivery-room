@@ -124,9 +124,12 @@ claude plugin marketplace add Mbialuddinkhan/ai-software-delivery-room   # or a 
 claude plugin install ai-software-delivery-room@asdr
 ```
 
-The install also pulls in `ui-ux-pro-max` (a declared dependency, pinned by
-commit). Update later with `claude plugin marketplace update asdr` followed by
-`claude plugin update ai-software-delivery-room@asdr`. Each `/asdr` run checks
+A fresh install also pulls in `ui-ux-pro-max` (a declared dependency, pinned
+by commit). Update later with `claude plugin marketplace update asdr` followed
+by `claude plugin update ai-software-delivery-room@asdr`. **Upgrading from
+3.2.x or earlier:** `plugin update` does not install newly declared
+dependencies, so ASDR shows "failed to load" until you also run
+`claude plugin install ui-ux-pro-max@asdr` once. Each `/asdr` run checks
 for newer versions of ASDR and its companions at Phase 0 and asks before
 installing anything; there is no session-start hook or background traffic.
 

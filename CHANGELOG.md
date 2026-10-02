@@ -56,6 +56,11 @@ Baseline is the shipped plugin at v2.0.0.
 - RTK: rewrites the evaluator's evidence commands; detected and warned only.
 - Vendoring any companion: all MIT, all fast-moving; detection over forks.
 
+### Upgrading from 3.2.x
+- `claude plugin update ai-software-delivery-room@asdr` leaves the plugin
+  "failed to load" until the new dependency is installed once:
+  `claude plugin install ui-ux-pro-max@asdr`. Fresh installs are unaffected.
+
 ### Merge note
 - Built against 3.2.0 and merged onto 3.2.2: every 3.2.1/3.2.2 fix is kept.
   The v1.1 `.claude/` mirror copies the patch re-synced were removed in

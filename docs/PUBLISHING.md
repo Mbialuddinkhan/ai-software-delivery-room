@@ -15,7 +15,12 @@ one `install`; the install pulls UI UX Pro Max in automatically.
 ```
 
 The install output ends with the dependencies it added; expect
-`ui-ux-pro-max` there. Ponytail is listed in the same marketplace but
+`ui-ux-pro-max` there. Note that `claude plugin update` does NOT install a
+dependency that a new version declares for the first time — an existing
+3.2.x user who updates sees "failed to load" with the error
+`Dependency "ui-ux-pro-max@asdr" is not installed` until they run
+`claude plugin install ui-ux-pro-max@asdr` once (observed on Claude Code
+2.1.178). Say so in the release notes of any version that adds a dependency. Ponytail is listed in the same marketplace but
 disabled by default: `/plugin install ponytail@asdr` if wanted, plus the
 `PONYTAIL_SUBAGENT_MATCHER` setting from `docs/COMPANIONS.md`.
 
