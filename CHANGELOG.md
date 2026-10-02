@@ -3,6 +3,16 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.3.1] — manifest description within Cowork's 500-character limit
+
+### Fixed
+- `plugin.json` `description` was 584 characters. Claude Code's validator
+  accepts that; Cowork's does not ("Plugin description must be at most 500
+  characters") and refused the 3.3.0 package. Now 485 characters, same
+  content. `tests/test_manifests.py` enforces the cap on `plugin.json` and
+  every `marketplace.json` entry, and checks skill versions match the
+  manifest and that no hooks ship. No functional change.
+
 ## [3.3.0] — agent runtime tiers, design-system stage, companion detection
 
 ### Added

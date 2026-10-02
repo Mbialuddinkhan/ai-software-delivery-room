@@ -52,6 +52,10 @@ Team rollout without per-user steps — commit to a project's
   SessionStart notice, but ASDR ships without one.
 - Keep executables under `scripts/`, never a top-level `bin/` (claude.ai
   org distribution rejects it).
+- Keep every `description` (plugin.json and each marketplace entry) at or
+  under 500 characters: Cowork's package validator rejects longer ones
+  ("Plugin description must be at most 500 characters"); Claude Code's
+  validator does not catch it.
 
 ## Release checklist (every version)
 
