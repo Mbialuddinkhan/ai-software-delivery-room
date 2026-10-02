@@ -31,11 +31,16 @@ class TestDetectCompanions(unittest.TestCase):
     def test_writes_json_and_exits_zero_when_nothing_installed(self):
         d = Path(tempfile.mkdtemp())
         try:
-            code, out, err = run([SCRIPTS / "detect_companions.py"], d, {"HOME": str(d)})
+            # Empty PATH hides any `graphify` CLI on the machine; the Python
+            # module check uses the test interpreter and is reported, not asserted.
+            code, out, err = run([SCRIPTS / "detect_companions.py"], d,
+                                 {"HOME": str(d), "PATH": str(d)})
             self.assertEqual(code, 0, err)
             data = json.loads((d / ".harness/companions.json").read_text())
-            for k in ("uupm", "ponytail", "graphify", "rtk"):
+            for k in ("uupm", "ponytail", "rtk"):
                 self.assertFalse(data[k]["installed"], k)
+            self.assertIsNone(data["graphify"]["cli"])
+            self.assertIsInstance(data["graphify"]["installed"], bool)
             self.assertEqual(data["warnings"], [])
         finally:
             shutil.rmtree(d)
