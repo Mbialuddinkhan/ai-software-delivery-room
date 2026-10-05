@@ -1,7 +1,7 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.3.2",
-  "description": "Multi-agent software delivery for Claude: discovery (brief, roadmap, business case, use cases), architecture and design-system stages, per-agent runtime tiers (T1/T2/T3, Task/Workspace/Gateway/Model), sprint execution with a plan→build→independent-QA triad, traceability with drift detection, Cypress E2E, context discipline (measured facts, contract pre-flight, budgeted packs), companion detection and in-run update checks. The state machine lives in scripts, not the model's memory.",
+  "version": "3.4.0",
+  "description": "Multi-agent software delivery for Claude: discovery with features, end-to-end process flows and test cases; architecture and design-system stages; sprints sliced through whole user journeys with a plan→build→independent-QA triad; Playwright, Cypress and Selenium tests you can watch live; private test reports; user manuals with real screenshots per persona and level (HTML + PDF); traceability and a journey gate before release. The state machine lives in scripts, not the model's memory.",
   "author": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com"

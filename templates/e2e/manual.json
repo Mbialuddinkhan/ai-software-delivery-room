@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "product": "<Product name>",
+  "version": "<set by the release, or pass --version>",
+  "intro": "<Two sentences: what the product is and who uses it.>",
+  "steps": {
+    "<tour>/<step-id>": {
+      "text": "<What the user does here and what they will see. Use **bold** for button and field names.>",
+      "levels": { "beginner": "<Simpler wording for beginners, optional>" }
+    }
+  },
+  "levels": [
+    { "id": "<persona>-getting-started", "kind": "persona", "persona": "<Persona name>", "part": "Getting started",
+      "audience": "<who this is for>", "sections": [ { "title": "<task>", "steps": ["<tour>/*"] } ] },
+    { "id": "<persona>-advanced", "kind": "persona", "persona": "<Persona name>", "part": "Advanced",
+      "audience": "<who this is for>", "sections": [ { "title": "<task>", "steps": ["<tour>/<first>..<last>"] } ] },
+    { "id": "beginner", "kind": "tier", "title": "Beginner", "audience": "<never used it>", "sections": [] },
+    { "id": "everyday", "kind": "tier", "title": "Everyday user", "audience": "<uses it most days>", "sections": [] },
+    { "id": "power", "kind": "tier", "title": "Power user", "audience": "<wants shortcuts and data out>", "sections": [] },
+    { "id": "administrator", "kind": "tier", "title": "Administrator", "audience": "<sets it up for others>", "sections": [] }
+  ]
+}

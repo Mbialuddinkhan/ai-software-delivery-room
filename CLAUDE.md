@@ -10,12 +10,14 @@ into other projects. Keep that distinction when editing.
 |---|---|
 | `.claude-plugin/plugin.json` | Plugin manifest (name, version) — the version users see |
 | `.claude-plugin/marketplace.json` | The `asdr` marketplace: ASDR (source `./`, no `version` — `plugin.json` is the single source) plus SHA-pinned companions `ui-ux-pro-max` (dependency) and `ponytail` (off by default) |
-| `agents/*.md` | The 17 agent definitions (frontmatter `name` must equal the filename) |
-| `skills/*/SKILL.md` | The 6 orchestrator skills; `metadata.version` tracks the plugin version |
+| `agents/*.md` | The 18 agent definitions (frontmatter `name` must equal the filename) |
+| `skills/*/SKILL.md` | The 6 orchestrator skills; `metadata.version` tracks the plugin version. `skills/asdr/references/` holds the file map, stage table, companion rules and the testing/manuals guide the asdr skill reads on demand |
 | `scripts/*.py` | The state machine, validators, context-discipline and companion/update scripts; copied into each project's `.harness/scripts/` by `init_asdr.py`. No hooks: ASDR makes no network call outside a run |
-| `templates/` | Fill-in templates; copied into each project's `.harness/templates/` |
+| `templates/` | Fill-in templates (and folders such as `templates/e2e/{playwright,cypress,selenium}`); copied into each project's `.harness/templates/` |
+| `examples/sample-app/` | TaskBoard, the reference project for v3.4: product docs 02–02e, `[TC-xx]` tests in all three frameworks, tours, `manual.json`. CI runs it end to end; its copies of the e2e templates must stay identical (a test checks) |
+| `.github/workflows/ci.yml` | Release gate: unit tests, validate, both install paths, sample e2e, `.plugin` asset on a version tag |
 | `docs/` | Operating manual, triad design, context-architecture review, `COMPANIONS.md`, `PUBLISHING.md` |
-| `tests/` | Unit tests for the scripts — `python3 -m unittest discover tests` |
+| `tests/` | Unit tests for the scripts — `python3 -m pytest -q tests` (or `python3 -m unittest discover tests`) |
 
 Runtime state (`.harness/`, `sprints.json`, `CLAUDE.md` inside a target
 project) is created by `scripts/init_asdr.py`; it does not live in this repo.
@@ -51,4 +53,8 @@ project) is created by `scripts/init_asdr.py`; it does not live in this repo.
 - Claude Code users update with `claude plugin marketplace update asdr` then
   `claude plugin update ai-software-delivery-room@asdr`.
 - Cowork takes a `.plugin` zip of: `.claude-plugin agents skills scripts
-  templates docs tests README.md CHANGELOG.md .gitignore` (no `.git`).
+  templates docs tests README.md CHANGELOG.md .gitignore` (no `.git`, no
+  `examples/`). CI builds exactly that file on the version tag and attaches it
+  to the GitHub release.
+- Never submit ASDR to a public plugin marketplace or directory without the
+  owner's explicit go-ahead.

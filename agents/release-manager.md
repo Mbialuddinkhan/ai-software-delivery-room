@@ -52,6 +52,22 @@ Produce (paths are canonical; the orchestrator may override):
 2. `docs/10-release-notes.md` — user-facing features and fixes, no internals
 3. `docs/10-release-checklist.md` — final pre-deploy verification
 4. `docs/10-post-release-monitoring.md` — what to watch in the first 48h
+5. The release test report and user manuals, from one fresh run on the
+   release commit (commit everything else first, so the commit is final):
+   1. `python3 .harness/scripts/run_tests.py --label v<version>` — must pass.
+   2. `python3 .harness/scripts/validate_product_map.py --gate` — every Must
+      flow proven end to end on this run.
+   3. `python3 .harness/scripts/publish_test_report.py --label v<version>`
+      → `docs/test-reports/v<version>/` (and the private single-file copy
+      it prints, which the orchestrator publishes).
+   4. `python3 .harness/scripts/build_manual.py --version <version>
+      --artifact .harness/manual-artifact.html` → HTML + PDF manuals in
+      `docs/manuals/<version>/` for every persona and experience tier
+      (the documentation agent wrote `docs/manuals/manual.json`). Fix
+      nothing by hand: if a step is stale or unexplained, the build says
+      which, and the owning agent fixes it.
+   Link both from the release notes ("How to use this release" → manuals,
+   "Test evidence" → report).
 
 ## Release checklist rules
 
@@ -61,6 +77,10 @@ each gets a real check, not an assumed tick:
 - [ ] All sprints show `done` in sprints.json
 - [ ] Latest eval report per sprint has verdict: pass
 - [ ] CI pipeline passes
+- [ ] `run_tests.py` passed on the release commit (`facts:test_runs.status == passed`, `facts:test_runs.commit_matches_head == true`)
+- [ ] Every Must process flow is proven end to end (`validate_product_map.py --gate` exit 0)
+- [ ] Test report published to `docs/test-reports/v<version>/`
+- [ ] User manuals built for every persona and tier in `docs/manuals/<version>/` (HTML + PDF)
 - [ ] Security review passed (docs/09-security-review-final.md, no unresolved critical/high)
 - [ ] Risk classification is MVP-ready or Production-ready
 - [ ] Docker build and compose succeed locally

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "product": "TaskBoard",
+  "app": {
+    "start_cmd": "python3 -m http.server 4173 --directory app",
+    "url": "http://localhost:4173",
+    "ready_timeout_s": 60
+  },
+  "suites": [
+    {
+      "name": "playwright",
+      "framework": "playwright",
+      "cmd": "npx playwright test",
+      "live_cmd": "npx playwright test --headed",
+      "tours_cmd": "npx playwright test --project=manual",
+      "junit": ["junit/playwright.xml"],
+      "html_report": "playwright/html/index.html"
+    },
+    {
+      "name": "cypress",
+      "framework": "cypress",
+      "cmd": "npx cypress run",
+      "live_cmd": "npx cypress run --headed",
+      "tours_cmd": "npx cypress run --spec 'cypress/e2e/**/*.tour.cy.js'",
+      "junit": ["junit/cypress-*.xml"]
+    },
+    {
+      "name": "selenium",
+      "framework": "selenium",
+      "cmd": "python3 -m pytest e2e/selenium -c e2e/selenium/pytest.ini --rootdir e2e/selenium -q --junitxml={results}/junit/selenium.xml",
+      "tours_cmd": "python3 -m pytest e2e/selenium -c e2e/selenium/pytest.ini --rootdir e2e/selenium -q -m tour --junitxml={results}/junit/selenium.xml",
+      "junit": ["junit/selenium.xml"]
+    }
+  ]
+}

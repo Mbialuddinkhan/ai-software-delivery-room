@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # Long Horizon — Execution Harness Orchestrator
@@ -77,7 +77,11 @@ a resumed run: report phase/sprint/attempt to the user, run
 
 1. Set progress phase to `planning`.
 2. Invoke **planner** with the build prompt verbatim + the path
-   `docs/00-blueprint-summary.md`.
+   `docs/00-blueprint-summary.md`, and `docs/02d-process-flows.md` when it
+   exists (then every sprint names the `flows` it completes end to end). If
+   there are no process flows yet and the product has a UI, say so: without
+   them nothing checks that the sprints add up to a working journey, and the
+   `discover` skill writes them.
 3. Run `python3 .harness/scripts/validate_sprints.py`. On ERROR lines,
    re-invoke the planner with those exact lines. Max 3 rounds, then ask the user.
 
@@ -93,9 +97,17 @@ force-ratify, attempt > 5 forces a planner split, two teardowns stops for
 the human. If state looks wrong, fix the state files and rerun the script;
 do not improvise the sequence.
 
+Browser tests: if `.harness/test-config.json` exists, the evaluator runs
+`python3 .harness/scripts/run_tests.py` every sprint (add `--live` when the
+user wants to watch; in a sandbox without a screen it records video instead)
+and `publish_test_report.py --label <sprint>-attempt-<n>`. Publish the
+single-file report it prints as a private Artifact when the session can, and
+give the user the link. Details: the asdr skill's
+`references/testing-and-manuals.md`.
+
 State field reference:
 
-- `sprints.json` status: `pending | active | done | torn-down`
+- `sprints.json` entry: `id`, `goal`, `flows`, status `pending | active | done | torn-down`
 - Contract status: `in-negotiation | revision-requested | ratified`
 - `progress.json` awaiting: `null | negotiate | ratify | build | evaluate`
 
@@ -106,6 +118,9 @@ to `done` and write `.harness/done.md`:
 
 - Sprint summary table from `sprints.json`
 - Eval verdicts per sprint from `.harness/eval-reports/`
+- Flow table from `python3 .harness/scripts/validate_product_map.py --results latest`
+  (when process flows exist) and the latest test report path
+- Run metrics: `python3 .harness/scripts/run_metrics.py`
 - Known issues
 - Next steps (suggest running the `riskgate` skill before any release)
 

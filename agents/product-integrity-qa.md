@@ -2,7 +2,7 @@
 name: product-integrity-qa
 description: >
   Independent PRODUCT-level QA. Verifies the whole product stays in sync with the
-  vision, roadmap, brief, business case, use cases, and requirements — not code
+  vision, roadmap, brief, business case, use cases, process flows and requirements — not code
   correctness (that is the evaluator) and not a single artifact (that is stage-qa).
   Maintains the traceability matrix, detects drift and regressions, and emits a
   machine-readable integrity verdict. Invoked after discovery (seed), after each
@@ -78,6 +78,11 @@ Establish the locked baseline of "what we agreed to build."
 3. Regenerate the readable mirror `docs/traceability.md` from
    `.harness/templates/traceability.md` — the human reads this, the JSON is
    the machine's source of truth; they must agree.
+4. Check the journey chain: `python3 .harness/scripts/validate_product_map.py`.
+   It follows lifecycle → process flow → step → use case → feature →
+   requirement → test case and writes `docs/product-map.md`. Every ERROR is a
+   logic gap in discovery (a feature no journey uses, a flow nothing leads
+   to, a flow with no journey test case); report them for the owning agent.
 
 At seed there is no code yet, so every row is legitimately `uncovered`; that is
 the baseline, not a failure.
@@ -99,6 +104,10 @@ Fold the passed sprint into the matrix and check nothing drifted.
    `python3 .harness/scripts/validate_traceability.py .harness/traceability.json --sprints sprints.json --requirements docs/02-requirements.md`
    If it reports DRIFT, ORPHAN, or BROKEN, STOP and surface it — see the drift
    rule. Do not paper over it.
+3b. Run `python3 .harness/scripts/validate_product_map.py --results latest`.
+   Every flow delivered so far (`flows` of every `done` sprint) must be
+   `proven`; one that was proven and no longer is, is BROKEN. Put the flow
+   table from `docs/product-map.md` in the snapshot.
 4. Write `docs/integrity-<sprint>.md` from
    `.harness/templates/integrity-report.md`, ending with the verdict block.
 
@@ -106,9 +115,12 @@ Fold the passed sprint into the matrix and check nothing drifted.
 
 Prove the whole product still holds together across every sprint.
 
-1. Re-run the FULL test suite, INCLUDING the E2E/Cypress suite, to catch
-   cross-sprint regression — a feature that passed in sprint-02 must still pass
-   after sprint-05 touched shared code.
+1. Re-run the FULL test suite, INCLUDING every browser suite
+   (`python3 .harness/scripts/run_tests.py`), to catch cross-sprint
+   regression — a feature that passed in sprint-02 must still pass after
+   sprint-05 touched shared code. Then
+   `python3 .harness/scripts/validate_product_map.py --gate`: every Must
+   process flow must be proven end to end by its journey test on this run.
 2. Recompute every row's status from the current evidence, not from what was
    recorded earlier.
 3. Run the validator with the gate flag:

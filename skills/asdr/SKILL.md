@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -57,6 +57,12 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    This step is the only place the check runs — ASDR makes no network
    call at session start — and the only place the user decides.
 
+6. Read `references/file-map.md` (in this skill's base directory) now: the
+   canonical paths, the stage table and the state fields. Rows cited below
+   ("row 2c") are rows of that file map. Browser testing, live runs,
+   publishing and manuals are in `references/testing-and-manuals.md`;
+   companion rules in `references/companions.md`.
+
 ### Resume protocol
 
 If `.harness/progress.json` already exists with phase ≠ `strategic` or a
@@ -66,37 +72,12 @@ there. Never restart phases that already produced approved documents.
 
 ## Canonical file map
 
-Use these exact paths everywhere. Agents receive their output path from you
-— never let an agent choose its own.
-
-| # | Document | Path | Agent | Template |
-|---|---|---|---|---|
-| 1 | Product brief | `docs/01-product-brief.md` | product-owner | product-brief.md |
-| 1b | Business case | `docs/01b-business-case.md` | product-owner | business-case.md |
-| 0b | Roadmap | `docs/00b-roadmap.md` | product-owner | roadmap.md |
-| 2 | Requirements | `docs/02-requirements.md` | business-analyst | requirements.md |
-| 2b | Use cases | `docs/02b-use-cases.md` | business-analyst | use-cases.md |
-| 3 | Discovery critique | `docs/critique-discovery.md` | critic | critique.md |
-| 4 | Discovery decision | `docs/decision-discovery.md` | judge | decision.md |
-| 5 | Architecture | `docs/03-architecture.md` | solution-architect | architecture.md |
-| 5b | Design system (UI only) | `docs/03b-design-system.md` | solution-architect | design-system.md |
-| 6 | Agent design (AI only) — incl. §13 runtime/deployment | `docs/04-agent-design.md` | ai-architect | agent-design.md |
-| 6b | Agent runtime manifests (T3 agents only) | `deploy/agents/<agent>.yaml` | devops | agent-runtime.yaml |
-| 7 | Security | `docs/05-security.md` | security-compliance | security.md |
-| 8 | DevOps | `docs/06-devops.md` | devops | devops.md |
-| 9 | Architecture critique | `docs/critique-architecture.md` | critic | critique.md |
-| 10 | Architecture decision | `docs/decision-architecture.md` | judge | decision.md |
-| 11 | Blueprint digest | `docs/00-blueprint-summary.md` | you | blueprint-summary.md |
-| 12 | E2E testing plan | `docs/08-e2e-testing.md` | devops | e2e-testing.md |
-| 13 | Traceability matrix | `docs/traceability.md` (+ `.harness/traceability.json`) | product-integrity-qa | traceability.md |
-| 14 | Product integrity (gate) | `docs/09-product-integrity.md` | product-integrity-qa | integrity-report.md |
-
-Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
-Templates live in `.harness/templates/`.
+`references/file-map.md`. Use those exact paths everywhere; agents receive
+their output path from you and never choose their own.
 
 ## Validators
 
-Four machine checks catch a bad document before it corrupts the run. Use
+These machine checks catch a bad document before it corrupts the run. Use
 them at the steps below; feed any `ERROR:` lines straight back to the agent
 that produced the file.
 
@@ -109,8 +90,12 @@ that produced the file.
   evaluator sees a draft: unmeasurable numbers, self-report of command output,
   zero-delta over an edited file, regex conflicts, cost-metric floors, file
   overload (>7 criteria naming one integration file), new-file budget.
-- `validate_contract.py` and `validate_sprints.py` run in later phases as
-  before.
+- `validate_product_map.py [--gate]` — the end-to-end chain: every feature
+  on a journey, every use case on a flow, every flow reachable and proven by
+  a journey test case; `--gate` adds passing `[TC-xx]` results. Writes
+  `docs/product-map.md`.
+- `validate_contract.py` and `validate_sprints.py` (which also requires each
+  sprint's `flows` and every Must flow delivered) run in later phases.
 
 Measured numbers live in `.harness/facts.json` (written by `emit_facts.py`)
 and nowhere else: **a number not in facts.json is not measured and may not be
@@ -120,6 +105,9 @@ asserted; cite it as `facts:<dotted.key>`.**
 
 Before dispatching ANY agent in the sprint loop, run these in order:
 
+    python3 .harness/scripts/validate_product_map.py --results latest
+                                                  # -> .harness/product-map.json (journey state;
+                                                  #    ERROR lines are expected mid-build)
     python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json (diffs against
                                                   #    progress.json -> sprint_base_ref)
     python3 .harness/scripts/build_graph.py       # -> graph in .harness/traceability.json
@@ -171,25 +159,8 @@ Gate/reviewer roles (critic, judge, risk-manager) are NOT wrapped in a triad —
 they ARE the independent review, terminated by their mechanical validators.
 The critic and judge still run at the end of each phase in every rigor mode.
 
-| Stage id | Executor agent | Artifact path | Tier |
-|---|---|---|---|
-| `product-brief` | product-owner | docs/01-product-brief.md | high |
-| `business-case` | product-owner | docs/01b-business-case.md | high |
-| `roadmap` | product-owner | docs/00b-roadmap.md | med |
-| `requirements` | business-analyst | docs/02-requirements.md | high |
-| `use-cases` | business-analyst | docs/02b-use-cases.md | high |
-| `architecture` | solution-architect | docs/03-architecture.md | high |
-| `design-system` | solution-architect | docs/03b-design-system.md | med (UI only; `--no-plan` under standard) |
-| `agent-design` | ai-architect | docs/04-agent-design.md | high (AI only) |
-| `security-design` | security-compliance | docs/05-security.md | high |
-| `devops-design` | devops | docs/06-devops.md | high |
-| `security-final` | security-compliance | docs/09-security-review-final.md | high |
-| `devops-readiness` | devops | docs/09-devops-readiness.md | high |
-| `documentation` | documentation | six-doc set | low (`--no-plan` under standard) |
-
-Phase 1 authoring stages are `product-brief`, `requirements`, `architecture`,
-`design-system`, `agent-design`, `security-design`, `devops-design`. Phase 4 gate-authoring
-stages are `security-final`, `devops-readiness`, `documentation`.
+The stage ids, executors, artifact paths and tiers are in the stage table in
+`references/file-map.md`.
 
 ## Phase 1 — Strategic SDLC Room
 
@@ -211,10 +182,21 @@ first two agents.
    business-analyst ALSO writes the use-case catalogue `docs/02b-use-cases.md`
    (row 2b, template use-cases.md) via the Stage execution protocol (stage-id
    `use-cases`).
-3. **critic** — pass rows 1–2 as inputs + row 3 paths. Then run
+2c. **product-manager** — inputs rows 1, 0b, 2, 2b + rows 2c and 2d paths.
+   It writes the feature list and the end-to-end process flows (with the PF-00
+   lifecycle map). Run each via the Stage execution protocol (stage-ids
+   `features`, `process-flows`).
+2d. **business-analyst** (test cases) — inputs rows 2, 2b, 2c, 2d + row 2e
+   paths. Stage-id `test-cases`. Then run
+   `python3 .harness/scripts/validate_product_map.py`; send ERROR lines to the
+   owner (product-manager for features/flows, business-analyst for use cases
+   and test cases), max 2 rounds. Discovery cannot pass with a broken chain:
+   this is where "the pieces don't connect" is caught for the price of a doc
+   edit.
+3. **critic** — pass rows 1–2e as inputs + row 3 paths. Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-discovery.md`;
    if it errors, re-invoke the critic with those lines (max 2 rounds).
-4. **judge** — pass rows 1–3 as inputs + row 4 paths.
+4. **judge** — pass rows 1–3 (including 2c–2e and `docs/product-map.md`) as inputs + row 4 paths.
    Run `python3 .harness/scripts/validate_verdict.py docs/decision-discovery.md
    --type decision`; if it errors, re-invoke the judge to fix the block.
    Then read the fenced verdict block at the end of the decision doc:
@@ -222,6 +204,9 @@ first two agents.
    - `required_changes` non-empty → re-invoke the responsible agent with
      exactly those changes, then re-invoke judge. Max 2 repair rounds, then
      stop and ask the user.
+4b. Show the user the flow table from `docs/product-map.md` and the PF-00
+   lifecycle diagram: it is the whole product on one page, and the cheapest
+   place to say "that is not how my users work".
 5. **solution-architect** — inputs rows 1–2 + row 5 paths. Run this stage via
    the Stage execution protocol (executor: solution-architect, stage-id:
    architecture, artifact: docs/03-architecture.md).
@@ -254,7 +239,8 @@ first two agents.
    the §13.2 Gateway blocks in row 6 (default-deny egress per agent). Run this stage via
    the Stage execution protocol (executor: security-compliance, stage-id:
    security-design, artifact: docs/05-security.md).
-8. **devops** — inputs rows 5, 6 and 7 + row 8 paths. For every T3 agent
+8. **devops** — inputs rows 5, 6 and 7 + row 8 paths; it also sets up the
+   browser suites and writes row 12 (`.harness/test-config.json`). For every T3 agent
    in row 6 §13.1 it also writes `deploy/agents/<agent>.yaml` from
    `.harness/templates/agent-runtime.yaml` (row 6b). Run this stage via the
    Stage execution protocol (executor: devops, stage-id: devops-design,
@@ -280,8 +266,9 @@ After the blueprint is approved:
     commands, conventions) from the approved architecture.
 13. Invoke **product-integrity-qa** in SEED mode to build the traceability
     matrix (`.harness/traceability.json` + `docs/traceability.md`) from the
-    strategic docs (brief, business case, roadmap, requirements, use cases),
-    then run `python3 .harness/scripts/validate_traceability.py
+    strategic docs (brief, business case, roadmap, requirements, use cases,
+    features, process flows, test cases), then run
+    `python3 .harness/scripts/validate_traceability.py
     .harness/traceability.json --sprints sprints.json`.
 14. Log: `python3 .harness/scripts/trace.py orchestrator blueprint-approved "phase 1 done"`
 
@@ -295,8 +282,10 @@ end-to-end without stopping, note that and continue.
 ## Phase 2 — Sprint planning
 
 1. Set `.harness/progress.json` phase to `planning`.
-2. Invoke **planner** with: the user's idea verbatim + the path
-   `docs/00-blueprint-summary.md` + instruction to write `sprints.json`.
+2. Invoke **planner** with: the user's idea verbatim + the paths
+   `docs/00-blueprint-summary.md`, `docs/02d-process-flows.md` and
+   `docs/02e-test-cases.md` + instruction to write `sprints.json` as slices
+   through whole flows (sprint 1 = the entry flow working end to end).
 3. Run `python3 .harness/scripts/validate_sprints.py`.
 4. If it prints ERROR lines, re-invoke the planner with those exact lines.
    Max 3 rounds, then stop and ask the user.
@@ -310,6 +299,10 @@ Drive the loop with the script — after every agent invocation:
 3. When it says `activate`: update `sprints.json` and `progress.json` as
    instructed, then rerun the script.
 4. When invoking generator/evaluator, pass: sprint id, mode, and attempt.
+4b. Before the evaluator's EVALUATE run, tell it whether the user wants to
+   watch (`run_tests.py --live`). After it reports, publish the test report it
+   produced as the private Artifact (see `references/testing-and-manuals.md`)
+   and give the user the link with one line: passed/failed, flows proven.
 5. After each sprint the evaluator marks `done`, invoke **product-integrity-qa**
    in UPDATE mode to refresh `.harness/traceability.json` +
    `docs/traceability.md` and write the snapshot `docs/integrity-<sprint>.md`,
@@ -321,30 +314,8 @@ Drive the loop with the script — after every agent invocation:
    use cases) consistently, then have **product-integrity-qa** re-baseline the
    matrix before the loop continues.
 
-### Companion rules in the sprint loop
-
-- **UI sprints**: the generator copies the relevant §9 checklist lines
-  from `docs/03b-design-system.md` into the contract as criteria and reads
-  §4–§6 tokens before writing any component. A UI contract with none of
-  §9 in it is incomplete — send it back in negotiation.
-- **Build ladder**: the generator reads `.harness/templates/build-ladder.md`
-  in BUILD mode; it does not need the Ponytail plugin.
-- **Ponytail (if installed anyway)**: only the generator may run under it,
-  and only in BUILD mode against a ratified contract. If `companions.json` shows
-  `ponytail.installed: true` and `scoped_to_generator: false`, STOP before
-  the first sprint and tell the user to set
-  `PONYTAIL_SUBAGENT_MATCHER='^generator$'` (docs/COMPANIONS.md) and
-  restart, or disable the plugin. A YAGNI ladder inside the critic, judge,
-  evaluator or security-compliance is an independent reviewer told to do
-  less reviewing.
-- **Graphify** (optional): on brownfield entry run `/graphify . --update`
-  once before Phase 1 so `build_graph.py` and the packs see the existing
-  code; after each sprint the evaluator marks `done`, `--update` is cheap
-  (AST only) and keeps "already in this codebase?" answerable. Never
-  substitute a graphify query for `emit_facts.py` as a measurement.
-- **RTK**: if `companions.json` shows it installed, remind the evaluator
-  and stage-qa every invocation that shell output is compressed and only
-  `facts:` keys count as evidence.
+Companion rules for UI sprints, the build ladder, Ponytail, Graphify and RTK
+are in `references/companions.md`; apply them every sprint.
 
 The script encodes the rules — contract before build, evaluator-only
 ratification, max 4 negotiation rounds then force-ratify, attempt > 5
@@ -354,11 +325,7 @@ the attempt and negotiation counters from artifacts on disk as well as from
 circuit breaker. Do not improvise around it: if you think the state is
 wrong, fix the state files, rerun the script, and follow it.
 
-State field reference:
-
-- `sprints.json` status: `pending | active | done | torn-down`
-- Contract status: `in-negotiation | revision-requested | ratified`
-- `progress.json` awaiting: `null | negotiate | ratify | build | evaluate`
+State fields: `references/file-map.md` → State field reference.
 
 ## Phase 4 — Final gates
 
@@ -374,9 +341,12 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    `deploy/agents/*.yaml` against docs/04 §13.2, paste evidence. Run this stage via
    the Stage execution protocol (executor: devops, stage-id: devops-readiness,
    artifact: docs/09-devops-readiness.md).
-3. **documentation** — the six-doc default set. Run this stage via the Stage
-   execution protocol (executor: documentation, stage-id: documentation,
-   artifact: the six-doc set; low tier — use `--no-plan` under standard).
+3. **documentation** — the developer docs plus, for any UI,
+   `docs/manuals/manual.json` (row 16) from the tour screenshots. Run this
+   stage via the Stage execution protocol (executor: documentation, stage-id:
+   documentation; low tier — use `--no-plan` under standard). Before invoking
+   it, run `python3 .harness/scripts/run_tests.py --tours` so the screenshots
+   are from the current commit.
 4. **product-integrity-qa** — GATE mode: run the full regression (all sprints)
    and emit the integrity verdict to `docs/09-product-integrity.md` (template
    integrity-report.md). Then run `python3 .harness/scripts/validate_verdict.py
@@ -384,12 +354,16 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    fix the block. A `broken` or `drifted` integrity verdict is a release
    blocker.
 5. **risk-manager** — inputs: both 09-docs, `docs/09-product-integrity.md`,
-   eval reports, sprints.json; output `docs/09-risk-review.md`. Then run
+   `docs/product-map.md`, eval reports, sprints.json; output
+   `docs/09-risk-review.md`. Then run
    `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
    --type risk`; if it errors, re-invoke the risk-manager to fix the block.
 6. Read the risk-manager's fenced classification block. Only if
-   `mvp-ready` or `production-ready`: invoke **release-manager**.
-   Otherwise skip packaging and report the blockers.
+   `mvp-ready` or `production-ready`: invoke **release-manager**, which runs
+   the release test run, publishes the versioned report and builds the user
+   manuals (HTML + PDF, every persona and tier). Publish the report and the
+   manual page it prints as private Artifacts. Otherwise skip packaging and
+   report the blockers.
 
 ## Phase 5 — Final response
 
@@ -399,23 +373,11 @@ Set phase to `done`. Print:
 2. Sprint status table (from `sprints.json`)
 3. Final risk classification (from the classification block)
 4. How to run locally, test, deploy (from `CLAUDE.md` / docs)
-5. Known limitations
-6. Next recommended steps
+5. Where the results are: the test report and the user manuals (links to the
+   private pages, and the repo paths), and the product-map flow table
+6. Run metrics: `python3 .harness/scripts/run_metrics.py`, show the table
+7. Known limitations
+8. Next recommended steps
 
 Never claim production-ready unless the risk-manager's block says
 `production-ready` — that word is its authority alone.
-
-## Companions (v3.3)
-
-Third-party skills ASDR uses. UI UX Pro Max installs with ASDR (a plugin
-dependency in the `asdr` marketplace); the rest are detected in Phase 0
-step 4 and used only when present. Version checks are Phase 0 step 5. Full install notes
-and the reasoning behind each rule: `docs/COMPANIONS.md`.
-
-| Companion | Used in | Rule |
-|---|---|---|
-| UI UX Pro Max | `design-system` stage (row 5b) | Installed automatically with ASDR from the `asdr` marketplace (Claude Code); absent in Cowork unless added separately — then 03b is hand-written from the template; drafts tokens/checklist; executor reviews fit; stage-qa grades fit vs docs/01 |
-| Build ladder (built in) | generator BUILD mode | `templates/build-ladder.md`; YAGNI objections go in NEGOTIATE, never skip a ratified criterion |
-| Ponytail (optional) | generator only | Listed in the `asdr` marketplace, disabled by default; needs `PONYTAIL_SUBAGENT_MATCHER='^generator$'` |
-| Graphify | brownfield entry, post-sprint `--update` | Navigation aid only; never a measurement source |
-| RTK | — (warned, not used) | Compresses evidence commands; `facts:` keys are the only measured numbers |

@@ -2,11 +2,11 @@
 name: discover
 description: >
   Use this skill when the user wants to run the discovery and planning phase for a software idea —
-  product brief, requirements, user stories, and acceptance criteria — before moving to architecture
-  or coding. Trigger phrases: "discover", "product discovery", "define requirements",
+  product brief, requirements, use cases, feature list, end-to-end process flows and test cases —
+  before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -51,6 +51,9 @@ The critic and judge still run at the end of each phase in every rigor mode.
 | `roadmap` | product-owner | docs/00b-roadmap.md | med |
 | `requirements` | business-analyst | docs/02-requirements.md | high |
 | `use-cases` | business-analyst | docs/02b-use-cases.md | high |
+| `features` | product-manager | docs/02c-features.md | high |
+| `process-flows` | product-manager | docs/02d-process-flows.md | high |
+| `test-cases` | business-analyst | docs/02e-test-cases.md | high |
 
 ## Phase 1 — Initialize
 
@@ -85,10 +88,37 @@ The business-analyst ALSO writes the use-case catalogue to
 `docs/02b-use-cases.md` (template `.harness/templates/use-cases.md`). Run it
 via the Stage execution protocol (stage-id `use-cases`).
 
+## Phase 3b — Features and end-to-end process flows
+
+Invoke **product-manager** with: inputs `docs/01-product-brief.md`,
+`docs/00b-roadmap.md`, `docs/02-requirements.md`, `docs/02b-use-cases.md`;
+outputs `docs/02c-features.md` (template `.harness/templates/feature-list.md`)
+and `docs/02d-process-flows.md` (template
+`.harness/templates/process-flows.md`). Run each via the Stage execution
+protocol (stage-ids `features`, `process-flows`). The flows are the
+end-to-end journeys — trigger to outcome, every step, every role handoff,
+the exception paths — and the PF-00 lifecycle map of how they connect.
+
+## Phase 3c — Test cases
+
+Invoke **business-analyst** with: inputs `docs/02-requirements.md`,
+`docs/02b-use-cases.md`, `docs/02c-features.md`, `docs/02d-process-flows.md`;
+output `docs/02e-test-cases.md` (template `.harness/templates/test-cases.md`).
+Stage-id `test-cases`. One journey test case per flow, one per exception path,
+then functional/edge/nfr cases until every FR is covered.
+
+Then run `python3 .harness/scripts/validate_product_map.py`. It checks the
+whole chain (lifecycle → flow → step → use case → feature → requirement →
+test case) and writes `docs/product-map.md`. Send every ERROR line to its
+owner — product-manager for features and flows, business-analyst for use
+cases and test cases — max 2 rounds, then carry what remains to the critic.
+
 ## Phase 4 — Critique
 
-Invoke **critic** with: inputs `docs/01-product-brief.md` and
-`docs/02-requirements.md`, output `docs/critique-discovery.md`, template
+Invoke **critic** with: inputs `docs/01-product-brief.md`,
+`docs/02-requirements.md`, `docs/02b-use-cases.md`, `docs/02c-features.md`,
+`docs/02d-process-flows.md`, `docs/02e-test-cases.md` and
+`docs/product-map.md`, output `docs/critique-discovery.md`, template
 `.harness/templates/critique.md`. Remind it: minimum 8 findings, each with
 severity, quoted evidence, and a required fix.
 
@@ -98,7 +128,8 @@ with exactly those lines (max 2 rounds), then continue.
 
 ## Phase 5 — Judge
 
-Invoke **judge** with: inputs both docs plus the critique, output
+Invoke **judge** with: inputs the discovery docs (01, 02, 02b–02e, the
+product map) plus the critique, output
 `docs/decision-discovery.md`, template `.harness/templates/decision.md`.
 
 Validate the machine-readable block first: run
@@ -108,7 +139,8 @@ read the fenced verdict block at the end of the decision doc:
 
 - `verdict: no-go` → stop; print reasons and required changes.
 - `required_changes` non-empty → re-invoke the responsible agent
-  (product-owner or business-analyst) with exactly those changes, then
+  (product-owner, business-analyst or product-manager) with exactly those
+  changes, rerun `validate_product_map.py`, then
   re-invoke the judge. Max 2 repair rounds, then stop and ask the user.
 - `verdict: go` with no changes → proceed to seed traceability.
 
@@ -118,7 +150,8 @@ Only after the judge returns `verdict: go`: invoke **product-integrity-qa**
 in SEED mode to build `.harness/traceability.json` and `docs/traceability.md`
 from the brief (`docs/01-product-brief.md`), business case
 (`docs/01b-business-case.md`), roadmap (`docs/00b-roadmap.md`), requirements
-(`docs/02-requirements.md`), and use cases (`docs/02b-use-cases.md`). Then run
+(`docs/02-requirements.md`), use cases (`docs/02b-use-cases.md`), features,
+process flows and test cases (`docs/02c`–`02e`). Then run
 `python3 .harness/scripts/validate_traceability.py .harness/traceability.json
 --sprints sprints.json`; feed any error lines back to product-integrity-qa.
 
@@ -127,10 +160,13 @@ from the brief (`docs/01-product-brief.md`), business case
 Print:
 
 1. Product brief summary (3–5 bullets)
-2. Requirements counts (functional, non-functional, user stories)
-3. Critical issues found and how they were resolved
-4. Open questions remaining
-5. Recommended next step: run the `architect` skill
+2. Requirements counts (functional, non-functional, user stories), features
+   by priority, test cases by type
+3. The flow table from `docs/product-map.md` and the PF-00 lifecycle diagram —
+   the whole product as journeys, for the user to correct
+4. Critical issues found and how they were resolved
+5. Open questions remaining
+6. Recommended next step: run the `architect` skill
 
 Do not proceed to architecture automatically. Discovery output is exactly
 what the user should correct while corrections are still cheap — wait for

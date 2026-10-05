@@ -16,3 +16,14 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# Sample app (examples/sample-app): dependencies and generated output.
+# manual.json, the docs/02*.md product docs and test-config.json are tracked.
+examples/sample-app/node_modules
+examples/sample-app/test-results/
+examples/sample-app/docs/test-reports/
+examples/sample-app/docs/manuals/*/
+examples/sample-app/docs/manuals/index.html
+examples/sample-app/docs/manuals/latest.json
+examples/sample-app/docs/product-map.md
+examples/sample-app/package-lock.json

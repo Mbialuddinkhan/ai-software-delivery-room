@@ -1,0 +1,6 @@
+{
+  "repo": true,
+  "ci_artifacts": true,
+  "claude_artifact": true,
+  "github_pages": false
+}

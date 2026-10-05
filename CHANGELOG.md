@@ -3,6 +3,84 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.4.0] — end-to-end journeys, live browser tests, published results, user manuals
+
+### Why
+Products built through ASDR passed every sprint and still did not hang
+together: each sprint proved its own pieces, and nothing described or checked
+the whole path a user walks. 3.4 makes the journey a first-class artifact, makes
+it the unit of planning and testing, and shows the result.
+
+### Added
+- **product-manager agent** (18th). Writes `docs/02c-features.md` (requirements
+  by feature: priority, release, persona, flows, use cases, requirements) and
+  `docs/02d-process-flows.md` (end-to-end flows with Mermaid diagrams, role
+  handoffs, exception paths, and a PF-00 lifecycle map of how the flows
+  connect). Templates `feature-list.md`, `process-flows.md`.
+- **Test cases in discovery.** The business-analyst writes
+  `docs/02e-test-cases.md` from the flows: a journey test case per flow, one
+  per exception path, then functional/edge/nfr until every FR is covered.
+  Automated tests carry the id in their title (`[TC-03] …`, `test_tc_03_…`).
+- **`validate_product_map.py`** follows lifecycle → flow → step → use case →
+  feature → requirement → test case → automated test → latest result and
+  writes `docs/product-map.md` + `.harness/product-map.json`
+  (`facts:product_map.*`). Errors name the gap: a Must feature no journey uses,
+  a use case on no flow, a flow nothing leads to, a Must flow with no exception
+  path, a flow with no journey test case. `--gate` requires passing results.
+- **Flow-based sprints.** `sprints.json` entries carry `flows`; when the flows
+  document exists, `validate_sprints.py` requires them and rejects a plan that
+  leaves a Must flow undelivered. The planner slices sprints through whole
+  journeys, sprint 1 being the entry journey working end to end.
+- **Browser testing in three frameworks.** `templates/e2e/` ships Playwright
+  (default), Cypress and Selenium (pytest) setups that write to one run folder.
+  `run_tests.py` runs every suite in `.harness/test-config.json`, starts the
+  app once, parses all JUnit, links each test to its screenshots, videos and
+  traces, and writes `summary.json` (`facts:test_runs.*`). A suite with no
+  results counts as failed. `--live` runs headed and slowed down so the user
+  watches; with no screen (Cowork sandbox, CI, SSH) it records video instead
+  and says so.
+- **Published results, private by default.** `publish_test_report.py` writes
+  `docs/test-reports/<label>/` with evidence and a history page, plus a
+  single-file copy for a private claude.ai Artifact. `.harness/publish.json`
+  (seeded by init) keeps GitHub Pages off unless the user turns it on.
+  `templates/ci-asdr.yml` runs the suites in CI, uploads artifacts, and has a
+  Pages job gated on that flag.
+- **User manuals with real screenshots.** Manual tours call
+  `manualStep` / `cy.manualStep` / `manual_step`, which outline the element in
+  red and record the step with URL and commit. The documentation agent writes
+  `docs/manuals/manual.json`; `build_manual.py` builds HTML + PDF manuals per
+  persona (Getting started, Advanced) and per tier (Beginner, Everyday user,
+  Power user, Administrator), with a version/commit banner and "What is new"
+  from the changelog. It refuses screenshots from a different commit.
+- **`run_metrics.py`** → `docs/run-metrics.md`: agent invocations, evaluations
+  and negotiation rounds per sprint, stage QA rounds, context-pack sizes, test
+  runs.
+- **`examples/sample-app/`** (TaskBoard): product docs 02–02e, 20 test cases,
+  [TC-xx] tests in Playwright, Cypress and Selenium, five tours, manual.json.
+  Its manual screenshots exposed a real bug (the top bar showed "Sign out"
+  before sign-in), now covered by TC-13.
+- **`.github/workflows/ci.yml`**: unit tests, `claude plugin validate`, the
+  Claude Code marketplace install (with ui-ux-pro-max) and the Cowork manifest
+  rules, the sample app in all three frameworks with report and manuals as
+  artifacts, and a `.plugin` file attached to the GitHub release on a version
+  tag. Nothing is submitted to a public marketplace.
+
+### Changed
+- evaluator: contracts for flow-delivering sprints must include the flows'
+  journey and exception test cases; every sprint runs `run_tests.py` and the
+  product map (a flow that was proven and no longer is, is a regression), and
+  publishes the report.
+- generator, devops, documentation, critic, product-integrity-qa,
+  risk-manager, release-manager, and the asdr/discover/architect/longhorizon/
+  riskgate/release skills wired to the above. Risk: a failing Must journey →
+  Not ready; an unproven one caps at MVP-ready.
+- `skills/asdr/SKILL.md` moved the file map, stage table and companion rules to
+  `skills/asdr/references/` (2,893 words, from 3,247, with the new stages).
+- `init_asdr.py` copies template folders (`templates/e2e/`) and seeds
+  `publish.json`.
+- UI UX Pro Max re-pinned to upstream `477bcb2` (2.13.0); the design-system
+  wrapper was smoke-tested against it.
+
 ## [3.3.2] — ASDR loads in Cowork again
 
 ### Fixed

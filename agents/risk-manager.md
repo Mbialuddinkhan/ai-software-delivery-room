@@ -63,6 +63,11 @@ output — never "appears fine"):
 8. AI safety and auditability (if AI features exist)
 9. Product integrity — the verdict in `docs/09-product-integrity.md` and any
    requirements it lists as uncovered, drifted, or broken
+10. End-to-end journeys — run `python3 .harness/scripts/validate_product_map.py
+   --gate` and read `docs/product-map.md`: which process flows are proven by
+   a passing journey test on the latest run, which are not, and which test
+   cases are manual. Read `.harness/facts.json` → `test_runs` for the run's
+   status, mode and commit.
 
 ## Classification — mechanical rules first
 
@@ -78,6 +83,15 @@ Apply these before judgment; they are not overridable:
 - Product-integrity verdict `drifted`, or uncovered requirements remain →
   cannot be Production-ready (at most **MVP-ready**), and carry the drift/
   uncovered requirement as a warning
+
+- `validate_product_map.py --gate` exits 1 because a Must flow's journey or
+  exception test failed → **Not ready** (the product does not work end to end
+  for that journey)
+- A Must flow has no result yet (not automated, or not run on this commit),
+  or `facts:test_runs.commit_matches_head` is false → cannot be
+  Production-ready (at most **MVP-ready**, carried as a warning)
+- Manual-only test cases without a recorded human sign-off → cannot be
+  Production-ready
 
 Test floor: zero automated tests, or tests that do not execute, caps the
 system at prototype no matter what else passes.

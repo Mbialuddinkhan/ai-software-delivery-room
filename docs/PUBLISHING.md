@@ -84,7 +84,14 @@ Team rollout without per-user steps — commit to a project's
    `claude plugin tag --push` → creates `ai-software-delivery-room--v3.3.0`
    (it refuses if plugin.json and the marketplace entry disagree or the
    tree is dirty). Also fine: `git tag ai-software-delivery-room--v3.3.0 && git push --tags`.
-7. Push `main`. Users see the update on their next `/plugin marketplace
+7. CI (`.github/workflows/ci.yml`) runs on the push and the tag: unit
+   tests, `claude plugin validate`, the marketplace install with
+   `ui-ux-pro-max`, the Cowork manifest rules, and the sample app in
+   Playwright, Cypress and Selenium (report, product map and manuals as
+   artifacts). On the tag it attaches `ai-software-delivery-room-X.Y.Z.plugin`
+   to the GitHub release — that file is what Cowork's "My Uploads" takes.
+   Do not ship a version whose CI is red.
+8. Push `main`. Users see the update on their next `/plugin marketplace
    update asdr` or, if they enabled auto-update for the marketplace in
    `/plugin`, automatically. Their next `/asdr` run shows what the update adds.
 

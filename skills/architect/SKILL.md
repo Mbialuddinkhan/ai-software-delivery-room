@@ -6,7 +6,7 @@ description: >
   discovery docs to already exist. Trigger phrases: "architect", "design the architecture",
   "system design", "technical blueprint", "design the system", "create architecture docs".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # Architect — Architecture Orchestrator
@@ -101,9 +101,10 @@ branching, commit/PR conventions, what-to-commit, branch protection, and
 SemVer tagging — copying its "Conventions the build loop follows" block into
 `CLAUDE.md`. DevOps ALSO produces the live E2E testing plan
 `docs/08-e2e-testing.md` (from `.harness/templates/e2e-testing.md`) and, for
-web-UI products, scaffolds the Cypress config plus a sample spec
-(`cypress.config.js`, `cypress/e2e/`, with video and screenshots on) so runs
-are watchable. Run this stage via the Stage execution protocol
+web-UI products, sets up the browser suites from `.harness/templates/e2e/`
+(Playwright by default; Cypress and Selenium supported side by side) with
+`.harness/test-config.json`, so `run_tests.py` runs them headless in CI and
+headed in front of the user (`--live`). Run this stage via the Stage execution protocol
 (executor: devops, stage-id: devops-design, artifact: docs/06-devops.md).
 
 ## Phase 5 — Critique

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "product": "<Product name>",
+  "app": {
+    "start_cmd": "<npm run dev>",
+    "url": "<http://localhost:3000>",
+    "ready_timeout_s": 60
+  },
+  "suites": [
+    {
+      "name": "playwright",
+      "framework": "playwright",
+      "cmd": "npx playwright test",
+      "live_cmd": "npx playwright test --headed",
+      "tours_cmd": "npx playwright test --project=manual",
+      "junit": ["junit/playwright.xml"],
+      "html_report": "playwright/html/index.html"
+    }
+  ]
+}

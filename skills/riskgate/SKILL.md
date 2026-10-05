@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -89,8 +89,10 @@ devops-readiness, artifact: docs/09-devops-readiness.md).
 ## Phase 2b — Product integrity
 
 Invoke **product-integrity-qa** in GATE mode: re-run the full test suite
-including the Cypress/E2E suite (cross-sprint regression), recompute coverage,
-and output `docs/09-product-integrity.md` (template
+including every browser suite (`python3 .harness/scripts/run_tests.py`,
+cross-sprint regression), run `python3 .harness/scripts/validate_product_map.py
+--gate` (every Must process flow proven end to end on this run), recompute
+coverage, and output `docs/09-product-integrity.md` (template
 `.harness/templates/integrity-report.md`). Validate the machine-readable block
 with `python3 .harness/scripts/validate_verdict.py docs/09-product-integrity.md
 --type integrity`; if it errors, re-invoke to fix the block. A `broken` or
@@ -99,8 +101,10 @@ with `python3 .harness/scripts/validate_verdict.py docs/09-product-integrity.md
 ## Phase 3 — Risk classification
 
 Invoke **risk-manager** with: inputs both 09-docs,
-`docs/09-product-integrity.md`, the eval reports directory, and
-`sprints.json`; output `docs/09-risk-review.md`.
+`docs/09-product-integrity.md`, `docs/product-map.md`, the eval reports
+directory, and `sprints.json`; output `docs/09-risk-review.md`. Publish the
+gate's test report first (`python3 .harness/scripts/publish_test_report.py
+--label gate`) and give the user the private link.
 
 Validate the machine-readable block first: run
 `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md

@@ -225,6 +225,55 @@ def test_facts(test_cmd, root):
     return res, None
 
 
+def test_run_facts(root, commit):
+    """Summarise the latest run_tests.py bundle (browser suites, manual tours).
+
+    Criteria cite these keys, e.g. `facts:test_runs.totals.failed == 0` or
+    `facts:test_runs.commit_matches_head == true`.
+    """
+    latest = root / ".harness" / "test-results" / "latest.json"
+    if not latest.is_file():
+        return None, "test_runs: no .harness/test-results/latest.json (run run_tests.py)"
+    try:
+        ptr = json.loads(latest.read_text())
+        s = json.loads((Path(ptr["path"]) / "summary.json").read_text())
+    except (OSError, ValueError, KeyError) as e:
+        return None, f"test_runs: unreadable latest run ({e})"
+    return {
+        "run_id": s.get("run_id"),
+        "mode": s.get("mode"),
+        "status": s.get("status"),
+        "commit": s.get("commit"),
+        "commit_matches_head": bool(commit) and s.get("commit") == commit,
+        "dirty": s.get("dirty"),
+        "totals": s.get("totals"),
+        "suites": {x["name"]: x["totals"] for x in s.get("suites", [])},
+        "manual_tours": len(s.get("manual", {}).get("tours", [])),
+        "manual_screenshots": s.get("manual", {}).get("screenshots", 0),
+        "manual_current": all(t.get("current") for t in s.get("manual", {}).get("tours", [])),
+        "summary": str(Path(ptr["path"]) / "summary.json"),
+    }, None
+
+
+def product_map_facts(root):
+    """End-to-end chain state written by validate_product_map.py.
+
+    Criteria cite e.g. `facts:product_map.flows.PF-02.journey_passing == true`
+    or `facts:product_map.errors == 0`.
+    """
+    p = root / ".harness" / "product-map.json"
+    if not p.is_file():
+        return None, "product_map: no .harness/product-map.json (run validate_product_map.py)"
+    try:
+        m = json.loads(p.read_text())
+    except ValueError as e:
+        return None, f"product_map: unreadable ({e})"
+    return {"generated_at": m.get("generated_at"), "results_run": m.get("results_run"),
+            "errors": m.get("errors"), "warnings": m.get("warnings"), "counts": m.get("counts"),
+            "flows": {k: {"status": v.get("status"), "journey_passing": v.get("journey_passing"),
+                          "priority": v.get("priority")} for k, v in (m.get("flows") or {}).items()}}, None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=None,
@@ -280,8 +329,17 @@ def main() -> int:
         "census": census(root),
         "assertions": assertion_counts(root),
         "tests": tests,
+        "test_runs": None,
+        "product_map": None,
         "notes": notes,
     }
+
+    facts["test_runs"], rerr = test_run_facts(root, commit)
+    if rerr:
+        notes.append(rerr)
+    facts["product_map"], merr = product_map_facts(root)
+    if merr:
+        notes.append(merr)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -290,7 +348,8 @@ def main() -> int:
     print(f"OK: wrote {out}")
     print(f"  commit={commit} diff_files={len(diff) if diff else 0} "
           f"census_total={facts['census']['total']} "
-          f"tests={'run' if tests else 'skipped'}")
+          f"tests={'run' if tests else 'skipped'} "
+          f"test_runs={facts['test_runs']['status'] if facts['test_runs'] else 'none'}")
     for n in notes:
         print(f"  NOTE: {n}")
     return 0

@@ -8,9 +8,10 @@ templates/ folders (two levels above any skill's base directory).
 
 This is Phase 0 as a single command. It:
   1. creates the harness directory tree
-  2. copies the plugin's scripts and templates into .harness/ so every later
-     step uses stable project-local paths (no plugin path math after this)
-  3. seeds progress.json, sprints.json, and CLAUDE.md if missing
+  2. copies the plugin's scripts and templates (including template folders
+     such as templates/e2e/) into .harness/ so every later step uses stable
+     project-local paths (no plugin path math after this)
+  3. seeds progress.json, sprints.json, publish.json and CLAUDE.md if missing
 Idempotent: safe to rerun; never overwrites existing project files.
 """
 import argparse
@@ -29,7 +30,10 @@ DIRS = [
     ".harness/plans",       # stage-planner acceptance checklists (triad)
     ".harness/qa-reports",  # stage-qa review reports (triad)
     ".harness/packs",       # generated per-task context packs (v3.2)
+    ".harness/test-results",  # run_tests.py run folders (v3.4)
+    ".harness/manual",        # manual-tour screenshots + manifests (v3.4)
     "docs",
+    "docs/manuals",           # manual.json + built manuals per version (v3.4)
     "evals",
     "deploy/agents",      # T3 agent runtime manifests (v3.3)
 ]
@@ -73,6 +77,19 @@ def main() -> int:
         for f in (source / sub).iterdir():
             if f.is_file():
                 shutil.copy2(f, root / ".harness" / sub / f.name)
+            elif f.is_dir() and not f.name.startswith(("__", ".")):
+                # template folders such as templates/e2e/{playwright,cypress,selenium}
+                shutil.copytree(f, root / ".harness" / sub / f.name, dirs_exist_ok=True,
+                                ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # Where test reports and manuals are published. Private by default: the
+    # repo, CI artifacts and a private claude.ai page. GitHub Pages is public
+    # and stays off unless the user turns it on for this project (v3.4).
+    publish = root / ".harness" / "publish.json"
+    if not publish.exists():
+        publish.write_text(json.dumps({"repo": True, "ci_artifacts": True,
+                                       "claude_artifact": True, "github_pages": False},
+                                      indent=2) + "\n")
 
     progress = root / ".harness" / "progress.json"
     if not progress.exists():
@@ -106,6 +123,8 @@ def main() -> int:
     print("  python3 .harness/scripts/build_graph.py")
     print("  python3 .harness/scripts/build_digest.py")
     print("  python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>")
+    print("Browser tests (v3.4): copy .harness/templates/e2e/test-config.json to")
+    print("  .harness/test-config.json, then: python3 .harness/scripts/run_tests.py [--live]")
     print("Next: python3 .harness/scripts/next_action.py")
     return 0
 

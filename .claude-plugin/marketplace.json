@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "asdr",
-  "description": "AI Software Delivery Room \u2014 17-agent SDLC harness with independent QA, plus the companion plugins it uses (UI UX Pro Max, Ponytail).",
+  "description": "AI Software Delivery Room — 18-agent SDLC harness with independent QA, end-to-end journey checks, live browser tests and user manuals, plus the companion plugins it uses (UI UX Pro Max, Ponytail).",
   "owner": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com",
@@ -12,7 +12,7 @@
       "name": "ai-software-delivery-room",
       "displayName": "AI Software Delivery Room",
       "source": "./",
-      "description": "Idea \u2192 brief \u2192 architecture \u2192 sprint loop with contract-first builds and evaluator-only sign-off. Installs UI UX Pro Max automatically for the design-system stage.",
+      "description": "Idea → brief → flows → architecture → sprint loop with contract-first builds, live browser tests and evaluator-only sign-off; publishes test reports and user manuals. Installs UI UX Pro Max automatically for the design-system stage.",
       "category": "development",
       "tags": [
         "sdlc",
@@ -31,7 +31,7 @@
       "source": {
         "source": "github",
         "repo": "nextlevelbuilder/ui-ux-pro-max-skill",
-        "sha": "de5f12b400775997d213524ef02a7c7d2746806f"
+        "sha": "477bcb28c9812b385cb51a4605ddf30d7b2266e2"
       },
       "description": "Offline design-system generator (styles, palettes with contrast pairs, font pairings, checklist). Used by ASDR's design-system stage. Upstream: nextlevelbuilder/ui-ux-pro-max-skill, MIT.",
       "version": "2.13.0",

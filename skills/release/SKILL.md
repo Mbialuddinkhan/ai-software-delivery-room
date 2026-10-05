@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.3.2"
+  version: "3.4.0"
 ---
 
 # Release — Release Packaging Orchestrator
@@ -63,16 +63,32 @@ verify every command against the actual code:
   `docs/api-reference.md` (if an API exists), `docs/troubleshooting.md`,
   `docs/handover.md`
 
+For a product with a UI, the documentation agent also writes
+`docs/manuals/manual.json`: explanations for every manual-tour screenshot and
+the manuals to build — Getting started + Advanced per persona, and Beginner,
+Everyday user, Power user and Administrator. Refresh the screenshots first so
+they come from this commit: `python3 .harness/scripts/run_tests.py --tours`.
+
 Run this stage via the Stage execution protocol (executor: documentation,
-stage-id: documentation, artifact: the six-doc set; low tier — use `--no-plan`
-under standard).
+stage-id: documentation, artifact: the six-doc set + manual.json; low tier —
+use `--no-plan` under standard).
 
 ## Phase 2 — Release packaging
 
 Invoke **release-manager** with: inputs `sprints.json`,
 `.harness/eval-reports/`, `docs/09-risk-review.md`; outputs
 `CHANGELOG.md`, `docs/10-release-notes.md`, `docs/10-release-checklist.md`,
-`docs/10-post-release-monitoring.md`.
+`docs/10-post-release-monitoring.md`, the release test report
+(`docs/test-reports/v<version>/`) and the user manuals
+(`docs/manuals/<version>/`, HTML + PDF for every persona and tier). It runs
+the tests on the release commit, the product-map gate, the report and the
+manual build itself (see its agent file).
+
+When it finishes, publish the two single-file pages it prints — the test
+report and `.harness/manual-artifact.html` — as private Artifacts (titles
+"<Product> Test Report" and "<Product> User Manuals"; update the same two
+artifacts every release so the links stay stable), and give the user both
+links.
 
 The checklist must tick only what was actually verified (its agent file
 defines the required items).
@@ -89,9 +105,11 @@ Print:
 2. What was built (sprint summary table)
 3. How to deploy (2–3 key commands)
 4. How to roll back
-5. Known limitations
-6. Post-release monitoring steps
-7. Next roadmap recommendations
+5. Where to find the user manuals (each persona and tier, HTML + PDF) and
+   the test report, with links
+6. Known limitations
+7. Post-release monitoring steps
+8. Next roadmap recommendations
 
 This is the final step. The human deploys manually — automated deployment
 is outside this system's authority.

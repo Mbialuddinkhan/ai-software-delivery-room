@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TaskBoard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <span class="brand">TaskBoard</span>
+    <nav id="nav" hidden>
+      <a href="#board" id="nav-board">Board</a>
+      <a href="#settings" id="nav-settings" hidden>Settings</a>
+      <span id="whoami" class="who"></span>
+      <button id="sign-out" class="link">Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="signin" class="card" aria-labelledby="signin-title">
+      <h1 id="signin-title">Sign in</h1>
+      <p class="muted">Pick your name and role to open your team's board.</p>
+      <form id="signin-form">
+        <label for="name">Your name</label>
+        <input id="name" name="name" autocomplete="name" required>
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          <option value="member">Team member</option>
+          <option value="admin">Team admin</option>
+        </select>
+        <button type="submit" id="signin-submit" class="primary">Sign in</button>
+        <p id="signin-error" class="error" role="alert" hidden>Please enter your name.</p>
+      </form>
+    </section>
+
+    <section id="board" class="card" hidden aria-labelledby="board-title">
+      <h1 id="board-title">Team board</h1>
+      <form id="new-task-form" class="row">
+        <label for="new-task" class="sr-only">New task</label>
+        <input id="new-task" placeholder="What needs doing? (press N to jump here)" autocomplete="off">
+        <select id="new-task-category" aria-label="Category"></select>
+        <button type="submit" id="add-task" class="primary">Add task</button>
+      </form>
+      <div class="row toolbar">
+        <div role="group" aria-label="Filter tasks" class="filters">
+          <button data-filter="all" class="chip active">All</button>
+          <button data-filter="active" class="chip">Active</button>
+          <button data-filter="done" class="chip">Done</button>
+        </div>
+        <span id="counter" class="muted" aria-live="polite"></span>
+        <button id="export" class="secondary">Export CSV</button>
+      </div>
+      <ul id="tasks" aria-label="Tasks"></ul>
+      <p id="empty" class="muted">No tasks yet. Add your first one above.</p>
+    </section>
+
+    <section id="settings" class="card" hidden aria-labelledby="settings-title">
+      <h1 id="settings-title">Team settings</h1>
+      <h2>Categories</h2>
+      <ul id="categories"></ul>
+      <form id="new-category-form" class="row">
+        <label for="new-category" class="sr-only">New category</label>
+        <input id="new-category" placeholder="New category name">
+        <button type="submit" id="add-category" class="primary">Add category</button>
+      </form>
+      <h2>Permissions</h2>
+      <label class="check"><input type="checkbox" id="members-can-delete"> Team members can delete tasks</label>
+      <p id="settings-saved" class="ok" role="status" hidden>Settings saved.</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,12 +1,29 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.3.2
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.4.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
 
-**What's new in v3.3 — runtime tiers, a design-system stage, companions,
+**What's new in v3.4 — the product has to work end to end, and you can watch
+it.** A new **product-manager** agent writes the feature list and the
+**end-to-end process flows** (Mermaid journeys, role handoffs, exception
+paths, and one lifecycle map of how every journey connects); the
+business-analyst turns them into **test cases** before any code exists.
+`validate_product_map.py` follows the whole chain — lifecycle → flow → step →
+use case → feature → requirement → test case → automated test → latest result
+— and the planner must slice sprints through whole journeys. Browser tests run
+in **Playwright, Cypress or Selenium** through one runner (`run_tests.py`),
+**live in front of you** (`--live`: headed, slowed down) or recorded where
+there is no screen. Every run is **published privately** (repo, CI artifact,
+private claude.ai page; GitHub Pages only if you opt in). Every release builds
+**user manuals with real screenshots** — Getting started + Advanced per
+persona, and Beginner / Everyday / Power user / Administrator — as HTML and
+PDF, stamped with the version and commit. A worked example lives in
+`examples/sample-app/`.
+
+**v3.3 — runtime tiers, a design-system stage, companions,
 update checks.** The ai-architect now decides *where each agent runs* (T1
 function / T2 container worker / T3 sandboxed actor runtime) with four runtime
 blocks per agent — Task, Workspace, Gateway, Model — that devops and security
@@ -168,25 +185,29 @@ Set the rigor dial any time by editing `.harness/progress.json`:
 ```
 USER IDEA
   ↓
-discover  →  [product-brief]→[requirements]  (each: plan → execute → QA)  → Critic → Judge
+discover  →  [product-brief]→[requirements]→[use cases]
+             →[features]→[process flows]→[test cases]  (each: plan → execute → QA)
+             → validate_product_map.py → Critic → Judge
   ↓
 architect →  [architecture]→[agent-design]→[security]→[devops]  (each triad) → Critic → Judge
   ↓
 asdr (full flow) / longhorizon (build only)
   ↓
-  Planner creates user-visible sprints
+  Planner slices sprints through whole process flows (sprint 1 = entry journey)
   ↓
   Generator negotiates the acceptance contract  (validate_contract.py)
   ↓
   Evaluator ratifies the contract
   ↓
-  Generator builds → Evaluator tests → PASS / FAIL / TEARDOWN
+  Generator builds + [TC-xx] browser tests → Evaluator runs run_tests.py (--live to watch)
+     → journeys proven? → report published privately → PASS / FAIL / TEARDOWN
   ↓
   Repeat until all sprints pass  (self-healing attempt + negotiation caps)
   ↓
 riskgate  →  Security + DevOps (triad) + Risk-Manager classification
   ↓
 release   →  Documentation + Release-Manager → Changelog + Deploy guide
+             + versioned test report + user manuals (HTML + PDF, every persona and tier)
 ```
 
 ---
@@ -197,7 +218,7 @@ release   →  Documentation + Release-Manager → Changelog + Deploy guide
 |---|---|
 | `asdr` | **Full workflow** — strategic layer + execution harness + release gates |
 | `longhorizon` | **Execution only** — Planner → Generator ↔ Evaluator loop |
-| `discover` | **Discovery** — product brief + requirements + critic + judge |
+| `discover` | **Discovery** — brief, requirements, use cases, feature list, process flows, test cases + critic + judge |
 | `architect` | **Architecture** — solution + AI + security + devops + critic + judge |
 | `riskgate` | **Risk gate** — security review + deployment readiness + classification |
 | `release` | **Release** — docs + changelog + release notes + deployment checklist |
@@ -207,7 +228,7 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 
 ---
 
-## Agents (17)
+## Agents (18)
 
 ### Triad + integrity roles (new in v3 / v3.1)
 | Agent | Role |
@@ -220,14 +241,15 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 | Agent | Role |
 |---|---|
 | `product-owner` | Product vision, MVP scope, personas, quantified success metrics |
-| `business-analyst` | Requirements, user stories, measurable acceptance criteria |
+| `business-analyst` | Requirements, user stories, measurable acceptance criteria, use cases, test cases |
+| `product-manager` | Feature list and end-to-end process flows — owns how the pieces join into journeys (v3.4) |
 | `solution-architect` | Architecture, APIs, DB design, trade-offs (records rejected ADR options) |
 | `ai-architect` | Agent workflows, prompts, tools, memory, evaluation (AI features only) |
 | `security-compliance` | Threat model, auth, injection risks, OWASP; release-gate code verification |
-| `devops` | Docker, CI/CD, monitoring, rollback |
+| `devops` | Docker, CI/CD, monitoring, rollback, browser test suites (Playwright / Cypress / Selenium) |
 | `critic` | Challenges plans aggressively — cross-document contradictions |
 | `judge` | Resolves conflicts, binding go/no-go with a machine-readable verdict |
-| `documentation` | README, guides, API docs, handover |
+| `documentation` | README, guides, API docs, handover, user manuals from test screenshots |
 | `risk-manager` | Final release gate and classification |
 | `release-manager` | Changelog, release notes, deploy checklist |
 
@@ -243,11 +265,11 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.3.2)
+.claude-plugin/plugin.json   ← plugin manifest (v3.4.0)
 README.md                    ← this file
 CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.3 change log
-agents/                      ← 17 agent definitions (incl. stage-planner, stage-qa,
-                               product-integrity-qa)
+agents/                      ← 18 agent definitions (incl. stage-planner, stage-qa,
+                               product-integrity-qa, product-manager)
 skills/                      ← 6 orchestrator skills (asdr, discover, architect,
                                longhorizon, riskgate, release)
 scripts/
@@ -269,30 +291,43 @@ scripts/
   uupm_design_system.py      ← drafts docs/03b via UI UX Pro Max when installed (v3.3)
   check_updates.py           ← installed vs upstream versions + changelog excerpt (v3.3)
   upstream.json              ← where check_updates.py looks for each item's latest version
+  validate_product_map.py    ← end-to-end chain check + docs/product-map.md (v3.4)
+  run_tests.py               ← runs Playwright / Cypress / Selenium suites, --live (v3.4)
+  publish_test_report.py     ← HTML report: repo, CI, private Artifact; Pages opt-in (v3.4)
+  build_manual.py            ← persona + tier user manuals, HTML + PDF (v3.4)
+  run_metrics.py             ← per-run metrics: rounds, attempts, packs, tests (v3.4)
+  report_style.py            ← shared look for reports and manuals (v3.4)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
                                integrity-report, git-workflow, e2e-testing (v3.1),
-                               design-system, agent-runtime.yaml, build-ladder (v3.3)
+                               design-system, agent-runtime.yaml, build-ladder (v3.3),
+                               feature-list, process-flows, test-cases, publish.json,
+                               ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4)
+examples/sample-app/         ← TaskBoard: a small app with every v3.4 artifact —
+                               product docs, [TC-xx] tests in all three frameworks,
+                               tours, manual.json (v3.4)
+.github/workflows/ci.yml     ← release gate: unit tests, validate, both install
+                               paths, sample e2e, .plugin asset on tag (v3.4)
 docs/
   AI_SOFTWARE_DELIVERY_ROOM_OPERATING_MANUAL.md
   TRIAD_ARCHITECTURE.md      ← the v3 triad + rigor dial design
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/
-  test_context_discipline.py ← unit tests for the v3.2 scripts (python3 -m unittest)
+tests/                       ← python3 -m pytest tests (63 tests)
 ```
 
-## The 17 agents at a glance
+## The 18 agents at a glance
 
 **Triad + integrity (v3 / v3.1):** `stage-planner` sets each stage's acceptance
 checklist, the specialist executor builds to it, `stage-qa` grades it
 independently, and `product-integrity-qa` verifies the whole product against
 the vision/roadmap/requirements every sprint (drift + regression).
 
-**Strategic (11):** `product-owner` (brief, roadmap, business case),
-`business-analyst` (requirements, use cases), `solution-architect`,
+**Strategic (12):** `product-owner` (brief, roadmap, business case),
+`business-analyst` (requirements, use cases, test cases), `product-manager`
+(feature list, end-to-end process flows), `solution-architect`,
 `ai-architect`, `security-compliance`, `devops` (Docker/CI + git-workflow + E2E),
 `critic`, `judge`, `documentation`, `risk-manager`, `release-manager`.
 
@@ -313,6 +348,12 @@ sprints.json                    status enum: pending | active | done | torn-down
 .harness/contracts/             per-sprint acceptance contracts
 .harness/eval-reports/          evaluator reports (attempt count derives from here)
 .harness/traces/log.jsonl       one line per agent invocation
+.harness/test-config.json       browser suites run_tests.py runs (v3.4)
+.harness/test-results/<run>/    JUnit, screenshots, videos, summary.json (v3.4)
+.harness/manual/                manual-tour screenshots + manifests (v3.4)
+.harness/publish.json           where reports go; private by default (v3.4)
+docs/product-map.md             generated end-to-end chain (v3.4)
+docs/test-reports/, docs/manuals/<version>/   published reports and manuals (v3.4)
 docs/00..10-*.md                blueprint and gate documents
 ```
 
@@ -328,6 +369,8 @@ docs/00..10-*.md                blueprint and gate documents
 5. Only the evaluator sets `Status: ratified` and updates sprint status.
 6. Generator cannot declare a sprint done; evaluator cannot write implementation code.
 7. Risk Manager can block release even if all sprints pass.
+8. Every Must process flow is proven end to end by a passing journey test on
+   the release commit — enforced by `validate_product_map.py --gate`.
 
 ---
 

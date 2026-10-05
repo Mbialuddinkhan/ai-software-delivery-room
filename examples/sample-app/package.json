@@ -1,0 +1,17 @@
+{
+  "name": "asdr-sample-taskboard",
+  "private": true,
+  "description": "Fixture app for ASDR's testing, reporting and manual pipeline",
+  "scripts": {
+    "start": "python3 -m http.server 4173 --directory app",
+    "test:playwright": "playwright test --project=e2e",
+    "test:tours": "playwright test --project=manual",
+    "test:cypress": "cypress run",
+    "test:selenium": "python3 -m pytest e2e/selenium -q"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "cypress": "^16.1.1",
+    "mocha-junit-reporter": "^2.2.1"
+  }
+}

@@ -1,0 +1,107 @@
+# ASDR release gate. Every push and PR must pass all four jobs; a tag
+# ai-software-delivery-room--vX.Y.Z (from `claude plugin tag --push`) also
+# builds the .plugin file for Cowork "My Uploads" and attaches it to a
+# GitHub release. Nothing here publishes to any public plugin marketplace.
+name: ci
+
+on:
+  push:
+    branches: [main]
+    tags: ["ai-software-delivery-room--v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: python -m pip install pytest
+      - run: python -m pytest -q tests
+
+  plugin:
+    name: Validate + both install paths
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install -g @anthropic-ai/claude-code
+      - name: claude plugin validate
+        run: claude plugin validate .
+      - name: Claude Code path (marketplace install, pulls ui-ux-pro-max)
+        run: |
+          export HOME="$RUNNER_TEMP/home" && mkdir -p "$HOME"
+          claude plugin marketplace add "$GITHUB_WORKSPACE"
+          claude plugin install ai-software-delivery-room@asdr
+          claude plugin list | tee plugins.txt
+          grep -q "ai-software-delivery-room@asdr" plugins.txt
+          grep -q "ui-ux-pro-max@asdr" plugins.txt
+      - name: Cowork path (plugin.json loads without marketplace-only fields)
+        run: python3 -m pytest -q tests/test_manifests.py
+
+  sample-e2e:
+    name: Sample app — Playwright, Cypress, Selenium
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/sample-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: python -m pip install selenium pytest
+      - name: Run every suite (run_tests.py)
+        run: python3 ../../scripts/run_tests.py --config test-config.json --label "ci-${{ github.run_number }}"
+      - name: Every Must flow proven end to end
+        run: python3 ../../scripts/validate_product_map.py --gate
+      - name: Publish report
+        if: always()
+        run: python3 ../../scripts/publish_test_report.py --label "ci-${{ github.run_number }}"
+      - name: Build user manuals (HTML + PDF)
+        run: |
+          export ASDR_CHROME="$(node -e "console.log(require('playwright').chromium.executablePath())")"
+          python3 ../../scripts/build_manual.py --version "ci-${{ github.run_number }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: asdr-sample-results
+          path: |
+            examples/sample-app/.harness/test-results/
+            examples/sample-app/docs/test-reports/
+            examples/sample-app/docs/manuals/
+            examples/sample-app/docs/product-map.md
+          retention-days: 14
+
+  release:
+    name: Attach .plugin to the GitHub release
+    if: startsWith(github.ref, 'refs/tags/ai-software-delivery-room--v')
+    needs: [unit, plugin, sample-e2e]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the .plugin file
+        run: |
+          VERSION="${GITHUB_REF_NAME#ai-software-delivery-room--v}"
+          OUT="ai-software-delivery-room-${VERSION}.plugin"
+          # Same file list as CLAUDE.md → Releasing (no examples/, no .git).
+          zip -qr "$OUT" .claude-plugin agents skills scripts templates docs tests README.md CHANGELOG.md .gitignore \
+            -x "*/__pycache__/*" "*.pyc"
+          unzip -l "$OUT" | tail -1
+          echo "PLUGIN_FILE=$OUT" >> "$GITHUB_ENV"
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.PLUGIN_FILE }}
+          generate_release_notes: true

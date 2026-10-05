@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """Validate sprints.json against the ASDR schema.
 
-Usage: python3 validate_sprints.py [path-to-sprints.json]
+Usage: python3 validate_sprints.py [path-to-sprints.json] [--flows docs/02d-process-flows.md]
+
+Since v3.4 each sprint also lists the process flows it delivers
+("flows": ["PF-01"]). When the flows document exists (it does after
+discovery), every sprint must name at least one flow, every named flow must
+exist, and every Must flow must be delivered by some sprint — so the build
+is planned as slices through whole user journeys, not as disconnected pieces.
+Projects without a flows document keep the old three-field schema.
 
 Exit 0 = valid. Exit 1 = invalid; every problem is printed as one line
 starting with "ERROR:" so the orchestrator can feed the list back to the
@@ -47,9 +54,35 @@ TECH_RE = re.compile(r"\b(" + "|".join(TECH_TERMS) + r")\b", re.IGNORECASE)
 SENTENCE_RE = re.compile(r"[.!?]+(?:\s+|$)")
 
 
+FLOW_ID = re.compile(r"^PF-\d+$")
+
+
+def flow_catalogue(path: Path) -> dict:
+    """{flow id: priority} from the process-flows doc, or {} if absent."""
+    if not path.is_file():
+        return {}
+    text = path.read_text(errors="ignore")
+    flows = {}
+    heads = list(re.finditer(r"^#{2,3}\s+(PF-\d+)\b", text, re.MULTILINE))
+    for i, m in enumerate(heads):
+        if m.group(1) == "PF-00":
+            continue
+        body = text[m.end(): heads[i + 1].start() if i + 1 < len(heads) else len(text)]
+        pr = re.search(r"^\s*[-*]\s*Priority\s*:\s*(\w+)", body, re.MULTILINE | re.IGNORECASE)
+        flows[m.group(1)] = (pr.group(1).lower() if pr else "")
+    return flows
+
+
 def main() -> int:
-    path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("sprints.json")
+    args = [a for a in sys.argv[1:]]
+    flows_path = Path("docs/02d-process-flows.md")
+    if "--flows" in args:
+        i = args.index("--flows")
+        flows_path = Path(args[i + 1])
+        del args[i:i + 2]
+    path = Path(args[0]) if args else Path("sprints.json")
     errors = []
+    catalogue = flow_catalogue(flows_path)
 
     if not path.exists():
         print(f"ERROR: {path} does not exist")
@@ -104,9 +137,32 @@ def main() -> int:
                 )
 
     unknown = [s.get("id", f"index {i}") for i, s in enumerate(sprints)
-               if isinstance(s, dict) and len(set(s) - {"id", "goal", "status"}) > 0]
+               if isinstance(s, dict) and len(set(s) - {"id", "goal", "status", "flows"}) > 0]
     if unknown:
-        errors.append(f"ERROR: extra fields found on {unknown}; only id, goal, status are allowed")
+        errors.append(f"ERROR: extra fields found on {unknown}; only id, goal, status, flows are allowed")
+
+    delivered = set()
+    for i, s in enumerate(sprints):
+        if not isinstance(s, dict):
+            continue
+        label = s.get("id") or f"sprint at index {i}"
+        fl = s.get("flows")
+        if fl is None:
+            if catalogue:
+                errors.append(f"ERROR: {label}: no 'flows' list — name the process flow(s) from "
+                              f"{flows_path} this sprint delivers (e.g. [\"PF-01\"])")
+            continue
+        if not isinstance(fl, list) or not fl or not all(isinstance(x, str) and FLOW_ID.match(x) for x in fl):
+            errors.append(f"ERROR: {label}: 'flows' must be a non-empty list of ids like \"PF-01\"")
+            continue
+        for x in fl:
+            if catalogue and x not in catalogue:
+                errors.append(f"ERROR: {label}: flow {x} is not in {flows_path}")
+            delivered.add(x)
+    missing = sorted(f for f, pr in catalogue.items() if pr == "must" and f not in delivered)
+    if missing:
+        errors.append(f"ERROR: Must flow(s) {missing} are not delivered by any sprint — every "
+                      "Must journey needs a sprint that makes it work end to end")
 
     if errors:
         print("\n".join(errors))

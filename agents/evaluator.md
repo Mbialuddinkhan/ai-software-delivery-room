@@ -79,6 +79,14 @@ Your job: make the contract impossible to game before any code exists.
 2. Review every criterion adversarially: could sloppy code technically
    satisfy it? Is it observable? Would it catch the obvious cheat? Edit weak
    criteria directly in the file — you may strengthen, split, or replace them.
+2b. Journey coverage: look up this sprint's `flows` in `sprints.json`. The
+   contract must contain, for each of those flows, a criterion that its
+   journey test case and every exception test case from
+   `docs/02e-test-cases.md` pass — cited as
+   `facts:product_map.flows.<PF-id>.journey_passing == true` plus the TC ids.
+   A contract for a flow-delivering sprint without them is
+   `revision-requested`: per-screen criteria alone are how features get built
+   that never connect.
 3. Then choose exactly one:
    - Acceptable → set `Status: ratified`, update `Last edit`, stop.
    - Not acceptable → set `Status: revision-requested`, write numbered,
@@ -118,9 +126,11 @@ that survive this test — this is what 'adversarial' means in practice.
    estimate a number to close a row.
 5. Every row gets Evidence: the command and its actual output, or file:line.
    For any user-facing criterion, unit-level evidence is not enough — require
-   E2E (Cypress) evidence that drives the real UI, and capture the recorded
-   video/screenshot path as the evidence for that row. A user-facing feature
-   that only passes a unit test has not been shown to work for a user.
+   browser E2E evidence that drives the real UI (Playwright, Cypress or
+   Selenium — whichever suites `.harness/test-config.json` lists), and cite
+   the screenshot/video path from the run's `summary.json` as the evidence for
+   that row. A user-facing feature that only passes a unit test has not been
+   shown to work for a user.
 
 Example row:
 
@@ -128,13 +138,23 @@ Example row:
 
 6. Cross-sprint regression — after grading this sprint's criteria, run the
    ENTIRE accumulated test suite, not just this sprint's: every spec in
-   `.harness/tests/` and the project's own test dir, INCLUDING the Cypress/E2E
-   suite. A sprint that passes its own criteria but breaks a feature an earlier
+   `.harness/tests/` and the project's own test dir, and every browser suite
+   through `python3 .harness/scripts/run_tests.py` (add `--live` when the
+   orchestrator says the user is watching). Then run
+   `python3 .harness/scripts/validate_product_map.py --results latest`: every
+   flow delivered by this or an earlier sprint must show `proven`. A flow that
+   was proven last sprint and is not now is a regression, however small the
+   change looked. A sprint that passes its own criteria but breaks a feature an earlier
    sprint shipped has made the product worse, not better. Any previously-passing
    test that now fails means this sprint CANNOT be marked done: record the
    failing test and its evidence (command + actual output, or the failed-run
    video/screenshot path), and return FAIL with a `regression:` note naming the
    broken test(s). Never override a regression to declare pass.
+
+6b. Publish the evidence: `python3 .harness/scripts/publish_test_report.py
+   --label <sprint-id>-attempt-<n>`. Put the report path (and the
+   `claude_artifact` file it prints, for the orchestrator to publish privately)
+   in the eval report's evidence section.
 
 7. End the report with the exact verdict block from the template
    (`verdict`, `sprint`, `attempt`, `failed_criteria`, `required_next_action`).

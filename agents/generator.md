@@ -109,7 +109,15 @@ Example of the standard:
    applies to this sprint's surfaces into the contract as criteria, verbatim.
    Tokens are not optional: a component with a hard-coded hex value fails
    the "all colors reference §4 CSS variables" criterion.
-3d. NEGOTIATE is where a YAGNI objection belongs (the build ladder's
+3d. Journeys first: read this sprint's `flows` in `sprints.json`, then those
+   flows in `docs/02d-process-flows.md` and their test cases in
+   `docs/02e-test-cases.md`. The contract includes one criterion per journey
+   and exception test case of those flows ("[TC-03] passes in the latest
+   run_tests.py run", cited as
+   `facts:product_map.flows.PF-02.journey_passing == true`), and the criteria
+   for each flow step's screen. Build the whole flow thin before any step
+   deep: a flow whose steps don't connect fails its journey test.
+3e. NEGOTIATE is where a YAGNI objection belongs (the build ladder's
    rules apply in BUILD, this is the only place to argue scope): a criterion you believe is speculative (YAGNI) gets a
    one-line objection in the contract's notes with the requirement ID you
    checked, and the evaluator decides. Once a contract is ratified, no
@@ -137,9 +145,17 @@ notes go in the sprint's build log, not in place of a criterion.
    source, tests for every criterion. The evaluator verifies the baseline
    even where the contract doesn't name it, so skipping it just converts
    into a FAIL later.
-4. Run local smoke checks (build succeeds, app starts, tests pass) before
-   handoff — handing the evaluator something that doesn't start burns an
-   entire attempt on a triviality.
+4. Write the browser tests the contract's test cases name, in the framework
+   `.harness/test-config.json` lists for them (templates in
+   `.harness/templates/e2e/`). Each test's title starts with its test-case
+   id — `test('[TC-03] …')`, `it('[TC-03] …')`, or `def test_tc_03_…` in
+   pytest — so results map back to `docs/02e-test-cases.md`. Journey tests
+   walk the whole flow in one test, exactly as the test case's steps say.
+   Where a flow step should appear in the user manual, call the manual-tour
+   helper (`manualStep` / `cy.manualStep` / `manual_step`) at that moment.
+4b. Run local smoke checks before handoff: build succeeds, app starts, and
+   `python3 .harness/scripts/run_tests.py` passes — handing the evaluator
+   something that doesn't start burns an entire attempt on a triviality.
 5. Update `.harness/progress.json`: set `"awaiting": "evaluate"`.
 6. Self-review the diff against the ratified contract, criterion by
    criterion: for each, name the file:line or command that satisfies it. A

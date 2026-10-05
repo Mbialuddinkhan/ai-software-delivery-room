@@ -75,13 +75,30 @@ output path.
   sprint. Undefined git conventions are exactly where features land
   inconsistently and drift.
   Also write the **live E2E testing plan** to `docs/08-e2e-testing.md` from
-  `.harness/templates/e2e-testing.md`. For web-UI products, scaffold Cypress so
-  runs are watchable: a `cypress.config.js` with `video: true` and
-  `screenshotOnRunFailure: true`, a `cypress/e2e/` folder with a sample spec,
-  and an npm `test:e2e` script. This full E2E suite is what the evaluator
-  re-runs each sprint and again at the release gate, so it must run headless in
-  CI.
-- **Release gate**: verify, don't trust. Actually run `docker build`,
+  `.harness/templates/e2e-testing.md`, and set the browser tests up so they
+  run headless in CI and headed in front of the user from one config:
+  - Playwright by default: copy `.harness/templates/e2e/playwright/`
+    (`playwright.config.ts` to the project root with its three marked values
+    set; `asdr-manual.ts` unchanged into the test dir). Add Cypress
+    (`templates/e2e/cypress/`) or Selenium (`templates/e2e/selenium/`) only
+    when the architecture or the user asks for it; both are supported side
+    by side.
+  - Write `.harness/test-config.json` from `templates/e2e/test-config.json`:
+    the app start command and URL, and one entry per suite with `cmd`,
+    `live_cmd`, `tours_cmd` and its JUnit path.
+  - Add the browser install to CI (`npx playwright install --with-deps
+    chromium`) and run `python3 .harness/scripts/run_tests.py` and
+    `publish_test_report.py` there; upload `.harness/test-results/` and
+    `docs/test-reports/` as artifacts. Start from
+    `.harness/templates/ci-asdr.yml`. Its GitHub Pages job stays disabled
+    unless `.harness/publish.json` has `"github_pages": true`, which only the
+    user turns on.
+  - Smoke it: `python3 .harness/scripts/run_tests.py` must pass on the empty
+    app with one sample test before you stop. This full suite is what the
+    evaluator re-runs each sprint and again at the release gate.
+- **Release gate**: verify, don't trust. Run
+  `python3 .harness/scripts/run_tests.py` and paste its summary lines; a
+  suite that produces no results is a failed suite. Actually run `docker build`,
   validate every `deploy/agents/*.yaml` (schema + no secret values),
   validate the compose file, diff `.env.example` against the variables the
   code reads. Paste command output into the readiness doc as evidence —

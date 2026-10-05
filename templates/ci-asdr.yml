@@ -1,0 +1,71 @@
+# ASDR project CI — copy to .github/workflows/asdr-tests.yml (devops does
+# this) and set the two marked lines. Runs every browser suite listed in
+# .harness/test-config.json, checks the product map, publishes the report and
+# uploads everything as a CI artifact (private to repo members).
+#
+# GitHub Pages (public) only runs when .harness/publish.json has
+# "github_pages": true — which only the user turns on for this project. The
+# repo also needs Settings → Pages → Source: GitHub Actions.
+name: asdr-tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    outputs:
+      pages: ${{ steps.publish.outputs.pages }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: npm ci                                   # <- your install command
+      - run: npx playwright install --with-deps chromium
+      # - run: python -m pip install selenium pytest  # <- only if a Selenium suite is listed
+      - name: Browser tests
+        run: python3 .harness/scripts/run_tests.py --label "ci-${{ github.run_number }}"
+      - name: Product map (journeys proven so far)
+        if: always()
+        run: python3 .harness/scripts/validate_product_map.py --results latest || true
+      - name: Publish report
+        id: publish
+        if: always()
+        run: |
+          python3 .harness/scripts/publish_test_report.py --label "ci-${{ github.run_number }}"
+          echo "pages=$(python3 -c "import json;print(str(json.load(open('.harness/publish.json')).get('github_pages', False)).lower())")" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: asdr-test-results
+          path: |
+            .harness/test-results/
+            docs/test-reports/
+            docs/product-map.md
+          retention-days: 30
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.publish.outputs.pages == 'true' && github.ref == 'refs/heads/main'
+        with:
+          path: docs/test-reports
+
+  pages:
+    needs: test
+    if: needs.test.outputs.pages == 'true' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
