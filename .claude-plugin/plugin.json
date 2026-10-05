@@ -1,6 +1,6 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Multi-agent software delivery for Claude: discovery with features, end-to-end process flows and test cases; architecture and design-system stages; sprints sliced through whole user journeys with a plan→build→independent-QA triad; Playwright, Cypress and Selenium tests you can watch live; private test reports; user manuals with real screenshots per persona and level (HTML + PDF); traceability and a journey gate before release. The state machine lives in scripts, not the model's memory.",
   "author": {
     "name": "Bilal Khan",

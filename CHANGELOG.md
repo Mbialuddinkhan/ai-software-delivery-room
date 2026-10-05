@@ -3,6 +3,17 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.4.1] — CI fix and stable report name
+
+### Fixed
+- CI's "Cowork path" step ran `pytest`, which the plugin job never installs, so
+  the 3.4.0 run failed there and skipped the release asset. It now runs
+  `unittest`. Unit tests and the sample app in Playwright, Cypress and
+  Selenium already passed on GitHub's runners.
+- The private test-report page now always has the same name ("<Product> Test
+  Report"), so every sprint and release updates one page instead of creating
+  a new one per label; per-run repo pages no longer repeat the product name.
+
 ## [3.4.0] — end-to-end journeys, live browser tests, published results, user manuals
 
 ### Why

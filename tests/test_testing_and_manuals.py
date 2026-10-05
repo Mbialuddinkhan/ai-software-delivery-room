@@ -206,7 +206,8 @@ class TestPublishReport(unittest.TestCase):
             self.assertNotIn("github_pages", pub["outputs"])          # private by default
             art = Path(pub["outputs"]["claude_artifact"]).read_text()
             self.assertNotIn("<!doctype", art.lower())                # Artifact-tool format
-            self.assertIn("<title>", art[:8000])
+            self.assertIn("<title>Demo Test Report</title>", art[:8000])   # stable Artifact name
+            self.assertIn("<title>Demo sprint-02 attempt-1 Test Report</title>", html)
             self.assertIn("data:image/png;base64,", art)
             self.assertIn("prefers-color-scheme: dark", art)
         finally:

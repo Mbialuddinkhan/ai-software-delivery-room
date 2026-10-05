@@ -322,7 +322,11 @@ def main() -> int:
     s = json.loads((run_dir / "summary.json").read_text())
     if args.label:
         s["label"] = args.label
-    title = f'{s.get("product") or "Test"} {s.get("label") or s["run_id"]}'
+    product = s.get("product") or "Project"
+    label = s.get("label") or s["run_id"]
+    # The repo page is per run; the private Artifact keeps one stable name so
+    # each release updates the same page instead of creating a new one.
+    run_title = label if label.lower().startswith(product.lower()) else f"{product} {label}"
     outputs = {}
 
     if pub.get("repo") and not args.no_repo:
@@ -331,7 +335,7 @@ def main() -> int:
             shutil.rmtree(out_dir)
         out_dir.mkdir(parents=True)
         html_text = build_report(s, run_dir, Assets(run_dir, out_dir, False, 0))
-        (out_dir / "index.html").write_text(page(f"{e(title)} Report", html_text))
+        (out_dir / "index.html").write_text(page(f"{e(run_title)} Test Report", html_text))
         (out_dir / "summary.json").write_text(json.dumps(s, indent=2))
         write_index(Path(args.out))
         outputs["repo"] = str(out_dir / "index.html")
@@ -343,7 +347,8 @@ def main() -> int:
     if inline_path:
         assets = Assets(run_dir, None, True, args.max_inline_mb)
         html_text = build_report(s, run_dir, assets)
-        Path(inline_path).write_text(page(f"{e(title)} Report", html_text, args.fragment))
+        Path(inline_path).write_text(page(f"{e(product)} Test Report" if args.fragment
+                                          else f"{e(run_title)} Test Report", html_text, args.fragment))
         outputs["claude_artifact" if args.fragment else "inline"] = inline_path
         mb = Path(inline_path).stat().st_size / 1024 / 1024
         print(f"OK: single-file report {inline_path} ({mb:.1f} MB"
