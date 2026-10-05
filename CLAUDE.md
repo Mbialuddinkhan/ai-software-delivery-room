@@ -34,10 +34,13 @@ project) is created by `scripts/init_asdr.py`; it does not live in this repo.
    shows users as "what it adds", so lead with benefits.
    Re-pinning a companion (new `sha` + `version` in `marketplace.json` and
    `scripts/upstream.json`) is an ASDR release too.
-4. Keep every `description` in `plugin.json` and `marketplace.json` at or
+4. Never put `dependencies` in `plugin.json` — declare them on the ASDR
+   entry in `marketplace.json` only. Cowork cannot resolve them and skips
+   loading the plugin entirely (3.3.0/3.3.1 shipped that way).
+5. Keep every `description` in `plugin.json` and `marketplace.json` at or
    under 500 characters — Cowork rejects the package above that, even though
    `claude plugin validate` passes it (`tests/test_manifests.py` enforces it).
-5. Before pushing: `python3 -m py_compile scripts/*.py`,
+6. Before pushing: `python3 -m py_compile scripts/*.py`,
    `python3 -m unittest discover tests`, and `claude plugin validate .`.
 
 ## Releasing

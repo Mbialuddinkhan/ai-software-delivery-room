@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.3.1"
+  version: "3.3.2"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -414,7 +414,7 @@ and the reasoning behind each rule: `docs/COMPANIONS.md`.
 
 | Companion | Used in | Rule |
 |---|---|---|
-| UI UX Pro Max | `design-system` stage (row 5b) | Installed automatically as an ASDR dependency; drafts tokens/checklist; executor reviews fit; stage-qa grades fit vs docs/01 |
+| UI UX Pro Max | `design-system` stage (row 5b) | Installed automatically with ASDR from the `asdr` marketplace (Claude Code); absent in Cowork unless added separately — then 03b is hand-written from the template; drafts tokens/checklist; executor reviews fit; stage-qa grades fit vs docs/01 |
 | Build ladder (built in) | generator BUILD mode | `templates/build-ladder.md`; YAGNI objections go in NEGOTIATE, never skip a ratified criterion |
 | Ponytail (optional) | generator only | Listed in the `asdr` marketplace, disabled by default; needs `PONYTAIL_SUBAGENT_MATCHER='^generator$'` |
 | Graphify | brownfield entry, post-sprint `--update` | Navigation aid only; never a measurement source |

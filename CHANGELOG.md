@@ -3,6 +3,20 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.3.2] — ASDR loads in Cowork again
+
+### Fixed
+- 3.3.0 and 3.3.1 did not load in Cowork: `/ai-software-delivery-room:asdr`
+  reported "isn't installed in this session" and no ASDR agents appeared.
+  `plugin.json` declared `dependencies: ["ui-ux-pro-max"]`; Cowork installs
+  the plugin outside the `asdr` marketplace, cannot resolve that
+  dependency, and skips the plugin ("will not load without it"). The
+  dependency now lives only on the ASDR entry in `marketplace.json`, where
+  Claude Code still installs it automatically. In Cowork the design-system
+  stage uses the hand-written template unless UI UX Pro Max is added
+  separately. `tests/test_manifests.py` forbids `dependencies` in
+  `plugin.json`.
+
 ## [3.3.1] — manifest description within Cowork's 500-character limit
 
 ### Fixed

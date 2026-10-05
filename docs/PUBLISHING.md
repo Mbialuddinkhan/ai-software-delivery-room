@@ -43,8 +43,12 @@ Team rollout without per-user steps — commit to a project's
   `ai-software-delivery-room` (source `./`, `dependencies: ["ui-ux-pro-max"]`),
   `ui-ux-pro-max` (github source pinned by `sha`), `ponytail` (pinned,
   `defaultEnabled: false`).
-- `.claude-plugin/plugin.json` — `dependencies`, `license`, `repository`
-  added. `version` lives ONLY here; the marketplace entry for
+- `.claude-plugin/plugin.json` — `license`, `repository` added. It must
+  NOT carry `dependencies`: Cowork installs the `.plugin` outside the `asdr`
+  marketplace, cannot resolve `ui-ux-pro-max` there, and silently skips
+  loading ASDR (no `/asdr` command, no agents). Dependencies live only on
+  the ASDR entry in `marketplace.json`, which Claude Code honours
+  ("+ 1 dependency: ui-ux-pro-max"). `tests/test_manifests.py` enforces this. `version` lives ONLY here; the marketplace entry for
   ASDR deliberately has no `version` (Claude Code silently prefers
   plugin.json, so a stale duplicate would mask releases).
 - No hooks. The update check runs only inside `/asdr` (Phase 0 step 5);

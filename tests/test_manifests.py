@@ -34,6 +34,18 @@ class TestManifests(unittest.TestCase):
         asdr = next(e for e in self.market["plugins"] if e["name"] == self.plugin["name"])
         self.assertNotIn("version", asdr, "ASDR marketplace entry must not carry a version")
 
+    def test_dependencies_only_in_marketplace(self):
+        # Cowork installs the .plugin outside the asdr marketplace; a
+        # dependency in plugin.json cannot resolve there and the whole plugin
+        # is skipped (no /asdr, no agents). Claude Code reads the marketplace
+        # entry's dependencies and installs them.
+        self.assertNotIn("dependencies", self.plugin)
+        asdr = next(e for e in self.market["plugins"] if e["name"] == self.plugin["name"])
+        self.assertEqual(asdr.get("dependencies"), ["ui-ux-pro-max"])
+        names = {e["name"] for e in self.market["plugins"]}
+        for dep in asdr["dependencies"]:
+            self.assertIn(dep, names, f"dependency {dep} not listed in marketplace.json")
+
     def test_no_hooks_shipped(self):
         self.assertNotIn("hooks", self.plugin)
         self.assertFalse((REPO / "hooks").exists())

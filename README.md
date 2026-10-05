@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.3.1
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.3.2
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -124,8 +124,8 @@ claude plugin marketplace add Mbialuddinkhan/ai-software-delivery-room   # or a 
 claude plugin install ai-software-delivery-room@asdr
 ```
 
-A fresh install also pulls in `ui-ux-pro-max` (a declared dependency, pinned
-by commit). Update later with `claude plugin marketplace update asdr` followed
+A fresh install from the `asdr` marketplace also pulls in `ui-ux-pro-max`
+(declared as a dependency in `marketplace.json`, pinned by commit). Update later with `claude plugin marketplace update asdr` followed
 by `claude plugin update ai-software-delivery-room@asdr`. **Upgrading from
 3.2.x or earlier:** `plugin update` does not install newly declared
 dependencies, so ASDR shows "failed to load" until you also run
@@ -133,7 +133,9 @@ dependencies, so ASDR shows "failed to load" until you also run
 for newer versions of ASDR and its companions at Phase 0 and asks before
 installing anything; there is no session-start hook or background traffic.
 
-**Cowork.** Zip the repo (without `.git`) as `ai-software-delivery-room.plugin`
+**Cowork.** Cowork installs the plugin on its own, outside the `asdr`
+marketplace, so UI UX Pro Max is not pulled in there; the design-system
+stage falls back to the hand-written template. Zip the repo (without `.git`) as `ai-software-delivery-room.plugin`
 and add it in the Claude desktop app, or accept the `.plugin` package when
 Claude hands it to you in chat. Then trigger a skill (e.g. ask to "run the
 full ASDR workflow" or use the trigger phrases below).
@@ -241,7 +243,7 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.3.1)
+.claude-plugin/plugin.json   ← plugin manifest (v3.3.2)
 README.md                    ← this file
 CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.3 change log
 agents/                      ← 17 agent definitions (incl. stage-planner, stage-qa,
