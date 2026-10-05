@@ -92,6 +92,11 @@ Apply these before judgment; they are not overridable:
   Production-ready (at most **MVP-ready**, carried as a warning)
 - Manual-only test cases without a recorded human sign-off → cannot be
   Production-ready
+- Critical or serious accessibility violations on the latest run
+  (`facts:test_runs.a11y.critical`, `.serious` > 0) → cannot be
+  Production-ready; no accessibility checks at all on a UI product → warning
+- User manuals whose explanations a person has not approved → cannot be
+  Production-ready (warning for MVP)
 
 Test floor: zero automated tests, or tests that do not execute, caps the
 system at prototype no matter what else passes.

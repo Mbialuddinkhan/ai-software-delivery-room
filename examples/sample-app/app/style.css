@@ -32,3 +32,5 @@ button.link { border:0; background:none; color:var(--accent); padding:0; }
 label.check { display:flex; gap:8px; font-weight:400; }
 .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 #categories { padding-left:18px; }
+/* 1.1.0: the open/done counter is a pill so it is easier to spot */
+#counter { background:#eef1fd; color:#2f3f9e; padding:3px 10px; border-radius:999px; font-weight:600; }

@@ -7,6 +7,7 @@ describe('TaskBoard (Cypress)', () => {
     cy.get('#add-task').click();
     cy.contains('#tasks li', 'Write release notes').should('be.visible');
     cy.get('#counter').should('have.text', '1 open · 0 done');
+    cy.asdrA11y('board');
   });
 
   it('[TC-19] hides settings from members', () => {
@@ -15,7 +16,8 @@ describe('TaskBoard (Cypress)', () => {
   });
 
   it('[TC-12] keeps tasks after a page reload', () => {
-    signIn('Sara');
+    cy.loginAs('member');          // saved login: this test is not about signing in
+    cy.visit('/');
     cy.get('#new-task').type('Order snacks{enter}');
     cy.reload();
     cy.contains('#tasks li', 'Order snacks').should('be.visible');

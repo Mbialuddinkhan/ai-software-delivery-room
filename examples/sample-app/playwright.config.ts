@@ -29,13 +29,21 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
+    // Signs in once per role (login.ts) and saves the state for the others.
+    { name: 'setup', testMatch: /auth\.setup\.ts$/ },
     // Behaviour tests.
-    { name: 'e2e', testIgnore: /\.tour\.spec\.ts$/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'e2e',
+      testIgnore: /\.tour\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: { ...devices['Desktop Chrome'] },
+    },
     // Manual tours: serial, fixed viewport so screenshots are consistent.
     {
       name: 'manual',
       testMatch: /\.tour\.spec\.ts$/,
       fullyParallel: false,
+      dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
     },
   ],

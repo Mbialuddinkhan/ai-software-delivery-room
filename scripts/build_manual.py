@@ -30,6 +30,33 @@ a screenshot was taken from a different commit than the one being released
 (--allow-stale to override for drafts). Tours no manual uses are warnings.
 --check validates without writing anything.
 
+Every explanation is also checked against the screen it describes: each
+**bold** name ("Click **Add task**") must be readable on that step's
+screenshot (the tour helpers record the on-screen text). Keyboard keys
+(**Enter**, **N**) are exempt; a step entry may list deliberate exceptions in
+"offscreen". This catches the commonest manual error — a button renamed in
+the app but not in the manual.
+
+Human review
+------------
+A person must read the explanations before they ship. Approvals live in
+docs/manuals/review.json, keyed by step with a hash of its text, so only new
+or changed explanations need reading again:
+  --review-page FILE        one self-contained page with every step's screenshot,
+                            text per level and review state (publish it privately)
+  --approve all|KEY,KEY --reviewer NAME   record approval of the current text
+  --flag KEY --note TEXT    record that a step needs fixing
+  --require-review          fail unless every step in use is approved (release)
+
+Screen changes between releases
+-------------------------------
+By default (--compare-to auto) the build compares this version's screenshots
+with the previous version's in docs/manuals/ (compare_screens.py): changed
+steps carry a "Screen changed since <version>" badge, new ones "New in this
+version", and docs/manuals/<version>/ui-changes.html shows before / after /
+diff for each. The release-manager lists them so a person confirms every UI
+change was intended. --compare-to <version> picks the baseline; none skips it.
+
 Outputs  docs/manuals/<version>/
   index.html            every manual for this version, by role and by experience
   <level>.html / .pdf   one per level; PDF via headless Chrome/Chromium
@@ -43,6 +70,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import datetime as dt
 import html
 import json
@@ -54,10 +82,67 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from report_style import page  # noqa: E402
+from report_style import ZOOM_JS, page  # noqa: E402
+from compare_screens import compare_dirs  # noqa: E402
 
 e = html.escape
 TIER_ORDER = ["beginner", "everyday", "power", "administrator"]
+KEYS = {"enter", "return", "tab", "esc", "escape", "space", "spacebar", "shift", "ctrl", "control",
+        "cmd", "command", "alt", "option", "delete", "backspace", "up", "down", "left", "right",
+        "home", "end", "page up", "page down", "f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8",
+        "f9", "f10", "f11", "f12"}
+
+
+def _norm(t: str) -> str:
+    t = t.replace("\u2019", "'").replace("\u2018", "'").replace("\u201c", '"').replace("\u201d", '"')
+    return re.sub(r"\s+", " ", t).strip().lower()
+
+
+def offscreen_terms(text: str, st: dict, allow) -> list:
+    """Bold UI names in an explanation that do not appear on the step's screen."""
+    pool = _norm((st.get("page_text") or "") + "\n" + (st.get("target_text") or ""))
+    allowed = {_norm(a) for a in allow or []}
+    missing = []
+    for term in re.findall(r"\*\*(.+?)\*\*", text or ""):
+        t = _norm(term)
+        if not t or t in KEYS or re.fullmatch(r"[a-z0-9]", t) or t in allowed:
+            continue
+        if any(re.search(r"(?<![a-z0-9])" + re.escape(c) + r"(?![a-z0-9])", pool)
+               for c in {t, t.rstrip(".:!")} if c):
+            continue
+        if term not in missing:
+            missing.append(term)
+    return missing
+
+
+def entry_hash(entry) -> str:
+    raw = json.dumps(entry, sort_keys=True, ensure_ascii=False)
+    return "sha1:" + hashlib.sha1(raw.encode("utf-8")).hexdigest()
+
+
+def file_sha(path: Path) -> str | None:
+    return "sha1:" + hashlib.sha1(path.read_bytes()).hexdigest() if path.is_file() else None
+
+
+def load_review(path: Path) -> dict:
+    if path.is_file():
+        try:
+            return json.loads(path.read_text())
+        except ValueError:
+            pass
+    return {"schema": 1, "steps": {}}
+
+
+def review_state(key: str, entry, review: dict) -> tuple:
+    """-> (state, record). state: approved | changed | new | needs-fix"""
+    rec = (review.get("steps") or {}).get(key)
+    if not rec:
+        return "new", None
+    if rec.get("status") == "needs-fix" and rec.get("hash") == entry_hash(entry):
+        return "needs-fix", rec
+    if rec.get("hash") != entry_hash(entry):
+        return "changed", rec
+    return ("approved", rec) if rec.get("status") == "approved" else ("new", rec)
 
 
 # ── inputs ─────────────────────────────────────────────────────────────────
@@ -143,9 +228,12 @@ def level_title(lv: dict) -> str:
 
 # ── validation ─────────────────────────────────────────────────────────────
 
-def plan(spec: dict, tours: dict, manual_dir: Path, commit: str | None, allow_stale: bool):
+def plan(spec: dict, tours: dict, manual_dir: Path, commit: str | None, allow_stale: bool,
+         catalog: dict | None = None):
     problems, warnings, built = [], [], []
     seen_ids, used = set(), set()
+    catalog = {} if catalog is None else catalog   # key -> what a reviewer needs to see
+    no_text_tours = set()
     texts = spec.get("steps", {})
     levels = spec.get("levels") or []
     if not levels:
@@ -184,6 +272,20 @@ def plan(spec: dict, tours: dict, manual_dir: Path, commit: str | None, allow_st
                     shot = manual_dir / st["screenshot"]
                     if not shot.is_file():
                         problems.append(f"{where}: screenshot {st['screenshot']} is missing")
+                    allow = entry.get("offscreen") if isinstance(entry, dict) else None
+                    if "page_text" not in st:
+                        no_text_tours.add(tour)
+                    elif text:
+                        for term in offscreen_terms(text, st, allow):
+                            msg = (f"step '{key}' ({lid}): the explanation names **{term}**, which is not on "
+                                   f"that screen ({st['screenshot']}) — fix the wording, or list it under "
+                                   f"\"offscreen\" if it is deliberate")
+                            if msg not in problems:
+                                problems.append(msg)
+                    c = catalog.setdefault(key, {"entry": entry, "title": st.get("title") or st["id"],
+                                                 "screenshot": st["screenshot"], "levels": {},
+                                                 "target_text": st.get("target_text")})
+                    c["levels"][lid] = text or ""
                     steps.append({"key": key, "title": st.get("title") or st["id"], "text": text or "",
                                   "note": st.get("note"), "screenshot": st["screenshot"], "url": st.get("url")})
             if not steps:
@@ -194,6 +296,9 @@ def plan(spec: dict, tours: dict, manual_dir: Path, commit: str | None, allow_st
             problems.append(f"level '{lid}' has no sections")
         built.append({**lv, "title_text": level_title(lv), "sections": sections})
 
+    for t in sorted(no_text_tours):
+        warnings.append(f"tour '{t}' has no on-screen text recorded (older manual helper) — the "
+                        "bold-name check was skipped; copy the current helper from .harness/templates/e2e/")
     for name, m in tours.items():
         if commit and m.get("commit") != commit:
             msg = (f"tour '{name}' screenshots are from commit {m.get('commit') or 'unknown'}, "
@@ -212,10 +317,11 @@ def plan(spec: dict, tours: dict, manual_dir: Path, commit: str | None, allow_st
 
 # ── rendering ──────────────────────────────────────────────────────────────
 
-def version_flag(product: str, version: str, commit: str | None, captured: str) -> str:
+def version_flag(product: str, version: str, commit: str | None, captured: str, reviewed: str = "") -> str:
     return ('<div class="version-flag" role="note"><span class="eyebrow">This manual matches</span>'
             f'<strong>{e(product)} {e(version)}</strong>'
-            f'<span class="muted mono">commit {e(commit or "unknown")} · screenshots taken {e(captured)}</span></div>')
+            f'<span class="muted mono">commit {e(commit or "unknown")} · screenshots taken {e(captured)}</span>'
+            + (f'<span class="muted">{e(reviewed)}</span>' if reviewed else "") + '</div>')
 
 
 def render_level(lv: dict, ctx: dict, img_src, anchor_prefix: str = "") -> str:
@@ -232,7 +338,8 @@ def render_level(lv: dict, ctx: dict, img_src, anchor_prefix: str = "") -> str:
             n += 1
             note = f'<p class="note">{md(st["note"])}</p>' if st.get("note") else ""
             rows.append(
-                f'<div class="step"><div class="text"><span class="num">STEP {n}</span>'
+                f'<div class="step"><div class="text"><div class="row"><span class="num">STEP {n}</span>'
+                f'{step_badge(ctx, st["screenshot"])}</div>'
                 f'<h3>{e(st["title"])}</h3><p>{md(st["text"])}</p>{note}</div>'
                 f'<img src="{img_src(st["screenshot"])}" alt="{e(st["title"])}: screenshot of {e(ctx["product"])}" loading="lazy"></div>')
         intro = f'<p>{md(sec["intro"])}</p>' if sec.get("intro") else ""
@@ -244,11 +351,65 @@ def render_level(lv: dict, ctx: dict, img_src, anchor_prefix: str = "") -> str:
         + (f'<p>{md(lv["audience"])}</p>' if lv.get("audience") else "")
         + (f'<p class="muted">{md(ctx["intro"])}</p>' if ctx.get("intro") else "")
         + '</header>'
-        + version_flag(ctx["product"], ctx["version"], ctx["commit"], ctx["captured"])
+        + version_flag(ctx["product"], ctx["version"], ctx["commit"], ctx["captured"], ctx.get("reviewed", ""))
         + new
         + f'<nav class="band" aria-label="Contents"><h2>In this guide</h2><ol class="toc">{toc}</ol>'
           '<p class="muted">In every screenshot, the part of the screen you use is outlined in red.</p></nav>'
         + "".join(secs))
+
+
+def step_badge(ctx: dict, shot: str) -> str:
+    ui = ctx.get("ui")
+    if not ui:
+        return ""
+    name = Path(shot).name
+    if name in ui["changed_names"]:
+        return f'<span class="pill skipped">Screen changed since {e(ui["compared_to"])}</span>'
+    if name in ui["added"]:
+        return '<span class="pill neutral">New in this version</span>'
+    return ""
+
+
+def ui_changes_body(ctx: dict, src) -> str:
+    """Before / after / diff for every changed screen. src(kind, name) -> image URL."""
+    ui = ctx["ui"]
+    cards = []
+    for c in ui["changed"]:
+        imgs = "".join(f'<figure><img src="{src(k, c["name"])}" alt="{lab} {e(c["name"])}"><figcaption>{lab}</figcaption></figure>'
+                       for k, lab in (("before", f"Before ({ui['compared_to']})"), ("after", f"Now ({ctx['version']})"),
+                                      ("diff", "Changed pixels in red")) if src(k, c["name"]))
+        cards.append(f'<section class="stack"><div class="row"><h3>{e(c["name"])}</h3>'
+                     f'<span class="pill skipped">{c["pct"]}% of the screen</span>'
+                     + (f'<span class="muted">{e(c["note"])}</span>' if c.get("note") else "")
+                     + f'</div><div class="shots">{imgs}</div></section>')
+    extra = ""
+    if ui["added"]:
+        extra += f'<p><strong>New screens:</strong> {e(", ".join(ui["added"]))}</p>'
+    if ui["removed"]:
+        extra += f'<p><strong>No longer in the manuals:</strong> {e(", ".join(ui["removed"]))}</p>'
+    return (f'<header class="stack"><span class="eyebrow">{e(ctx["product"])} {e(ctx["version"])}</span>'
+            f'<h1>What changed on screen since {e(ui["compared_to"])}</h1>'
+            f'<p>{len(ui["changed"])} screens changed, {len(ui["added"])} new, {len(ui["removed"])} removed. '
+            'Confirm each change was intended before the release goes out.</p></header>'
+            + extra + "".join(cards))
+
+
+def find_previous(root: Path, version: str, choice: str):
+    if choice == "none" or not root.is_dir():
+        return None
+    cands = []
+    for d in root.iterdir():
+        b = d / "build.json"
+        if b.is_file() and (d / "screens").is_dir():
+            try:
+                info = json.loads(b.read_text())
+            except ValueError:
+                continue
+            if str(info.get("version")) != version:
+                cands.append((info.get("built_at") or "", str(info.get("version")), d))
+    if choice != "auto":
+        cands = [c for c in cands if c[1] == choice or c[2].name == choice]
+    return max(cands)[1:] if cands else None
 
 
 def footer(ctx: dict) -> str:
@@ -273,9 +434,19 @@ def index_body(levels: list, ctx: dict, link) -> str:
     role_html = "".join(f'<section class="stack"><h3>{e(name)}</h3><div class="levels">{"".join(card(x) for x in lvs)}</div></section>'
                         for name, lvs in groups.items())
     tier_html = "".join(card(x) for x in tiers)
+    ui = ctx.get("ui")
+    changes = ""
+    if ui:
+        what = (f'{len(ui["changed"])} screens changed, {len(ui["added"])} new, {len(ui["removed"])} removed'
+                if ui["changed"] or ui["added"] or ui["removed"] else "no screens changed")
+        link_ui = ctx.get("ui_link")
+        changes = (f'<section class="band"><h2>What changed on screen since {e(ui["compared_to"])}</h2><p>{e(what)}.'
+                   + (f' <a href="{link_ui}">See before and after</a>.' if link_ui and ui["changed"] else "")
+                   + '</p></section>')
     return (f'<header class="stack"><span class="eyebrow">{e(ctx["product"])}</span><h1>User manuals</h1>'
             + (f'<p>{md(ctx["intro"])}</p>' if ctx.get("intro") else "") + '</header>'
-            + version_flag(ctx["product"], ctx["version"], ctx["commit"], ctx["captured"])
+            + version_flag(ctx["product"], ctx["version"], ctx["commit"], ctx["captured"], ctx.get("reviewed", ""))
+            + changes
             + (f'<section class="stack"><h2>By role</h2>{role_html}</section>' if role_html else "")
             + (f'<section class="stack"><h2>By experience</h2><div class="levels">{tier_html}</div></section>' if tier_html else ""))
 
@@ -306,6 +477,70 @@ def to_pdf(chrome: str, html_file: Path, pdf_file: Path) -> bool:
     return pdf_file.is_file() and pdf_file.stat().st_size > 1000
 
 
+# ── human review ───────────────────────────────────────────────────────────
+
+def record_review(args, catalog: dict, review: dict, path: Path, manual_dir: Path) -> int:
+    now = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
+    who = args.reviewer or os.environ.get("USER") or "unknown"
+    if args.flag:
+        keys, status = [args.flag], "needs-fix"
+        if not args.note:
+            print("ERROR: --flag needs --note saying what is wrong")
+            return 1
+    else:
+        keys = list(catalog) if args.approve.strip() == "all" else [k.strip() for k in args.approve.split(",") if k.strip()]
+        status = "approved"
+    unknown = [k for k in keys if k not in catalog]
+    if unknown:
+        print(f"ERROR: not a step used by any manual: {', '.join(unknown)}")
+        return 1
+    steps = review.setdefault("steps", {})
+    for k in keys:
+        c = catalog[k]
+        steps[k] = {"status": status, "hash": entry_hash(c["entry"]), "reviewer": who, "at": now,
+                    "screen": file_sha(manual_dir / c["screenshot"]), "note": args.note or None}
+    review["schema"] = 1
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(review, indent=2, ensure_ascii=False) + "\n")
+    print(f"OK: {len(keys)} step(s) {status} by {who} in {path}")
+    return 0
+
+
+def write_review_page(out: Path, spec: dict, catalog: dict, states: dict, manual_dir: Path,
+                      problems: list, version, commit) -> None:
+    badge = {"approved": ("passed", "Approved"), "changed": ("skipped", "Changed since approval"),
+             "new": ("neutral", "Not reviewed yet"), "needs-fix": ("failed", "Needs fixing")}
+    order = {"needs-fix": 0, "changed": 1, "new": 2, "approved": 3}
+    cards = []
+    for k in sorted(catalog, key=lambda k: (order[states[k][0]], k)):
+        c, (st, rec) = catalog[k], states[k]
+        cls, label = badge[st]
+        shot = manual_dir / c["screenshot"]
+        src = ("data:image/png;base64," + base64.b64encode(shot.read_bytes()).decode()) if shot.is_file() else ""
+        texts = {}
+        for lid, t in c["levels"].items():
+            texts.setdefault(t, []).append(lid)
+        body = "".join(f'<p>{md(t)}</p><p class="muted mono">used in: {e(", ".join(lids))}</p>' for t, lids in texts.items())
+        note = (f'<p class="note">{e(rec.get("reviewer") or "")}: {e(rec.get("note") or "")}</p>'
+                if rec and rec.get("note") else "")
+        cards.append(f'<div class="step"><div class="text"><div class="row"><span class="pill {cls}">{label}</span>'
+                     f'<code>{e(k)}</code></div><h3>{e(c["title"])}</h3>{body}{note}</div>'
+                     f'<img src="{src}" alt="{e(c["title"])}"></div>')
+    counts = {s: sum(1 for v in states.values() if v[0] == s) for s in order}
+    probs = ("".join(f"<li>{e(p)}</li>" for p in problems))
+    head = (f'<header class="stack"><span class="eyebrow">{e(spec.get("product") or "")} · manual review · '
+            f'version {e(str(version))} · commit {e(commit or "unknown")}</span><h1>Manual review</h1>'
+            '<p>Read each explanation against its screenshot: is it what a user sees, in words they would use? '
+            'Then reply in chat with <strong>approve all</strong>, or name the steps that need changes, '
+            'for example <code>flag member-basics/add-task: the button is on the right</code>.</p>'
+            f'<p class="muted mono">{counts["needs-fix"]} need fixing · {counts["changed"]} changed · '
+            f'{counts["new"]} not reviewed · {counts["approved"]} approved</p></header>'
+            + (f'<section class="band"><h2>Automatic checks found</h2><ul class="toc">{probs}</ul></section>' if probs else ""))
+    page_html = page(f'{e(spec.get("product") or "Product")} Manual Review',
+                     f'<main class="wrap">{head}{"".join(cards)}</main>', fragment=True)
+    out.write_text(page_html)
+
+
 # ── main ───────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -320,6 +555,15 @@ def main() -> int:
     ap.add_argument("--allow-stale", action="store_true", help="accept screenshots from another commit (drafts)")
     ap.add_argument("--artifact", metavar="FILE", help="also write all manuals as one self-contained page")
     ap.add_argument("--check", action="store_true", help="validate only; write nothing")
+    ap.add_argument("--review-file", default=None, help="default: review.json next to the spec")
+    ap.add_argument("--review-page", metavar="FILE", help="write the human review page and stop")
+    ap.add_argument("--approve", metavar="all|KEY,KEY", help="record approval of the current explanations")
+    ap.add_argument("--flag", metavar="KEY", help="record that a step's explanation needs fixing")
+    ap.add_argument("--note", default="", help="what is wrong (with --flag) or a remark (with --approve)")
+    ap.add_argument("--reviewer", default=None, help="who reviewed (with --approve / --flag)")
+    ap.add_argument("--compare-to", default="auto", help="auto | <version> | none (screen changes)")
+    ap.add_argument("--require-review", action="store_true",
+                    help="fail unless a person approved every explanation in use (release builds)")
     args = ap.parse_args()
 
     spec_path, manual_dir = Path(args.spec), Path(args.manual_dir)
@@ -337,7 +581,27 @@ def main() -> int:
         version = json.loads(Path("package.json").read_text()).get("version")
     version = version or (commit or "draft")
 
-    levels, problems, warnings = plan(spec, tours, manual_dir, commit, args.allow_stale)
+    catalog = {}
+    levels, problems, warnings = plan(spec, tours, manual_dir, commit, args.allow_stale, catalog)
+    review_path = Path(args.review_file) if args.review_file else spec_path.parent / "review.json"
+    review = load_review(review_path)
+    states = {k: review_state(k, c["entry"], review) for k, c in catalog.items()}
+
+    if args.approve or args.flag:
+        return record_review(args, catalog, review, review_path, manual_dir)
+    if args.review_page:
+        write_review_page(Path(args.review_page), spec, catalog, states, manual_dir, problems, version, commit)
+        counts = {s: sum(1 for v in states.values() if v[0] == s) for s in ("approved", "changed", "new", "needs-fix")}
+        print(f"OK: review page {args.review_page} — {len(catalog)} steps: " +
+              ", ".join(f"{n} {k}" for k, n in counts.items() if n))
+        return 0
+    if args.require_review:
+        for k, (st, rec) in states.items():
+            if st == "needs-fix":
+                problems.append(f"step '{k}' was flagged for fixing by {rec.get('reviewer')}: {rec.get('note')}")
+            elif st != "approved":
+                problems.append(f"step '{k}' explanation is {'new' if st == 'new' else 'changed since it was approved'} "
+                                "and has not been reviewed by a person — run --review-page, then --approve")
     for w in warnings:
         print(f"WARN: {w}")
     if problems:
@@ -351,7 +615,14 @@ def main() -> int:
         return 0
 
     captured = max((m.get("captured_at") or "" for m in tours.values()), default="")[:10] or "unknown"
-    ctx = {"product": spec.get("product") or "The product", "version": str(version), "commit": commit,
+    approved = [rec for st, rec in states.values() if st == "approved"]
+    if catalog and len(approved) == len(catalog):
+        who = sorted({r.get("reviewer") or "a reviewer" for r in approved})
+        last = max((r.get("at") or "")[:10] for r in approved)
+        reviewed = f"Explanations reviewed by {', '.join(who)} (latest {last})"
+    else:
+        reviewed = f"Explanations not yet fully reviewed by a person ({len(approved)} of {len(catalog)} approved)"
+    ctx = {"reviewed": reviewed, "product": spec.get("product") or "The product", "version": str(version), "commit": commit,
            "captured": captured, "intro": spec.get("intro"),
            "whats_new": whats_new(spec, Path(args.changelog), str(version))}
     out = Path(args.out) / re.sub(r"[^A-Za-z0-9._-]+", "-", str(version))
@@ -361,6 +632,29 @@ def main() -> int:
     used = {st["screenshot"] for lv in levels for s in lv["sections"] for st in s["steps"]}
     for rel in used:
         shutil.copy2(manual_dir / rel, out / rel)
+
+    prev = find_previous(Path(args.out), str(version), args.compare_to)
+    if args.compare_to not in ("auto", "none") and not prev:
+        warnings.append(f"--compare-to {args.compare_to}: no such earlier build in {args.out}; skipped")
+        print(f"WARN: {warnings[-1]}")
+    if prev:
+        prev_version, prev_dir = prev
+        rep_ = compare_dirs(prev_dir / "screens", manual_dir / "screens", out / "changes",
+                            only={Path(r).name for r in used})
+        for c in rep_["changed"]:
+            if (prev_dir / "screens" / c["name"]).is_file():
+                shutil.copy2(prev_dir / "screens" / c["name"], out / "changes" / f"before--{c['name']}")
+        ctx["ui"] = {"compared_to": prev_version, "changed": rep_["changed"], "added": rep_["added"],
+                     "removed": rep_["removed"], "changed_names": {c["name"] for c in rep_["changed"]}}
+        ctx["ui_link"] = "ui-changes.html"
+
+        def rel_src(kind, name):
+            f = {"before": f"changes/before--{name}", "after": f"screens/{name}", "diff": f"changes/diff--{name}"}[kind]
+            return f if (out / f).is_file() else None
+        (out / "ui-changes.html").write_text(page(f'{e(ctx["product"])} Screen Changes',
+                                                  f'<main class="wrap">{ui_changes_body(ctx, rel_src)}{footer(ctx)}</main>{ZOOM_JS}'))
+        print(f"OK: compared with {prev_version}: {len(rep_['changed'])} screens changed, "
+              f"{len(rep_['added'])} new, {len(rep_['removed'])} removed")
 
     chrome = None if args.no_pdf else find_chrome()
     if not args.no_pdf and not chrome:
@@ -389,7 +683,10 @@ def main() -> int:
     build = {"schema": 1, "product": ctx["product"], "version": ctx["version"], "commit": commit,
              "built_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
              "screenshots_captured": captured, "tours": sorted(tours), "levels": files,
-             "steps": steps_total, "warnings": warnings}
+             "steps": steps_total, "warnings": warnings,
+             "review": {s: sum(1 for v in states.values() if v[0] == s)
+                        for s in ("approved", "changed", "new", "needs-fix")},
+             "ui_changes": ({k: v for k, v in ctx["ui"].items() if k != "changed_names"} if ctx.get("ui") else None)}
     (out / "build.json").write_text(json.dumps(build, indent=2))
 
     root = Path(args.out)
@@ -418,11 +715,19 @@ def main() -> int:
             if rel not in cache:
                 cache[rel] = "data:image/png;base64," + base64.b64encode((manual_dir / rel).read_bytes()).decode()
             return cache[rel]
+        if ctx.get("ui"):
+            ctx["ui_link"] = "#ui-changes"
         parts = [index_body(levels, ctx, lambda lv, kind: f'#{lv["id"]}' if kind == "html" else None)]
         for lv in levels:
             parts.append(f'<hr id="{lv["id"]}">' + render_level(lv, ctx, inline, anchor_prefix=f'{lv["id"]}-')
                          + '<p><a href="#top">Back to all manuals</a></p>')
-        body = f'<main class="wrap" id="top">{"".join(parts)}{footer(ctx)}</main>'
+        if ctx.get("ui") and ctx["ui"]["changed"]:
+            def data_src(kind, name):
+                f = out / {"before": f"changes/before--{name}", "after": f"screens/{name}",
+                           "diff": f"changes/diff--{name}"}[kind]
+                return ("data:image/png;base64," + base64.b64encode(f.read_bytes()).decode()) if f.is_file() else None
+            parts.append('<hr id="ui-changes">' + ui_changes_body(ctx, data_src))
+        body = f'<main class="wrap" id="top">{"".join(parts)}{footer(ctx)}</main>{ZOOM_JS}'
         Path(args.artifact).write_text(page(f'{e(ctx["product"])} User Manuals', body, fragment=True))
         print(f"OK: single-page manual for a private Artifact: {args.artifact} "
               f"({Path(args.artifact).stat().st_size / 1024 / 1024:.1f} MB)")

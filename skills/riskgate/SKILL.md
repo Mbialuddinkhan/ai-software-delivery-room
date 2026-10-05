@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.4.1"
+  version: "3.5.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator

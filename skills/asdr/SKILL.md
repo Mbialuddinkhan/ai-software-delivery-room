@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.4.1"
+  version: "3.5.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -359,7 +359,9 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
    --type risk`; if it errors, re-invoke the risk-manager to fix the block.
 6. Read the risk-manager's fenced classification block. Only if
-   `mvp-ready` or `production-ready`: invoke **release-manager**, which runs
+   `mvp-ready` or `production-ready`: first get the user's review of the
+   manual wording (release skill, Phase 1b: review page → approve / flag),
+   then invoke **release-manager**, which runs
    the release test run, publishes the versioned report and builds the user
    manuals (HTML + PDF, every persona and tier). Publish the report and the
    manual page it prints as private Artifacts. Otherwise skip packaging and

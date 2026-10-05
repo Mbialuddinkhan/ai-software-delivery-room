@@ -130,7 +130,10 @@ that survive this test — this is what 'adversarial' means in practice.
    Selenium — whichever suites `.harness/test-config.json` lists), and cite
    the screenshot/video path from the run's `summary.json` as the evidence for
    that row. A user-facing feature that only passes a unit test has not been
-   shown to work for a user.
+   shown to work for a user. For every screen a UI sprint adds or changes,
+   require an accessibility check in the run (`summary.json` → `a11y.pages`);
+   any critical or serious violation (`facts:test_runs.a11y.serious`) is a
+   FAIL for that screen's criterion.
 
 Example row:
 

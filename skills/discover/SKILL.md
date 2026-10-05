@@ -6,7 +6,7 @@ description: >
   before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.4.1"
+  version: "3.5.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator

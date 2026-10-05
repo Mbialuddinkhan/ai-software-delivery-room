@@ -2,6 +2,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
+from asdr_a11y import check_a11y
+from asdr_auth import sign_in_as
+
 
 def sign_in(driver, base_url, name, role="member"):
     driver.get(base_url + "/")
@@ -19,6 +22,7 @@ def test_tc_15_add_task_updates_counter(driver, base_url):
     driver.find_element(By.ID, "add-task").click()
     assert "Book venue" in driver.find_element(By.ID, "tasks").text
     assert driver.find_element(By.ID, "counter").text == "1 open · 0 done"
+    check_a11y(driver, "board")
 
 
 def test_tc_16_complete_task_moves_to_done(driver, base_url):
@@ -32,5 +36,8 @@ def test_tc_16_complete_task_moves_to_done(driver, base_url):
 
 
 def test_tc_17_members_cannot_see_settings(driver, base_url):
-    sign_in(driver, base_url, "Sara")
+    # Saved login: reuses the member state the Playwright auth setup saved, if any.
+    how = sign_in_as(driver, base_url, "member")
+    print(f"saved login: {how}")
+    WebDriverWait(driver, 5).until(EC.visibility_of_element_located((By.ID, "board")))
     assert not driver.find_element(By.ID, "nav-settings").is_displayed()

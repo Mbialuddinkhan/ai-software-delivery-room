@@ -70,6 +70,12 @@ screenshots the manual tours capture during `run_tests.py`:
      plus the four experience tiers: `beginner`, `everyday`, `power`,
      `administrator`. Sections follow the process flows in the order a user
      meets them.
+   - Put in **bold** only names the user can read on that screen — button
+     labels, field labels, menu items, messages — spelled exactly as shown.
+     The build checks every bold name against the text the tour recorded on
+     that screen and fails on a mismatch. Keyboard keys (**Enter**, **N**)
+     are exempt; list any deliberate exception under `"offscreen"` in the
+     step entry.
 3. If a flow step a manual needs has no screenshot, ask the orchestrator for a
    tour step (the generator adds a `manualStep` call), rather than describing
    a screen nobody captured.
@@ -79,6 +85,12 @@ screenshots the manual tours capture during `run_tests.py`:
    the version and commit on every page, and refuses screenshots from another
    commit. `docs/user-guide.md` and `docs/admin-guide.md` then link to these
    manuals instead of repeating them.
+5. A person reviews the wording before release: run
+   `python3 .harness/scripts/build_manual.py --review-page .harness/manual-review.html`
+   and hand the path to the orchestrator, which shows it to the user. You
+   never approve your own explanations; approvals come only from the user
+   (`--approve` / `--flag`, recorded in `docs/manuals/review.json`). When a
+   step is flagged, fix its text and the review page shows it as changed.
 
 ## The one test your docs must pass
 

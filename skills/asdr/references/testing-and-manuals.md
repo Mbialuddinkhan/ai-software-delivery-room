@@ -34,6 +34,30 @@ every sprint that delivered a flow. Live needs a screen:
   a real browser on their screen.
 - **CI / SSH**: recorded, always.
 
+## Test users and saved logins
+
+- `app.seed_cmd` in the test config runs after the app is up and before any
+  suite: it creates the test users and data the tests expect. Config `env`
+  values reach every suite; write secrets as `${VARIABLE}` so they come from
+  the environment or CI secrets, never from the file.
+- Playwright's `auth.setup.ts` signs in once per role (project `login.ts`) and
+  saves the browser state to `.harness/auth/<role>.json`. Tests that are not
+  about signing in start there: `test.use({ storageState: authFile('admin') })`.
+  Cypress uses `cy.loginAs('admin')` (cy.session); Selenium uses
+  `sign_in_as(driver, base_url, 'admin')`, which reuses the Playwright file.
+- Journey tests that include sign-in walk it for real.
+- `.harness/auth/` holds live sessions: it is cleared every full run, carries a
+  `*` .gitignore, and is never published.
+
+## Accessibility
+
+Journey tests call the helper at each new screen: `checkA11y(page, 'board')`,
+`cy.asdrA11y('board')`, `check_a11y(driver, 'board')`. axe-core checks WCAG 2.1
+A and AA; serious and critical problems fail the test (`ASDR_A11Y_FAIL_ON`).
+`run_tests.py` adds up every check (`summary.json` → `a11y`,
+`facts:test_runs.a11y.*`) and the report opens with an Accessibility section.
+Risk: serious or critical violations keep a release below Production-ready.
+
 ## Publishing results (private by default)
 
 After every evaluated sprint and at release:
@@ -74,6 +98,29 @@ Never make a report public on your own.
 
 Manuals are rebuilt at every release by the release-manager from a fresh run
 on the release commit, so screenshots always match the shipped build.
+
+### Wording checks and the user's review
+
+- Every **bold** name in an explanation must be readable on that step's
+  screen (the tour helpers record the on-screen text). Keys like **Enter** are
+  exempt; deliberate exceptions go under `"offscreen"` in the step entry.
+- A person reads the wording before release. `build_manual.py --review-page
+  FILE` writes one page with every screenshot, its explanation per manual and
+  its review state; publish it privately and ask the user. Record the answer
+  with `--approve all|KEY,… --reviewer NAME` or `--flag KEY --note TEXT`
+  (`docs/manuals/review.json`, keyed by a hash of each explanation, so later
+  releases only ask about new or changed steps). Release builds use
+  `--require-review`. Never approve on the user's behalf.
+
+### What changed on screen
+
+Each build compares its screenshots with the previous version in
+`docs/manuals/` (`compare_screens.py`; 0.01% of pixels is enough to flag a
+restyled badge, while unchanged screens stay at 0%). Changed steps carry a
+"Screen changed since <version>" badge, `ui-changes.html` shows before / after
+/ diff, and the release notes list every changed screen for the user to confirm.
+`python3 .harness/scripts/compare_screens.py --baseline A --current B --out D`
+compares any two screenshot folders, for example two sprints' runs.
 
 ## Proof that the product works end to end
 

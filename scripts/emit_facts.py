@@ -248,6 +248,7 @@ def test_run_facts(root, commit):
         "dirty": s.get("dirty"),
         "totals": s.get("totals"),
         "suites": {x["name"]: x["totals"] for x in s.get("suites", [])},
+        "a11y": ({"checks": s["a11y"]["checks"], **s["a11y"]["by_impact"]} if s.get("a11y") else None),
         "manual_tours": len(s.get("manual", {}).get("tours", [])),
         "manual_screenshots": s.get("manual", {}).get("screenshots", 0),
         "manual_current": all(t.get("current") for t in s.get("manual", {}).get("tours", [])),

@@ -51,5 +51,15 @@ class TestManifests(unittest.TestCase):
         self.assertFalse((REPO / "hooks").exists())
 
 
+    def test_licence_files(self):
+        self.assertEqual(self.plugin.get("license"), "MIT")
+        lic = (REPO / "LICENSE").read_text()
+        self.assertTrue(lic.startswith("MIT License"))
+        self.assertIn("Bilal Khan", lic)
+        notices = (REPO / "THIRD_PARTY_NOTICES.md").read_text()
+        self.assertIn("Copyright (c) 2026 DietrichGebert", notices)   # build-ladder adaptation
+        self.assertIn("ponytail", (REPO / "templates/build-ladder.md").read_text().lower())
+
+
 if __name__ == "__main__":
     unittest.main()

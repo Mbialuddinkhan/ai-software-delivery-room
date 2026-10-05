@@ -93,6 +93,16 @@ output path.
     `.harness/templates/ci-asdr.yml`. Its GitHub Pages job stays disabled
     unless `.harness/publish.json` has `"github_pages": true`, which only the
     user turns on.
+  - Test users and saved logins: write `e2e/playwright/login.ts` (and the
+    Cypress/Selenium `login` files if those suites exist) from the templates —
+    the roles and how each signs in — and copy `auth.setup.ts`,
+    `asdr-auth.ts` unchanged. Add `app.seed_cmd` to the test config when the
+    app needs users or data created first; credentials go in the config's
+    `env` as `${VARIABLE}` references (CI secrets), never as values. The
+    saved-login folder `.harness/auth/` holds live sessions: confirm it is
+    git-ignored.
+  - Accessibility: add `@axe-core/playwright` (and `axe-core` for Cypress or
+    Selenium) as dev dependencies and copy the `asdr-a11y` helpers.
   - Smoke it: `python3 .harness/scripts/run_tests.py` must pass on the empty
     app with one sample test before you stop. This full suite is what the
     evaluator re-runs each sprint and again at the release gate.

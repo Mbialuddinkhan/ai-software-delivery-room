@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.4.1"
+  version: "3.5.0"
 ---
 
 # Release — Release Packaging Orchestrator
@@ -73,6 +73,25 @@ Run this stage via the Stage execution protocol (executor: documentation,
 stage-id: documentation, artifact: the six-doc set + manual.json; low tier —
 use `--no-plan` under standard).
 
+## Phase 1b — The user reviews the manual wording
+
+Before packaging, run
+`python3 .harness/scripts/build_manual.py --review-page .harness/manual-review.html`
+and publish that file as a private Artifact ("<Product> Manual Review"; update
+the same one each release). It shows every step's screenshot next to its
+explanation, with steps that are new or changed since the last approval first.
+Ask the user to read it and reply "approve all" or name what to fix. Then:
+
+- approvals → `python3 .harness/scripts/build_manual.py --approve all --reviewer "<their name>"`
+  (or `--approve <key>,<key>` for part of it)
+- each fix → `python3 .harness/scripts/build_manual.py --flag <key> --note "<what they said>" --reviewer "<their name>"`,
+  invoke the documentation agent with the flagged steps, regenerate the page,
+  and ask again for the changed steps only.
+
+Never approve on the user's behalf, and never skip this step for a product
+with a UI: the release build runs with `--require-review` and stops without
+approvals. If the user is not there to answer, stop here and say what is waiting.
+
 ## Phase 2 — Release packaging
 
 Invoke **release-manager** with: inputs `sprints.json`,
@@ -83,6 +102,11 @@ Invoke **release-manager** with: inputs `sprints.json`,
 (`docs/manuals/<version>/`, HTML + PDF for every persona and tier). It runs
 the tests on the release commit, the product-map gate, the report and the
 manual build itself (see its agent file).
+
+The manual build compares every screenshot with the previous release;
+show the user `docs/manuals/<version>/ui-changes.html` (it is also inside the
+manual page) and ask them to confirm any changed screen the changelog does
+not explain.
 
 When it finishes, publish the two single-file pages it prints — the test
 report and `.harness/manual-artifact.html` — as private Artifacts (titles

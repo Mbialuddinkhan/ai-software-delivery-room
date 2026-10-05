@@ -97,7 +97,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#ai-software-delivery-room--v}"
           OUT="ai-software-delivery-room-${VERSION}.plugin"
           # Same file list as CLAUDE.md → Releasing (no examples/, no .git).
-          zip -qr "$OUT" .claude-plugin agents skills scripts templates docs tests README.md CHANGELOG.md .gitignore \
+          zip -qr "$OUT" .claude-plugin agents skills scripts templates docs tests README.md CHANGELOG.md LICENSE THIRD_PARTY_NOTICES.md .gitignore \
             -x "*/__pycache__/*" "*.pyc"
           unzip -l "$OUT" | tail -1
           echo "PLUGIN_FILE=$OUT" >> "$GITHUB_ENV"

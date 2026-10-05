@@ -16,6 +16,20 @@ module.exports = function asdrManual(on, config) {
     },
   });
 
+  // Open the browser larger than the 1280x800 viewport so Cypress does not
+  // scale the app down: manual screenshots then match Playwright and Selenium.
+  on('before:browser:launch', (browser = {}, launchOptions) => {
+    if (browser.name === 'electron') {
+      launchOptions.preferences.width = 1400;
+      launchOptions.preferences.height = 1000;
+    } else if (browser.family === 'chromium') {
+      launchOptions.args.push('--window-size=1400,1000');
+    } else if (browser.family === 'firefox') {
+      launchOptions.args.push('--width=1400', '--height=1000');
+    }
+    return launchOptions;
+  });
+
   on('after:screenshot', (details) => {
     const entry = pending[details.name];
     if (!entry) return;
@@ -36,6 +50,7 @@ module.exports = function asdrManual(on, config) {
       id: entry.id, title: entry.title, url: entry.url, screenshot: rel,
       target: entry.target, note: entry.note,
       viewport: details.dimensions || null,
+      page_text: entry.page_text || null, target_text: entry.target_text || null,
     });
     m.steps.forEach((s, i) => (s.order = i + 1));
     fs.writeFileSync(file, JSON.stringify(m, null, 2));

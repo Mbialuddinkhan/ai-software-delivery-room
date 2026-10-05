@@ -4,7 +4,8 @@
   "app": {
     "start_cmd": "<npm run dev>",
     "url": "<http://localhost:3000>",
-    "ready_timeout_s": 60
+    "ready_timeout_s": 60,
+    "seed_cmd": "<optional: npm run seed:test \u2014 creates the test users and data>"
   },
   "suites": [
     {
@@ -13,8 +14,14 @@
       "cmd": "npx playwright test",
       "live_cmd": "npx playwright test --headed",
       "tours_cmd": "npx playwright test --project=manual",
-      "junit": ["junit/playwright.xml"],
+      "junit": [
+        "junit/playwright.xml"
+      ],
       "html_report": "playwright/html/index.html"
     }
-  ]
+  ],
+  "env": {
+    "ASDR_USER_ADMIN": "<admin@example.test>",
+    "ASDR_PASS_ADMIN": "${TEST_ADMIN_PASSWORD}"
+  }
 }

@@ -153,6 +153,15 @@ notes go in the sprint's build log, not in place of a criterion.
    walk the whole flow in one test, exactly as the test case's steps say.
    Where a flow step should appear in the user manual, call the manual-tour
    helper (`manualStep` / `cy.manualStep` / `manual_step`) at that moment.
+   - Accessibility: in every journey test, call the accessibility helper at
+     each new screen (`checkA11y(page, '<screen>')`, `cy.asdrA11y(...)`,
+     `check_a11y(driver, ...)`). It fails on serious or critical WCAG 2.1
+     A/AA problems; fix the screen, never the check.
+   - Saved logins: a test that is not about signing in starts signed in
+     (`test.use({ storageState: authFile('<role>') })`, `cy.loginAs('<role>')`,
+     `sign_in_as(driver, base_url, '<role>')`). Journey tests that include
+     sign-in walk it for real. Test users come from the seed step, never real
+     accounts.
 4b. Run local smoke checks before handoff: build succeeds, app starts, and
    `python3 .harness/scripts/run_tests.py` passes — handing the evaluator
    something that doesn't start burns an entire attempt on a triviality.

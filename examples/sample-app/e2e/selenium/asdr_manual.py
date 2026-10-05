@@ -23,6 +23,24 @@ from selenium.webdriver.common.by import By
 
 HIGHLIGHT = "3px solid #e5484d"
 
+# Everything a person can read on screen (visible text, placeholders,
+# aria-labels, titles, field values — never passwords). build_manual.py checks
+# every **bold** UI name in a step's explanation against it.
+READABLE_TEXT_JS = """
+const bits = [document.body.innerText];
+document.querySelectorAll('[placeholder],[aria-label],[title],input,textarea,select').forEach((e) => {
+  ['placeholder', 'aria-label', 'title'].forEach((a) => { const v = e.getAttribute(a); if (v) bits.push(v); });
+  if (e.value && e.type !== 'password') bits.push(e.value);
+});
+return bits.join('\\n').slice(0, 12000);
+"""
+DESCRIBE_JS = """
+const el = arguments[0];
+const labels = el.labels ? Array.from(el.labels).map((l) => l.innerText) : [];
+return [el.innerText, el.type === 'password' ? '' : el.value, el.getAttribute('aria-label'),
+  el.getAttribute('placeholder'), el.getAttribute('title'), ...labels].filter(Boolean).join(' | ');
+"""
+
 
 def _resolve(driver, element):
     """Accept a WebElement, a CSS selector string, or a (By, value) tuple."""
@@ -54,6 +72,8 @@ def manual_step(driver, tour: str, step_id: str, title: str, element=None, note:
             "e.style.outline=arguments[1];e.style.outlineOffset='3px';",
             el, HIGHLIGHT,
         )
+    page_text = driver.execute_script(READABLE_TEXT_JS)
+    target_text = driver.execute_script(DESCRIBE_JS, el) if el is not None else None
     rel = f"screens/{tour}--{step_id}.png"
     driver.save_screenshot(str(base / rel))
     if el is not None:
@@ -73,6 +93,7 @@ def manual_step(driver, tour: str, step_id: str, title: str, element=None, note:
     manifest["steps"].append({
         "id": step_id, "title": title, "url": driver.current_url, "screenshot": rel,
         "target": target, "note": note, "viewport": vp,
+        "page_text": page_text, "target_text": target_text,
     })
     for i, s in enumerate(manifest["steps"], 1):
         s["order"] = i

@@ -61,11 +61,20 @@ Produce (paths are canonical; the orchestrator may override):
       → `docs/test-reports/v<version>/` (and the private single-file copy
       it prints, which the orchestrator publishes).
    4. `python3 .harness/scripts/build_manual.py --version <version>
-      --artifact .harness/manual-artifact.html` → HTML + PDF manuals in
-      `docs/manuals/<version>/` for every persona and experience tier
-      (the documentation agent wrote `docs/manuals/manual.json`). Fix
-      nothing by hand: if a step is stale or unexplained, the build says
-      which, and the owning agent fixes it.
+      --require-review --artifact .harness/manual-artifact.html` → HTML + PDF
+      manuals in `docs/manuals/<version>/` for every persona and experience
+      tier (the documentation agent wrote `docs/manuals/manual.json`). It
+      refuses explanations a person has not approved (`docs/manuals/review.json`)
+      — if it fails on that, stop and ask the orchestrator for the user's
+      review; never approve on the user's behalf. Fix nothing by hand: if a
+      step is stale or unexplained, the build says which, and the owning
+      agent fixes it.
+   5. The build compares every screenshot with the previous release
+      (`docs/manuals/<version>/ui-changes.html`, `build.json` → `ui_changes`).
+      List every changed screen in the release notes under "Screens that
+      changed" with the reason from the changelog. A changed screen no
+      changelog entry explains is an unexplained UI change: put it in front
+      of the user to confirm before the release goes out.
    Link both from the release notes ("How to use this release" → manuals,
    "Test evidence" → report).
 
@@ -81,6 +90,9 @@ each gets a real check, not an assumed tick:
 - [ ] Every Must process flow is proven end to end (`validate_product_map.py --gate` exit 0)
 - [ ] Test report published to `docs/test-reports/v<version>/`
 - [ ] User manuals built for every persona and tier in `docs/manuals/<version>/` (HTML + PDF)
+- [ ] Every manual explanation approved by a person (`build_manual.py --require-review` exit 0)
+- [ ] Every changed screen since the last release is explained or confirmed by the user
+- [ ] No critical or serious accessibility violations (`facts:test_runs.a11y.critical == 0`, `facts:test_runs.a11y.serious == 0`)
 - [ ] Security review passed (docs/09-security-review-final.md, no unresolved critical/high)
 - [ ] Risk classification is MVP-ready or Production-ready
 - [ ] Docker build and compose succeed locally

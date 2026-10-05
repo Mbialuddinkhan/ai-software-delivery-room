@@ -11,11 +11,34 @@
 // Copy unchanged into cypress/support/ and import it from cypress/support/e2e.js.
 const HIGHLIGHT = '3px solid #e5484d';
 
+// Everything a person can read on screen (visible text, placeholders,
+// aria-labels, titles, field values — never passwords). build_manual.py
+// checks every **bold** UI name in a step's explanation against it.
+function readableText(doc) {
+  const bits = [doc.body.innerText];
+  doc.querySelectorAll('[placeholder],[aria-label],[title],input,textarea,select').forEach((e) => {
+    ['placeholder', 'aria-label', 'title'].forEach((a) => { const v = e.getAttribute(a); if (v) bits.push(v); });
+    if (e.value && e.type !== 'password') bits.push(e.value);
+  });
+  return bits.join('\n').slice(0, 12000);
+}
+
+function describe(el) {
+  if (!el) return null;
+  const labels = el.labels ? Array.from(el.labels).map((l) => l.innerText) : [];
+  return [el.innerText, el.type === 'password' ? '' : el.value, el.getAttribute('aria-label'),
+    el.getAttribute('placeholder'), el.getAttribute('title'), ...labels].filter(Boolean).join(' | ');
+}
+
 Cypress.Commands.add('manualStep', (tour, id, title, selector, note) => {
   const name = `asdr-manual__${tour}__${id}`;
-  cy.url({ log: false }).then((url) =>
-    cy.task('asdrManualPending', { tour, id, title, name, url,
-      target: selector || null, note: note || null }, { log: false }));
+  cy.document({ log: false }).then((doc) => {
+    const page_text = readableText(doc);
+    const target_text = selector ? describe(doc.querySelector(selector)) : null;
+    cy.url({ log: false }).then((url) =>
+      cy.task('asdrManualPending', { tour, id, title, name, url, page_text, target_text,
+        target: selector || null, note: note || null }, { log: false }));
+  });
   if (selector) {
     cy.get(selector).scrollIntoView().then(($el) => {
       const el = $el[0];

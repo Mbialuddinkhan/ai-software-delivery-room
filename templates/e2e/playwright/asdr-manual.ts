@@ -21,6 +21,30 @@ import * as path from 'path';
 
 const HIGHLIGHT = '3px solid #e5484d';
 
+// Everything a person can read on screen: visible text plus placeholders,
+// aria-labels, titles and field values (never passwords). build_manual.py
+// checks every **bold** UI name in a step's explanation against it.
+function readableText(): string {
+  const bits: string[] = [document.body.innerText];
+  document.querySelectorAll('[placeholder],[aria-label],[title],input,textarea,select').forEach((e: any) => {
+    for (const a of ['placeholder', 'aria-label', 'title']) {
+      const v = e.getAttribute(a);
+      if (v) bits.push(v);
+    }
+    if (e.value && e.type !== 'password') bits.push(e.value);
+  });
+  return bits.join('\n').slice(0, 12000);
+}
+
+async function describeTarget(target: Locator): Promise<string> {
+  return target.evaluate((el: any) => {
+    const parts = [el.innerText, el.type === 'password' ? '' : el.value, el.getAttribute('aria-label'),
+      el.getAttribute('placeholder'), el.getAttribute('title'),
+      ...(el.labels ? Array.from(el.labels).map((l: any) => l.innerText) : [])];
+    return parts.filter(Boolean).join(' | ');
+  });
+}
+
 export async function manualStep(
   page: Page,
   tour: string,
@@ -41,6 +65,8 @@ export async function manualStep(
       el.style.outlineOffset = '3px';
     }, HIGHLIGHT);
   }
+  const pageText = await page.evaluate(readableText);
+  const targetText = target ? await describeTarget(target) : null;
   const rel = `screens/${tour}--${id}.png`;
   const abs = path.join(dir, rel);
   await page.screenshot({ path: abs });
@@ -63,7 +89,7 @@ export async function manualStep(
   manifest.steps.push({
     id, title, url: page.url(), screenshot: rel,
     target: target ? target.toString() : null, note: note || null,
-    viewport: page.viewportSize(),
+    viewport: page.viewportSize(), page_text: pageText, target_text: targetText,
   });
   manifest.steps.forEach((s: any, i: number) => (s.order = i + 1));
   fs.writeFileSync(file, JSON.stringify(manifest, null, 2));

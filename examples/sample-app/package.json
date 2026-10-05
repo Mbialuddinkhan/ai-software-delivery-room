@@ -10,7 +10,9 @@
     "test:selenium": "python3 -m pytest e2e/selenium -q"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@playwright/test": "1.56.0",
+    "axe-core": "^4.11.0",
     "cypress": "^16.1.1",
     "mocha-junit-reporter": "^2.2.1"
   }

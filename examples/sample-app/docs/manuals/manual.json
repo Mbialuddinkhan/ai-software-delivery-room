@@ -1,19 +1,23 @@
 {
   "schema": 1,
   "product": "TaskBoard",
-  "version": "1.0.0",
-  "intro": "TaskBoard is a shared to-do board for a small team. Everyone signs in with their name, adds tasks, and ticks them off. Admins also manage categories and permissions.",
+  "version": "1.1.0",
+  "intro": "TaskBoard is a to-do board for a small team that shares one computer. Each person signs in with their name, adds tasks and ticks them off. Admins also manage categories and permissions. Tasks are kept in this browser.",
   "steps": {
     "member-basics/signin-page": {
       "text": "Open TaskBoard in your browser. The first thing you see is the sign-in page.",
-      "levels": { "beginner": "Open the TaskBoard link your team gave you. You will land on this sign-in page. Nothing is saved yet, so there is nothing to break." }
+      "levels": {
+        "beginner": "Open the TaskBoard link your team gave you. You will land on this sign-in page. Nothing is saved yet, so there is nothing to break."
+      }
     },
     "member-basics/enter-name": {
       "text": "Type your name in the **Your name** box. Your teammates see this name next to your work."
     },
     "member-basics/choose-role": {
       "text": "Choose **Team member** unless your team lead asked you to be an admin. Admins see an extra Settings page.",
-      "levels": { "beginner": "Leave this on **Team member**. You only need **Admin** if you look after the team's settings." }
+      "levels": {
+        "beginner": "Leave this on **Team member**. You only need **Team admin** if you look after the team's settings."
+      }
     },
     "member-basics/sign-in": {
       "text": "Click **Sign in**. If you left your name empty, TaskBoard asks you to fill it in first."
@@ -23,7 +27,9 @@
     },
     "member-basics/type-task": {
       "text": "Click the box at the top and describe what needs doing, in a few words.",
-      "levels": { "power": "Type the task title. Keep it short — the board shows one line per task." }
+      "levels": {
+        "power": "Type the task title. Keep it short — the board shows one line per task."
+      }
     },
     "member-basics/pick-category": {
       "text": "Pick a category so the task is easy to find later. **General** is fine if nothing else fits."
@@ -32,11 +38,13 @@
       "text": "Click **Add task**, or press **Enter**. The task appears on the board straight away."
     },
     "member-basics/task-added": {
-      "text": "Your new task is now on the board with its category next to it. Everyone on the team can see it."
+      "text": "Your new task is now on the board, with its category next to it."
     },
     "member-basics/complete-task": {
       "text": "When a task is finished, tick the box next to it. The task is crossed out and counted as done.",
-      "levels": { "beginner": "Finished something? Tick the small box next to it. You can untick it again if you clicked by mistake." }
+      "levels": {
+        "beginner": "Finished something? Tick the small box next to it. You can untick it again if you clicked by mistake."
+      }
     },
     "member-advanced/counter": {
       "text": "The counter shows how many tasks are still open and how many are done. It updates as you work."
@@ -48,11 +56,13 @@
       "text": "Click **Done** to see only finished tasks — handy for a weekly round-up. Click **All** to go back."
     },
     "member-advanced/shortcut-n": {
-      "text": "Press **N** anywhere on the board to jump straight to the new-task box without using the mouse."
+      "text": "Press **N** on the board, when you are not typing in a box, to jump straight to the new-task box."
     },
     "member-advanced/export": {
       "text": "Click **Export CSV** to download every task as `tasks.csv`. It opens in Excel, Numbers or Google Sheets.",
-      "levels": { "administrator": "Use **Export CSV** to keep a copy of the board before you change categories or permissions." }
+      "levels": {
+        "administrator": "Use **Export CSV** to keep a copy of the board before you change categories or permissions."
+      }
     },
     "quick-add/board": {
       "text": "Start from your board. You do not need to click anything for the next step."
@@ -73,7 +83,7 @@
       "text": "You are back on the sign-in page. Your tasks stay on the board for next time."
     },
     "admin-settings/sign-in-admin": {
-      "text": "To manage the team, sign in with the **Admin** role."
+      "text": "To manage the team, sign in with the **Team admin** role."
     },
     "admin-settings/settings-link": {
       "text": "Admins see a **Settings** link in the top bar. Team members do not."
@@ -85,11 +95,13 @@
       "text": "Type a name for a new category, such as a project or a department."
     },
     "admin-settings/category-added": {
-      "text": "Click **Add category**. The new category appears in the list and in everyone's category menu straight away."
+      "text": "Click **Add category**. The new category appears in the list, and in the category menu on the board straight away."
     },
     "admin-settings/allow-delete": {
       "text": "Tick **Team members can delete tasks** if you trust everyone to tidy the board. TaskBoard confirms with **Settings saved.**",
-      "levels": { "administrator": "Tick **Team members can delete tasks** to let anyone remove tasks. Leave it unticked if only admins should delete. The change applies at once and shows **Settings saved.**" }
+      "levels": {
+        "administrator": "Tick **Team members can delete tasks** to let anyone remove tasks. Leave it unticked if only admins should delete. The change applies at once and shows **Settings saved.**"
+      }
     },
     "admin-settings/delete-task": {
       "text": "Admins (and members, if you allowed it) see a **Delete** button on each task. Deleting cannot be undone."
@@ -103,9 +115,24 @@
       "part": "Getting started",
       "audience": "Anyone joining the team board for the first time.",
       "sections": [
-        { "title": "Sign in", "steps": ["member-basics/signin-page..sign-in"] },
-        { "title": "Add your first task", "steps": ["member-basics/empty-board..task-added"] },
-        { "title": "Finish a task", "steps": ["member-basics/complete-task"] }
+        {
+          "title": "Sign in",
+          "steps": [
+            "member-basics/signin-page..sign-in"
+          ]
+        },
+        {
+          "title": "Add your first task",
+          "steps": [
+            "member-basics/empty-board..task-added"
+          ]
+        },
+        {
+          "title": "Finish a task",
+          "steps": [
+            "member-basics/complete-task"
+          ]
+        }
       ]
     },
     {
@@ -115,10 +142,30 @@
       "part": "Advanced",
       "audience": "Team members who use the board every day and want to work faster.",
       "sections": [
-        { "title": "Keep track of progress", "steps": ["member-advanced/counter..filter-done"] },
-        { "title": "Work from the keyboard", "steps": ["quick-add/*"] },
-        { "title": "Export your tasks", "steps": ["member-advanced/export"] },
-        { "title": "Your account", "steps": ["account/*"] }
+        {
+          "title": "Keep track of progress",
+          "steps": [
+            "member-advanced/counter..filter-done"
+          ]
+        },
+        {
+          "title": "Work from the keyboard",
+          "steps": [
+            "quick-add/*"
+          ]
+        },
+        {
+          "title": "Export your tasks",
+          "steps": [
+            "member-advanced/export"
+          ]
+        },
+        {
+          "title": "Your account",
+          "steps": [
+            "account/*"
+          ]
+        }
       ]
     },
     {
@@ -128,8 +175,18 @@
       "part": "Getting started",
       "audience": "The person who looks after the team's board.",
       "sections": [
-        { "title": "Open Settings", "steps": ["admin-settings/sign-in-admin..settings-page"] },
-        { "title": "Check your account", "steps": ["account/whoami"] }
+        {
+          "title": "Open Settings",
+          "steps": [
+            "admin-settings/sign-in-admin..settings-page"
+          ]
+        },
+        {
+          "title": "Check your account",
+          "steps": [
+            "account/whoami"
+          ]
+        }
       ]
     },
     {
@@ -139,8 +196,18 @@
       "part": "Advanced",
       "audience": "Admins shaping how the team uses the board.",
       "sections": [
-        { "title": "Manage categories", "steps": ["admin-settings/new-category..category-added"] },
-        { "title": "Set permissions and tidy the board", "steps": ["admin-settings/allow-delete..delete-task"] }
+        {
+          "title": "Manage categories",
+          "steps": [
+            "admin-settings/new-category..category-added"
+          ]
+        },
+        {
+          "title": "Set permissions and tidy the board",
+          "steps": [
+            "admin-settings/allow-delete..delete-task"
+          ]
+        }
       ]
     },
     {
@@ -149,9 +216,26 @@
       "title": "Beginner",
       "audience": "You have never used TaskBoard. This guide takes about five minutes.",
       "sections": [
-        { "title": "Sign in", "steps": ["member-basics/signin-page..sign-in"] },
-        { "title": "Add a task", "steps": ["member-basics/type-task", "member-basics/add-task", "member-basics/task-added"] },
-        { "title": "Tick it off", "steps": ["member-basics/complete-task"] }
+        {
+          "title": "Sign in",
+          "steps": [
+            "member-basics/signin-page..sign-in"
+          ]
+        },
+        {
+          "title": "Add a task",
+          "steps": [
+            "member-basics/type-task",
+            "member-basics/add-task",
+            "member-basics/task-added"
+          ]
+        },
+        {
+          "title": "Tick it off",
+          "steps": [
+            "member-basics/complete-task"
+          ]
+        }
       ]
     },
     {
@@ -160,9 +244,24 @@
       "title": "Everyday user",
       "audience": "You use TaskBoard most days and want the full picture of the board.",
       "sections": [
-        { "title": "Adding and finishing tasks", "steps": ["member-basics/type-task..complete-task"] },
-        { "title": "Finding tasks", "steps": ["member-advanced/counter..filter-done"] },
-        { "title": "Signing out", "steps": ["account/*"] }
+        {
+          "title": "Adding and finishing tasks",
+          "steps": [
+            "member-basics/type-task..complete-task"
+          ]
+        },
+        {
+          "title": "Finding tasks",
+          "steps": [
+            "member-advanced/counter..filter-done"
+          ]
+        },
+        {
+          "title": "Signing out",
+          "steps": [
+            "account/*"
+          ]
+        }
       ]
     },
     {
@@ -171,8 +270,20 @@
       "title": "Power user",
       "audience": "You want shortcuts and data out of TaskBoard.",
       "sections": [
-        { "title": "Keyboard shortcuts", "steps": ["member-advanced/shortcut-n", "quick-add/press-n", "quick-add/added"] },
-        { "title": "Export", "steps": ["member-advanced/export"] }
+        {
+          "title": "Keyboard shortcuts",
+          "steps": [
+            "member-advanced/shortcut-n",
+            "quick-add/press-n",
+            "quick-add/added"
+          ]
+        },
+        {
+          "title": "Export",
+          "steps": [
+            "member-advanced/export"
+          ]
+        }
       ]
     },
     {
@@ -181,8 +292,18 @@
       "title": "Administrator",
       "audience": "You set up and look after TaskBoard for your team.",
       "sections": [
-        { "title": "Settings", "steps": ["admin-settings/*"] },
-        { "title": "Back up the board", "steps": ["member-advanced/export"] }
+        {
+          "title": "Settings",
+          "steps": [
+            "admin-settings/*"
+          ]
+        },
+        {
+          "title": "Back up the board",
+          "steps": [
+            "member-advanced/export"
+          ]
+        }
       ]
     }
   ]

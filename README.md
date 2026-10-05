@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.4.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.5.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -22,6 +22,14 @@ private claude.ai page; GitHub Pages only if you opt in). Every release builds
 persona, and Beginner / Everyday / Power user / Administrator — as HTML and
 PDF, stamped with the version and commit. A worked example lives in
 `examples/sample-app/`.
+
+**v3.5 — manuals a person signs off, accessibility, saved logins, screen
+diffs.** Manual explanations are checked against the text on each screenshot
+and approved by you before release (review page → approve / flag); every
+journey screen is checked against WCAG 2.1 A/AA with axe-core; tests that are
+not about signing in reuse one saved login per role across Playwright, Cypress
+and Selenium; and each release shows which screens changed since the last one,
+with before / after / diff images.
 
 **v3.3 — runtime tiers, a design-system stage, companions,
 update checks.** The ai-architect now decides *where each agent runs* (T1
@@ -297,6 +305,7 @@ scripts/
   build_manual.py            ← persona + tier user manuals, HTML + PDF (v3.4)
   run_metrics.py             ← per-run metrics: rounds, attempts, packs, tests (v3.4)
   report_style.py            ← shared look for reports and manuals (v3.4)
+  compare_screens.py         ← screenshot diffs between runs or releases (v3.5)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -315,7 +324,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m pytest tests (63 tests)
+tests/                       ← python3 -m pytest tests (74 tests)
 ```
 
 ## The 18 agents at a glance
@@ -383,3 +392,11 @@ docs/00..10-*.md                blueprint and gate documents
 | AI/Agents | LangGraph + OpenAI/Anthropic APIs + structured JSON outputs |
 | Vector memory | Qdrant or pgvector |
 | DevOps | Docker + Docker Compose + GitHub Actions |
+
+---
+
+## Licence
+
+MIT — see `LICENSE`. Adapted and referenced third-party work (Ponytail's
+build ladder, UI UX Pro Max, the AX schema vocabulary, the test tools) is
+listed with its licences in `THIRD_PARTY_NOTICES.md`.

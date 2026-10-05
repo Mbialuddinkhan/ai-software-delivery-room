@@ -34,7 +34,10 @@ the whole flow.
 ```
 playwright.config.ts                 # from templates/e2e/playwright/
 e2e/playwright/
-  asdr-manual.ts                     # copied unchanged
+  asdr-manual.ts                     # copied unchanged (manual tours)
+  asdr-a11y.ts, asdr-auth.ts         # copied unchanged (accessibility, saved logins)
+  auth.setup.ts                      # copied unchanged: one sign-in per role
+  login.ts                           # project-specific: roles + how each signs in
   journeys.spec.ts                   # [TC-xx] journey tests, one per process flow
   <area>.spec.ts                     # functional / exception / edge tests
   tours/<tour>.tour.spec.ts          # manual tours (also real tests)
@@ -75,7 +78,20 @@ sandbox, in CI and over SSH there is no screen, so the run switches to
 "recorded": headless with video, and the videos are in the report. The
 summary records which mode ran.
 
-## 6. Publishing results — private by default
+## 6. Test users, saved logins and accessibility
+
+- Seed: `"app": {"seed_cmd": "<npm run seed:test>"}` creates the test users and
+  data before any suite; credentials in the config's `"env"` as `${VAR}`
+  references only.
+- Saved logins: `login.ts` (roles + how each signs in) and `auth.setup.ts`
+  save one session per role in `.harness/auth/`; other tests start signed in
+  with `test.use({ storageState: authFile('<role>') })`, `cy.loginAs('<role>')`
+  or `sign_in_as(driver, base_url, '<role>')`. Journey tests sign in for real.
+- Accessibility: `checkA11y(page, '<screen>')` (or the Cypress/Selenium
+  equivalents) at every new screen of every journey test; serious or critical
+  WCAG 2.1 A/AA problems fail the test and appear in the report.
+
+## 7. Publishing results — private by default
 
 `python3 .harness/scripts/publish_test_report.py [--label <sprint or version>]`
 reads `.harness/publish.json`:
@@ -87,7 +103,7 @@ reads `.harness/publish.json`:
 | Private claude.ai page | on | single-file report the orchestrator publishes as a private Artifact |
 | GitHub Pages | **off** | public; turn on only by the user's choice for this project |
 
-## 7. User manuals from the same run
+## 8. User manuals from the same run
 
 Tours are tests that call the manual helper at each moment a manual should
 show. Each call outlines the element the user acts on and saves a screenshot
@@ -97,9 +113,12 @@ one per persona (Getting started + Advanced) and four by experience
 (Beginner, Everyday user, Power user, Administrator).
 `python3 .harness/scripts/build_manual.py --version <version>` writes HTML and
 PDF for each to `docs/manuals/<version>/`, and refuses screenshots taken from a
-different commit than the release.
+different commit than the release, checks every **bold** name in an
+explanation against the text on that screen, compares each screenshot with
+the previous release (`ui-changes.html`), and with `--require-review` refuses
+explanations the user has not approved (`--review-page`, then `--approve`).
 
-## 8. Rules
+## 9. Rules
 
 - Every user-facing acceptance criterion and every test case has a browser test; no criterion ships unwatched.
 - The FULL suite runs every sprint (regression) and again at the release gate.

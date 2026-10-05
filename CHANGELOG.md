@@ -3,6 +3,53 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.5.0] — reviewed manuals, accessibility checks, saved logins, screen-change diffs
+
+### Added
+- **Manual wording is checked against the screen.** The tour helpers (all
+  three frameworks) now record the text a person can read on each screenshot.
+  `build_manual.py` fails when an explanation names a **button or label** that
+  is not on that screen — the commonest manual error after a UI rename. Keys
+  (**Enter**, **N**) are exempt; deliberate exceptions go under `"offscreen"`.
+- **A person signs off the wording.** `build_manual.py --review-page` writes
+  one page with every screenshot and its explanation per manual;
+  `--approve` / `--flag` record the answer in `docs/manuals/review.json`, keyed
+  by a hash of each explanation so later releases only ask about new or
+  changed steps. Release builds use `--require-review`; the manuals state who
+  reviewed them. The release skill publishes the review page privately and
+  waits for the user.
+- **Accessibility checks.** `checkA11y` (Playwright), `cy.asdrA11y` (Cypress)
+  and `check_a11y` (Selenium) run axe-core's WCAG 2.1 A/AA rules at each
+  journey screen and fail on serious or critical problems. `run_tests.py`
+  adds them up (`summary.json` → `a11y`, `facts:test_runs.a11y.*`), the report
+  opens with an Accessibility section, and serious or critical violations keep
+  a release below Production-ready.
+- **Test users and saved logins.** `app.seed_cmd` creates test users and data
+  before the suites; config `env` passes credentials as `${VAR}` references.
+  Playwright's `auth.setup.ts` signs in once per role and saves the session to
+  `.harness/auth/`; tests that are not about signing in reuse it
+  (`storageState`, `cy.loginAs`, `sign_in_as` — Selenium reuses the Playwright
+  file). The folder is cleared every full run, git-ignored and never published.
+- **Screen changes between releases.** `compare_screens.py` (zero-dependency
+  PNG decode, Pillow when present) compares two screenshot folders and writes
+  diff images with changed pixels in red. Each manual build compares with the
+  previous version: changed steps carry a badge, `ui-changes.html` shows before
+  / after / diff, and the release notes list every changed screen for the
+  user to confirm.
+- `LICENSE` (MIT) and `THIRD_PARTY_NOTICES.md` (Ponytail attribution for the
+  build ladder; UI UX Pro Max, AX and the test tools as not bundled). Both ship
+  in the `.plugin` file.
+
+### Changed
+- Cypress templates use the Cypress 16 APIs (`cy.env` for credentials,
+  `Cypress.expose` for settings; `Cypress.env` was removed in 16) and open the
+  browser at 1400×1000 so manual screenshots are 1280×800 like the other
+  frameworks.
+- Sample (TaskBoard 1.1.0): saved logins and accessibility checks in all three
+  frameworks, TC-21 (WCAG on key screens), and three explanations corrected
+  after review — two claimed other team members see the board, which this
+  local-storage sample cannot do.
+
 ## [3.4.1] — CI fix and stable report name
 
 ### Fixed

@@ -302,3 +302,19 @@ Written from the process flows before code. Each automated test's title starts w
   2. Click Sign out
 - Expected result: The sign-in form is shown
 - Automation: cypress/e2e/account.tour.cy.js › [TC-20] shows who is signed in and signs out
+
+### TC-21 · Key screens meet WCAG 2.1 A/AA
+
+- Type: nfr
+- Flow: PF-02
+- Use cases: UC-01, UC-02, UC-06
+- Requirements: FR-01
+- Persona: Team member
+- Priority: Must
+- Preconditions: Saved logins for member and admin
+- Steps:
+  1. Open the sign-in page, the board with a finished task, and the settings page
+  2. Run the axe-core WCAG 2.1 A/AA rules on each
+- Expected result: No critical or serious accessibility violations on any of the three screens (NFR-01)
+- Automation: e2e/playwright/a11y.spec.ts › [TC-21] … is accessible
+

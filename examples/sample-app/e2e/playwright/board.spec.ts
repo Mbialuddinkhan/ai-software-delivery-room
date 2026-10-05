@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { authFile } from './asdr-auth';
 
 async function signIn(page: Page, name: string, role: 'member' | 'admin' = 'member') {
   await page.goto('/');
@@ -54,13 +55,17 @@ test('[TC-06] members cannot open settings; admins can', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Team settings' })).toBeVisible();
 });
 
-test('[TC-10] a new category appears when adding tasks', async ({ page }) => {
-  await signIn(page, 'Omar', 'admin');
-  await page.getByRole('link', { name: 'Settings' }).click();
-  await page.getByPlaceholder('New category name').fill('Design');
-  await page.getByRole('button', { name: 'Add category' }).click();
-  await page.getByRole('link', { name: 'Board' }).click();
-  await expect(page.getByLabel('Category', { exact: true })).toContainText('Design');
+test.describe('signed in as admin (saved login)', () => {
+  test.use({ storageState: authFile('admin') });
+
+  test('[TC-10] a new category appears when adding tasks', async ({ page }) => {
+    await page.goto('/#settings');
+    await expect(page.getByRole('heading', { name: 'Team settings' })).toBeVisible();
+    await page.getByPlaceholder('New category name').fill('Design');
+    await page.getByRole('button', { name: 'Add category' }).click();
+    await page.getByRole('link', { name: 'Board' }).click();
+    await expect(page.getByLabel('Category', { exact: true })).toContainText('Design');
+  });
 });
 
 test('[TC-11] export downloads a CSV with the tasks', async ({ page }) => {
