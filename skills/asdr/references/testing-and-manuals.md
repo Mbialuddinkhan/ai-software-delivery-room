@@ -124,12 +124,33 @@ compares any two screenshot folders, for example two sprints' runs.
 
 ## Proof that the product works end to end
 
-`python3 .harness/scripts/validate_product_map.py [--gate]` follows lifecycle →
-process flow → step → use case → feature → requirement → test case →
-automated test → latest result, and writes `docs/product-map.md`. Tests are
-matched to test cases by the `[TC-xx]` prefix in their titles (`test_tc_xx_…`
-in pytest). `--gate` requires every Must flow's journey and exception tests to
-have passed on the latest run.
+`python3 .harness/scripts/validate_product_map.py [--require-coverage] [--gate]`
+follows lifecycle → process flow → step → use case → feature → requirement →
+test case → automated test → latest result, and writes `docs/product-map.md`.
+Tests are matched to test cases by the `[TC-xx]` prefix in their titles
+(`test_tc_xx_…` in pytest).
+
+Coverage is per project: the validator reads THIS project's documents and
+treats every id as a testable item — FR, NFR, AC-<story>.<n>, BR, EC, every
+use case and each of its alternate/exception flows (UC-xx.A1, UC-xx.E1), every
+feature, every flow step and exception path. Each must be named by a test case
+(Covers / Requirements / Use cases lines; a journey names its flow's steps, a
+step names its use case and features). Gaps are warnings while building and
+errors with `--require-coverage` (end of discovery) and `--gate`.
+
+Features with an "Affects" role (an admin setting that changes what members
+can do) need a flow step for that role and test cases from that role's side —
+two (on and off) for a switch.
+
+Runtime proof: tests call the markers from `asdr-cover.*` —
+`flowStep('PF-02.3')` after checking a step, `covers('AC-03.2')` at the
+assertion that proves an item, `metric(name, value, unit, budget)` for a
+measured NFR. `run_tests.py` collects them into `summary.json` → `coverage`
+(measurements also in `facts:test_runs.metrics.*` and the report). `--gate`
+requires every Must flow's journey and exception tests to have passed, every
+Must step and exception path to be reached by a passing test, and every Covers
+item to be marked by its own test. `docs/product-map.md` → "Coverage of every
+testable item" shows each item: tested, named but not reached, or missing.
 
 ## Run metrics
 

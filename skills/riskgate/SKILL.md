@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -91,7 +91,8 @@ devops-readiness, artifact: docs/09-devops-readiness.md).
 Invoke **product-integrity-qa** in GATE mode: re-run the full test suite
 including every browser suite (`python3 .harness/scripts/run_tests.py`,
 cross-sprint regression), run `python3 .harness/scripts/validate_product_map.py
---gate` (every Must process flow proven end to end on this run), recompute
+--gate` (every Must process flow proven end to end on this run, every Must
+step and every test case's Covers item reached by a passing test), recompute
 coverage, and output `docs/09-product-integrity.md` (template
 `.harness/templates/integrity-report.md`). Validate the machine-readable block
 with `python3 .harness/scripts/validate_verdict.py docs/09-product-integrity.md

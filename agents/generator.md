@@ -153,6 +153,19 @@ notes go in the sprint's build log, not in place of a criterion.
    walk the whole flow in one test, exactly as the test case's steps say.
    Where a flow step should appear in the user manual, call the manual-tour
    helper (`manualStep` / `cy.manualStep` / `manual_step`) at that moment.
+   - Coverage markers (`asdr-cover.*`): in a journey test, call
+     `flowStep('PF-xx.n')` (`cy.flowStep`, `flow_step`) right after the
+     assertion that checks that step's System response; in every test, call
+     `covers('<id>', …)` for each item on its test case's Covers line right
+     after the assertion that proves it. A measured NFR records its value
+     with `metric('<name>', value, '<unit>', budget)` and asserts it. The
+     release gate fails any Must step, exception path or Covers item no
+     passing test marked. Assert what the user sees — exact text, counts,
+     exported columns and values, the item gone — never just that a click
+     happened; the evaluator grades whether a broken feature would still pass.
+   - Cross-role: when the test case's Persona is the role a setting affects,
+     drive it as that role (set the setting as the admin first, then sign in
+     as the affected role), with the setting both on and off.
    - Accessibility: in every journey test, call the accessibility helper at
      each new screen (`checkA11y(page, '<screen>')`, `cy.asdrA11y(...)`,
      `check_a11y(driver, ...)`). It fails on serious or critical WCAG 2.1

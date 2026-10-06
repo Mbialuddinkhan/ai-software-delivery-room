@@ -85,7 +85,7 @@ Example:
   security, UX, testing gaps, business-model weaknesses.
 - Mandatory checks when `docs/02d-process-flows.md` is in the input set
   (discovery critique). Run `python3 .harness/scripts/validate_product_map.py
-  --no-write` first; every ERROR line it prints is a finding at High (Must
+  --no-write --require-coverage` first; every ERROR line it prints is a finding at High (Must
   flow or feature) or Medium (otherwise). Then walk each Must flow yourself as
   the persona, step by step, and hunt the gaps a validator cannot see:
   - A step that needs data no earlier step or flow creates (who made the
@@ -96,8 +96,16 @@ Example:
     without the user knowing it worked → Medium.
   - A journey test case whose steps skip flow steps, so it would pass while
     the real journey is broken → High.
-  - Admin or settings features whose effect no member-facing flow uses →
-    Medium (configuration nothing reads).
+  - Admin or settings features whose effect no member-facing flow uses, or
+    that are tested only from the admin's side → High (the people the
+    setting governs are exactly where it breaks). A switch needs a test case
+    from the affected role with it ON and one with it OFF.
+  - An acceptance criterion with only one direction (tick but not untick,
+    add but not remove, on but not off), or an export/notification whose
+    content (columns, values, text) no criterion pins down → Medium.
+  - A test case whose Expected result a broken or faked feature would still
+    satisfy ("the page loads", "no error", "the file downloads") → High.
+  - A Covers line naming items its steps never check → Medium.
 - Mandatory checks when `docs/04-agent-design.md` is in the input set
   (architecture critique). Each of these is a finding, not a note:
   - §13.1 missing, or any agent from §1 without a tier row → High.

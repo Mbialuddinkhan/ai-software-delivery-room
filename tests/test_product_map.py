@@ -39,17 +39,44 @@ class Fixture:
     def check(self, *extra):
         return run([str(S / "validate_product_map.py"), *extra], self.dir)
 
-    def results(self, statuses: dict):
-        """Write a run_tests.py summary where each TC id has the given status."""
+    def results(self, statuses: dict, coverage="ideal"):
+        """Write a run_tests.py summary where each TC id has the given status.
+
+        coverage: "ideal" = every test case marked exactly what its documents
+        say it proves (see ideal_markers); None = no markers; or a by_tc dict."""
         run_dir = self.dir / ".harness/test-results/r1"
         run_dir.mkdir(parents=True)
         cases = [{"name": f"[{tid}] case", "status": st} for tid, st in statuses.items()]
-        (run_dir / "summary.json").write_text(json.dumps(
-            {"run_id": "r1", "commit": None, "suites": [{"name": "pw", "cases": cases}]}))
+        summary = {"run_id": "r1", "commit": None, "suites": [{"name": "pw", "cases": cases}]}
+        if coverage == "ideal":
+            coverage = ideal_markers(self.dir / "docs")
+        if coverage is not None:
+            summary["coverage"] = {"by_tc": coverage, "metrics": [], "untagged_markers": 0}
+        (run_dir / "summary.json").write_text(json.dumps(summary))
         (self.dir / ".harness/test-results/latest.json").write_text(json.dumps({"path": str(run_dir)}))
 
     def close(self):
         shutil.rmtree(self.dir, ignore_errors=True)
+
+
+def ideal_markers(docs: Path) -> dict:
+    """What a well-instrumented suite marks: a journey marks every step of its
+    flow (flowStep), an exception test its exception path, and every test the
+    items on its Covers line (covers)."""
+    flows_md = (docs / "02d-process-flows.md").read_text()
+    out = {}
+    for tid, body in re.findall(r"^### (TC-\d+).*?\n(.*?)(?=^### |\Z)",
+                                (docs / "02e-test-cases.md").read_text(), re.MULTILINE | re.DOTALL):
+        flow = (re.search(r"^- Flow: (PF-\d+(?:\.E\d+)?)", body, re.MULTILINE) or [None, None])[1]
+        kind = (re.search(r"^- Type: (\w+)", body, re.MULTILINE) or [None, ""])[1]
+        cov = re.search(r"^- Covers: (.*)$", body, re.MULTILINE)
+        items = re.findall(r"[A-Z]+-\d+(?:\.[AE]?\d+)?", cov.group(1)) if cov else []
+        if flow and kind == "journey":
+            items += re.findall(rf"^\| ({re.escape(flow)}\.\d+) \|", flows_md, re.MULTILINE)
+        elif flow and ".E" in flow:
+            items.append(flow)
+        out[tid] = sorted(set(items))
+    return out
 
 
 def all_tcs():
@@ -66,7 +93,8 @@ class TestProductMap(unittest.TestCase):
     def test_sample_chain_is_whole(self):
         r = self.f.check()
         self.assertEqual(r.returncode, 0, r.stdout)
-        self.assertIn("4 flows", r.stdout)
+        self.assertIn("5 flows", r.stdout)
+        self.assertIn("81/81 testable items named by a test case", r.stdout)
         m = json.loads((self.f.dir / ".harness/product-map.json").read_text())
         self.assertEqual(m["counts"]["requirements_tested"], m["counts"]["requirements"])
         self.assertEqual(m["flows"]["PF-02"]["journey_tests"], ["TC-03"])
@@ -117,7 +145,8 @@ class TestProductMap(unittest.TestCase):
         self.f.results(statuses)
         r = self.f.check("--gate")
         self.assertEqual(r.returncode, 0, r.stdout)
-        self.assertIn("4 flows (4 proven)", r.stdout)
+        self.assertIn("5 flows (5 proven)", r.stdout)
+        self.assertIn("81 reached by a passing test", r.stdout)
         shutil.rmtree(self.f.dir / ".harness/test-results")
         statuses["TC-03"] = "failed"
         del statuses["TC-05"]

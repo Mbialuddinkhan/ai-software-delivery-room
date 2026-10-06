@@ -55,7 +55,8 @@
 
 - Primary actor: Team admin
 - Goal: decide who may remove tasks, and tidy the board
-- Main flow: 1. Ticks "Team members can delete tasks" 2. Sees "Settings saved." 3. Deletes a task
+- Main flow: 1. Ticks "Team members can delete tasks" 2. Sees "Settings saved." 3. A team member deletes a stale task
+- Alternate / exception flows: E1: deleting is not allowed → a team member sees no Delete button; A1: an admin deletes a task whether or not members may
 - Linked requirements: FR-09
 - Linked outcome: O-03
 

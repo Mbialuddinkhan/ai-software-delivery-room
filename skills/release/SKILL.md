@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # Release — Release Packaging Orchestrator
@@ -100,8 +100,10 @@ Invoke **release-manager** with: inputs `sprints.json`,
 `docs/10-post-release-monitoring.md`, the release test report
 (`docs/test-reports/v<version>/`) and the user manuals
 (`docs/manuals/<version>/`, HTML + PDF for every persona and tier). It runs
-the tests on the release commit, the product-map gate, the report and the
-manual build itself (see its agent file).
+the tests on the release commit, the product-map gate (every Must step and
+every testable item reached by a passing test), the report and the manual
+build itself (see its agent file). Show the user the coverage matrix from
+`docs/product-map.md` and any measured NFR over budget.
 
 The manual build compares every screenshot with the previous release;
 show the user `docs/manuals/<version>/ui-changes.html` (it is also inside the

@@ -77,6 +77,12 @@ From `.harness/templates/process-flows.md`.
    actually hit — invalid input, missing permission, empty state, a duplicate,
    a lost connection — each with exactly what the user sees and where they
    rejoin the flow.
+6. Cross-role effects: for every feature that changes what ANOTHER role can
+   do (an admin setting, a permission, a shared list one role maintains for
+   others), fill the Affects column in the feature Summary ("Team member", or
+   "Team member (on/off)" for a switch) and add a step where that role meets
+   the effect — with an exception path for the OFF state of a switch. The
+   validator refuses an Affects role with no step of its own.
 
 ## Operating standard
 

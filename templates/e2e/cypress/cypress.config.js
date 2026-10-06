@@ -6,6 +6,7 @@
 const { defineConfig } = require('cypress');
 const asdrManual = require('./cypress/plugins/asdr-manual-plugin');
 const asdrA11y = require('./cypress/plugins/asdr-a11y-plugin');
+const asdrCover = require('./cypress/plugins/asdr-cover-plugin');
 
 const results = process.env.ASDR_RESULTS_DIR || 'test-results';
 
@@ -34,7 +35,8 @@ module.exports = defineConfig({
     specPattern: 'cypress/e2e/**/*.cy.{js,ts}',
     setupNodeEvents(on, config) {
       asdrManual(on, config);
-      return asdrA11y(on, config);
+      asdrA11y(on, config);
+      return asdrCover(on, config);
     },
   },
 });

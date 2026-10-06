@@ -1,6 +1,7 @@
 import pytest
 from selenium.webdriver.common.by import By
 
+from asdr_cover import covers
 from asdr_manual import manual_step
 from test_board import sign_in
 
@@ -16,4 +17,5 @@ def test_tc_14_tour_quick_add_with_keyboard(driver, base_url):
     manual_step(driver, T, "press-n", "Press N to jump to the new-task box", "#new-task")
     driver.find_element(By.ID, "new-task").send_keys("Call the caterer\n")
     assert "Call the caterer" in driver.find_element(By.ID, "tasks").text
+    covers("AC-02.2", "AC-02.3")
     manual_step(driver, T, "added", "Press Enter to add it", "#tasks")

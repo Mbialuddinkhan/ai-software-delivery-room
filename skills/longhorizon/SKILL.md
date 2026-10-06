@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # Long Horizon — Execution Harness Orchestrator

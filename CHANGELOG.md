@@ -3,6 +3,72 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.5.1] — every documented item tested, and proven at run time
+
+### Added
+- **Coverage of every testable item, per project.** `validate_product_map.py`
+  now enumerates every id the project's own documents define — FR, NFR,
+  acceptance criteria (`AC-<story>.<n>`), business rules, edge cases, each use
+  case and each of its alternate/exception flows (`UC-xx.A1`, `UC-xx.E1`),
+  every feature, every flow step and exception path — and requires a test case
+  that names each one (new `Covers:` line on test cases; a journey names all
+  its flow's steps, a step names its use case and features). Gaps are warnings
+  while building and errors with the new `--require-coverage` (end of
+  discovery) and at `--gate`. A Covers id no document defines is an error.
+- **Runtime proof (markers).** New helpers `asdr-cover.ts` (Playwright),
+  `asdr-cover.js` + `asdr-cover-plugin.js` (Cypress) and `asdr_cover.py`
+  (Selenium): `flowStep('PF-02.3')`, `covers('AC-03.2', …)` and
+  `metric(name, value, unit, budget)`. They write
+  `<run>/coverage/<framework>.jsonl`; `run_tests.py` collects them into
+  `summary.json` → `coverage`. The gate requires every step and exception path
+  of every Must flow, and every item on each test case's Covers line, to be
+  marked by a PASSING test, and lists any testable item no passing test
+  reached. Markers from failing tests do not count.
+- **Cross-role effects.** Features get an optional `Affects` column
+  (`Team member`, or `Team member (on/off)` for a switch). The validator then
+  requires a flow step where that role meets the effect, and test cases from
+  that role's side — one for a plain effect, two (on and off) for a switch.
+- **Measurements.** `metric(...)` values appear in the report's new
+  Measurements section and in `facts:test_runs.metrics.<name>`
+  (`within_budget`); coverage per kind in `facts:product_map.coverage.*` and
+  `facts:product_map.counts.items_executed`.
+- **Coverage matrix** in `docs/product-map.md`: per kind, every item with the
+  test cases that name it, the passing tests that reached it and its status
+  (tested / named, not reached / no test case).
+
+### Changed
+- business-analyst: acceptance criteria for both directions (untick, remove,
+  off) and exact export content; Covers on every test case; role-side tests
+  for cross-role features; runs `--require-coverage`.
+- product-manager: fills Affects and adds the affected role's steps.
+- critic: admin-only testing of a setting, one-directional criteria, fakeable
+  expected results and unchecked Covers items are findings.
+- evaluator: assertion depth ("what is the cheapest fake that still passes?"),
+  markers placed after the assertion that proves them, coverage of the
+  sprint's flows on the latest run.
+- generator: calls the markers; drives cross-role tests as the affected role.
+- devops: copies the cover helpers and registers the Cypress plugin.
+- risk-manager / release-manager: unreached items or an NFR over budget keep
+  a release below Production-ready; release checklist items for both.
+- Templates: requirements (one bullet per id), use cases (labelled A1/E1),
+  feature list (Affects), test cases (Covers, cross-role examples), process
+  flows (cross-role steps, markers), e2e-testing (marker table).
+
+### Fixed
+- `UC-07.E1` was read as use case `UC-0` by the id parser.
+
+### Sample (TaskBoard)
+- Requirements rewritten with 22 acceptance criteria, NFR-02 (500 tasks in
+  under 1 s), BR-01/02 and EC-01/02; new flow PF-05 "Team member tidies the
+  board" (delete permission from the member's side, on and off).
+- 28 test cases (was 21): member delete allowed (TC-22) and not allowed
+  (TC-23), untick (TC-24), NFR-02 performance with a measured value (TC-25),
+  keyboard-only use (TC-26), an admin's category reaching a member (TC-27),
+  admins always deleting (TC-28); CSV export now checks the header and every
+  row's category and status.
+- Every test in all three frameworks carries markers: 81 of 81 items reached
+  by a passing test.
+
 ## [3.5.0] — reviewed manuals, accessibility checks, saved logins, screen-change diffs
 
 ### Added

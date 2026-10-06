@@ -21,6 +21,15 @@ Rules the validator enforces:
   - every Must flow documents at least one exception path
   - every flow has a journey test case (Type: journey) in docs/02e-test-cases.md
     and every exception path has a test case
+  - cross-role: when a feature changes what ANOTHER role can do (an admin
+    setting, a permission, a list one role keeps for others — "Affects" in
+    docs/02c-features.md), that role must have a step where it meets the
+    effect: e.g. "PF-05.1 · Team member · opens the board after an admin
+    allowed deleting · sees Delete". A switch also needs the OFF path as an
+    exception ("PF-05.E1 · deleting is not allowed · no Delete button").
+  - at the release gate a passing test must reach every step and exception
+    path of every Must flow: the test calls flowStep('PF-xx.n') right after
+    it has checked that step's System response.
 Use Mermaid flowchart syntax. Put each role in its own subgraph when a flow
 crosses roles (a handoff between people is where journeys usually break). -->
 
@@ -34,6 +43,7 @@ flowchart LR
 ```
 
 - Entry flows: PF-01 (new user), PF-04 (admin)
+- Cross-role: PF-04 changes what users can do in PF-02 (<which setting>)
 - Core loop: PF-02, repeated daily
 
 ### PF-01 · <title: verb + object, e.g. "Sign up and create the first project">

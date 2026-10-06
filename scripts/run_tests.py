@@ -290,6 +290,37 @@ def a11y_summary(run_dir: Path) -> dict | None:
             "pages": checks}
 
 
+def coverage_summary(run_dir: Path) -> dict | None:
+    """Collect the flowStep / covers / metric markers the tests wrote to <run>/coverage/*.jsonl."""
+    files = sorted((run_dir / "coverage").glob("*.jsonl")) if (run_dir / "coverage").is_dir() else []
+    if not files:
+        return None
+    by_tc, metrics, untagged = {}, [], 0
+    for f in files:
+        for line in f.read_text(errors="ignore").splitlines():
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            tcs = rec.get("tc") or []
+            if rec.get("kind") in ("step", "covers"):
+                if not tcs:
+                    untagged += 1
+                for t in tcs:
+                    bucket = by_tc.setdefault(t, [])
+                    for x in rec.get("items") or []:
+                        if x not in bucket:
+                            bucket.append(x)
+            elif rec.get("kind") == "metric":
+                budget = rec.get("budget")
+                metrics.append({"name": rec.get("name"), "value": rec.get("value"), "unit": rec.get("unit"),
+                                "budget": budget, "test": rec.get("test"), "tc": tcs,
+                                "within_budget": (None if budget is None or rec.get("value") is None
+                                                  else rec["value"] <= budget)})
+    return {"by_tc": {k: sorted(v) for k, v in sorted(by_tc.items())}, "metrics": metrics,
+            "untagged_markers": untagged}
+
+
 def manual_inventory(manual_dir: Path, commit: str | None) -> dict:
     tours = []
     for f in sorted((manual_dir / "tours").glob("*.json")) if (manual_dir / "tours").is_dir() else []:
@@ -474,6 +505,7 @@ def main() -> int:
         "manual": manual_inventory(manual_dir, commit),
         "seed": seed,
         "a11y": a11y_summary(run_dir),
+        "coverage": coverage_summary(run_dir),
         "saved_logins": sorted(f.stem for f in auth_dir.glob("*.json")) if auth_dir.is_dir() else [],
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
@@ -492,6 +524,11 @@ def main() -> int:
         t = s["totals"]
         print(f"  {s['name']:<14} {t['passed']:>3} passed  {t['failed']:>3} failed  "
               f"{t['error']:>3} errors  {t['skipped']:>3} skipped")
+    cov = summary["coverage"]
+    if cov:
+        print(f"  coverage markers: {len({x for v in cov['by_tc'].values() for x in v})} distinct items marked by "
+              f"{len(cov['by_tc'])} test cases" + (f", {len(cov['metrics'])} measurements" if cov["metrics"] else "")
+              + " (validate_product_map.py checks them against the documents)")
     a = summary["a11y"]
     if a:
         print(f"  accessibility: {a['checks']} checks — " +

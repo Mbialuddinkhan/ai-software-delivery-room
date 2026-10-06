@@ -11,21 +11,35 @@ It reads the discovery documents and follows every link in the chain
   lifecycle (PF-00) → process flow (PF) → step → use case (UC) → feature (F)
   → requirement (FR) → test case (TC) → automated test → latest result
 
-  docs/02-requirements.md   FR ids
-  docs/02b-use-cases.md     UC ids + "Linked requirements"
-  docs/02c-features.md      feature Summary table
+  docs/02-requirements.md   FR, NFR, BR, EC ids and acceptance criteria AC-<story>.<n>
+  docs/02b-use-cases.md     UC ids, their alternate/exception flows (UC-xx.A1,
+                            UC-xx.E1) and "Linked requirements"
+  docs/02c-features.md      feature Summary table (optional 9th column "Affects":
+                            roles whose experience the feature changes)
   docs/02d-process-flows.md PF-00 lifecycle + one section per flow
-  docs/02e-test-cases.md    TC sections
+  docs/02e-test-cases.md    TC sections; "Covers:" lists the items each one tests
 
 and reports every broken link as an "ERROR:" line (exit 1) — a feature no
 journey uses, a use case on no flow, a flow nothing leads to, a flow without a
 journey test, an exception path nobody tests. These are the gaps that let each
 sprint pass while the product as a whole does not work.
 
+Coverage of everything testable (v3.5.1). Every item the project's own
+documents define — each FR, NFR, business rule, edge case and acceptance
+criterion, each use case and each of its alternate/exception flows, each
+feature, each step and exception path of each flow — must be named by at
+least one test case. A feature that changes what another role can do
+("Affects") must appear in a flow step of that role and be tested from that
+role's side at least twice (setting on and off). Gaps are warnings while
+building and errors with --require-coverage (end of discovery) or --gate.
+
 --gate (release gate; also usable after any sprint) adds the proof: every Must
 test case must be automated and its test — titled "[TC-xx] …" — must have
 PASSED in the latest run_tests.py run (--results, default latest). A failing
-test of any priority is an error. Every FR must be covered by a test case.
+test of any priority is an error. And linking is not enough: tests record what
+they actually exercised (flowStep / covers markers, templates/e2e/*/asdr-cover.*),
+so every step and exception path of every Must flow, and every item a test
+case lists under Covers, must have been reached by a PASSING test.
 
 It always writes docs/product-map.md (human view, regenerated — never edit by
 hand) and .harness/product-map.json (read by emit_facts.py as
@@ -47,14 +61,58 @@ TC_TYPES = {"journey", "exception", "functional", "edge", "nfr"}
 NONE_WORDS = {"", "none", "—", "-", "n/a", "na"}
 
 
+ITEM_RE = re.compile(r"\b(PF-\d+\.E\d+|PF-\d+\.\d+|UC-\d+\.[AE]\d+|UC-\d+|AC-\d+\.\d+|"
+                     r"NFR-\d+|FR-\d+|BR-\d+|EC-\d+|F-\d+)\b")
+KIND_ORDER = ["FR", "NFR", "AC", "BR", "EC", "UC", "UC-ALT", "F", "STEP", "EXC"]
+KIND_LABEL = {"FR": "Functional requirements", "NFR": "Non-functional requirements",
+              "AC": "Acceptance criteria", "BR": "Business rules", "EC": "Edge cases",
+              "UC": "Use cases (main flow)", "UC-ALT": "Use case alternate and exception flows",
+              "F": "Features", "STEP": "Process flow steps", "EXC": "Process flow exception paths"}
+
+
+def kind_of(item: str) -> str:
+    if re.fullmatch(r"PF-\d+\.E\d+", item):
+        return "EXC"
+    if re.fullmatch(r"PF-\d+\.\d+", item):
+        return "STEP"
+    if re.fullmatch(r"UC-\d+\.[AE]\d+", item):
+        return "UC-ALT"
+    return item.split("-")[0]
+
+
+def items_in(text: str) -> list:
+    """Every testable-item id in a piece of text, in order, without duplicates."""
+    out = []
+    for m in ITEM_RE.findall(text or ""):
+        if m not in out:
+            out.append(m)
+    return out
+
+
 def ids(text: str, prefix: str) -> list:
     pat = {"PFSTEP": r"PF-\d+\.\d+", "PFEX": r"PF-\d+\.E\d+",
-           "PF": r"PF-\d+(?!\d)(?!\.E?\d)", "F": r"(?<![A-Z])F-\d+", "UC": r"UC-\d+",
+           "PF": r"PF-\d+(?!\d)(?!\.E?\d)", "F": r"(?<![A-Z])F-\d+", "UC": r"UC-\d+(?!\d)(?!\.[AE]\d)",
            "FR": r"FR-\d+", "TC": r"TC-\d+"}[prefix]
     out = []
     for m in re.findall(r"\b" + pat if prefix != "F" else pat, text or ""):
         if m not in out:
             out.append(m)
+    return out
+
+
+def declared_by_feature(tid: str, t: dict, flows: dict, step_info: dict) -> set:
+    """Features a test case exercises: named directly, or through the flow steps it walks."""
+    named = set(t["declared"])
+    if t["flow"] in flows and t["type"] == "journey":
+        named |= {st["id"] for st in flows[t["flow"]]["steps"]}
+    for pid, f in flows.items():
+        for e in f["exceptions"]:
+            if t["flow"] == e["id"] and e["at"] in step_info:
+                named.add(e["at"])
+    out = {x for x in named if x.startswith("F-")}
+    for x in named:
+        if x in step_info:
+            out |= set(step_info[x][1]["feature"])
     return out
 
 
@@ -132,6 +190,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Validate the end-to-end product chain and write the product map.")
     ap.add_argument("--docs", default="docs")
     ap.add_argument("--gate", action="store_true")
+    ap.add_argument("--require-coverage", action="store_true",
+                    help="every testable item must be named by a test case (end of discovery)")
     ap.add_argument("--results", default=None, help="'latest' or a summary.json / run folder (default: latest with --gate)")
     ap.add_argument("--sprints", default="sprints.json")
     ap.add_argument("--map", default=None, help="default <docs>/product-map.md")
@@ -154,12 +214,34 @@ def main() -> int:
             frs.append(m.group(1))
     if req_md and not frs:
         frs = ids(req_md, "FR")
-    ucs = {}
+    cover_gap = errors if (args.require_coverage or args.gate) else warns
+    req_items = {}            # id -> text, for FR / NFR / AC / BR / EC defined in the requirements doc
+    for m in re.finditer(r"^\s*(?:[-*|]\s*)?(?:\*\*)?(NFR-\d+|FR-\d+|BR-\d+|EC-\d+|AC-\d+\.\d+)\b"
+                         r"(?:\*\*)?\s*[:.)\-–—|]*\s*(.*)$", req_md, re.MULTILINE):
+        req_items.setdefault(m.group(1), m.group(2).strip().rstrip("|").strip()[:160])
+    for fr in frs:
+        req_items.setdefault(fr, "")
+    ucs, uc_alts = {}, {}
     for uid, (title, body) in sections(uc_md, "UC").items():
         ucs[uid] = {"title": title, "frs": ids(bullet(body, "Linked requirements") or "", "FR")}
         for fr in ucs[uid]["frs"]:
             if fr not in frs:
                 errors.append(f"{uid} links {fr}, which is not in 02-requirements.md")
+        lines, grab = body.splitlines(), []
+        for i, line in enumerate(lines):
+            if re.match(r"^\s*[-*]\s*Alternate", line, re.IGNORECASE):
+                grab.append(line.split(":", 1)[1] if ":" in line else "")
+                for nxt in lines[i + 1:]:
+                    if re.match(r"^[-*]\s", nxt) or (nxt.strip() and not nxt.startswith((" ", "\t"))):
+                        break
+                    grab.append(nxt)
+        for line in grab:                            # several labels may share a line: "E1: …; A1: …"
+            marks = list(re.finditer(r"\b([AE]\d+)\s*[:.)\-–—]\s*", line))
+            for i, m in enumerate(marks):
+                end = marks[i + 1].start() if i + 1 < len(marks) else len(line)
+                txt = line[m.end():end].strip().rstrip(";,").strip()
+                if m.group(1) not in ("A0", "E0"):
+                    uc_alts[f"{uid}.{m.group(1)}"] = {"uc": uid, "text": txt[:160]}
 
     # ── features ──
     features = {}
@@ -170,8 +252,17 @@ def main() -> int:
         fid = r[0]
         if fid in features:
             errors.append(f"{fid} appears twice in the feature Summary table")
+        affects = []                                   # [(role, is_switch)]
+        if len(r) >= 9 and r[8].strip().lower() not in NONE_WORDS:
+            for a in re.split(r"[,;]", r[8]):
+                a = a.strip()
+                if not a:
+                    continue
+                m = re.match(r"(.+?)\s*\((?:on/off|on-off|switch|toggle)\)\s*$", a, re.IGNORECASE)
+                affects.append((m.group(1).strip(), True) if m else (a, False))
         features[fid] = {"name": r[1], "personas": r[2], "priority": r[3].strip().lower(), "release": r[4],
-                         "flows": ids(r[5], "PF"), "ucs": ids(r[6], "UC"), "frs": ids(r[7], "FR")}
+                         "flows": ids(r[5], "PF"), "ucs": ids(r[6], "UC"), "frs": ids(r[7], "FR"),
+                         "affects": affects}
     f_details = sections(f_md, "F")
     for fid, f in features.items():
         if f["priority"] not in PRIORITIES:
@@ -301,10 +392,15 @@ def main() -> int:
     tcs = {}
     for tid, (title, body) in sections(tc_md, "TC").items():
         flow_raw = bullet(body, "Flow") or ""
+        covers = items_in(bullet(body, "Covers") or "")
         tcs[tid] = {"title": title, "type": (bullet(body, "Type") or "").lower(),
                     "flow": (ids(flow_raw, "PFEX") or ids(flow_raw, "PF") or [None])[0],
                     "ucs": ids(bullet(body, "Use cases") or "", "UC"),
                     "frs": ids(bullet(body, "Requirements") or "", "FR"),
+                    "covers": covers,
+                    "declared": items_in(" ".join([bullet(body, "Covers") or "", bullet(body, "Requirements") or "",
+                                                   bullet(body, "Use cases") or ""])),
+                    "persona": (bullet(body, "Persona") or "").strip().lower(),
                     "priority": (bullet(body, "Priority") or "").lower(),
                     "automation": bullet(body, "Automation") or "",
                     "expected": bullet(body, "Expected result") or ""}
@@ -346,8 +442,14 @@ def main() -> int:
                 if not exc_tested.get(e["id"]):
                     errors.append(f"{e['id']} ({e['condition']}) has no test case")
         for r in frs:
-            if not fr_tested.get(r):
-                (errors if args.gate else warns).append(f"{r} is not covered by any test case")
+            if not fr_tested.get(r) and not any(r in t["declared"] for t in tcs.values()):
+                cover_gap.append(f"{r} is not covered by any test case")
+        for tid, t in tcs.items():
+            for x in t["covers"]:
+                known = (x in req_items or x in ucs or x in uc_alts or x in features
+                         or any(x == st["id"] for f in flows.values() for st in f["steps"]) or x in exc_ids)
+                if not known:
+                    errors.append(f"{tid} covers {x}, which no document defines")
 
     # ── results (gate) ──
     results_arg = args.results or ("latest" if args.gate else None)
@@ -389,6 +491,107 @@ def main() -> int:
                               f"— its test must be titled '[{tid}] …' (or test_tc_NN_… in pytest)")
             if args.gate and state == "manual":
                 warns.append(f"{tid} is manual ({t['automation']}) — needs a human sign-off at the gate")
+
+    # ── coverage of every testable item ──
+    step_info = {st["id"]: (pid, st) for pid, f in flows.items() for st in f["steps"]}
+    testable = {}                                   # id -> (kind, description)
+    for x, txt in req_items.items():
+        testable[x] = (kind_of(x), txt)
+    for u, info in ucs.items():
+        testable[u] = ("UC", info["title"])
+    for x, info in uc_alts.items():
+        testable[x] = ("UC-ALT", info["text"])
+    for fid, f in features.items():
+        if f["priority"] not in ("won't", "wont"):
+            testable[fid] = ("F", f["name"])
+    for pid, f in flows.items():
+        for st in f["steps"]:
+            testable[st["id"]] = ("STEP", f"{st['actor']}: {st['action']}")
+        for e in f["exceptions"]:
+            testable[e["id"]] = ("EXC", e["condition"])
+
+    declared_by = defaultdict(set)                  # item -> test cases that name it
+    for tid, t in tcs.items():
+        named = set(t["declared"])
+        if t["flow"] in flows and t["type"] == "journey":
+            named |= {st["id"] for st in flows[t["flow"]]["steps"]} | {t["flow"]}
+        if t["flow"] in exc_ids:
+            named.add(t["flow"])
+        for x in list(named):                       # a named step also names its use case and feature
+            if x in step_info:
+                named |= set(step_info[x][1]["uc"]) | set(step_info[x][1]["feature"])
+        for x in named:
+            declared_by[x].add(tid)
+    for x, (kind, desc) in testable.items():
+        if not declared_by.get(x) and kind not in ("EXC",):       # exception paths are checked above
+            if kind == "FR":
+                continue                                          # reported above
+            cover_gap.append(f"{x} ({KIND_LABEL[kind].lower().rstrip('s')}: {desc or '—'}) is not named by any "
+                             "test case — add it to a test case's Covers line")
+
+    # cross-role effects: a feature that changes what another role can do
+    for fid, f in features.items():
+        for role, is_switch in f["affects"]:
+            r = role.lower()
+            steps_for_role = [st["id"] for pid, fl in flows.items() for st in fl["steps"]
+                              if r in st["actor"].lower() and fid in st["feature"]]
+            if not steps_for_role:
+                errors.append(f"{fid} ({f['name']}) changes what {role} can do, but no flow has a {role} step "
+                              f"using it — add the step where {role} feels the effect")
+            role_tcs = [tid for tid, t in tcs.items() if r in t["persona"] and fid in declared_by_feature(tid, t, flows, step_info)]
+            need = 2 if is_switch else 1
+            if len(role_tcs) < need:
+                how = "with it on and with it off" if is_switch else "where they see the change"
+                cover_gap.append(f"{fid} ({f['name']}) changes what {role} can do: test it from the {role} side "
+                                 f"{how} — needs {need} test case(s) with Persona {role} covering {fid}, found "
+                                 f"{len(role_tcs)}")
+
+    # executed coverage: markers the tests recorded at run time
+    run_cov = (summary or {}).get("coverage") or {}
+    marked = {tid: set(v) for tid, v in (run_cov.get("by_tc") or {}).items()}
+    executed_by = defaultdict(set)                  # item -> passing test cases that reached it
+    for tid, items in marked.items():
+        if tc_state.get(tid) != "passed":
+            continue
+        reached = set(items)
+        for x in list(reached):
+            if x in step_info:
+                reached |= set(step_info[x][1]["uc"]) | set(step_info[x][1]["feature"])
+        for x in reached:
+            executed_by[x].add(tid)
+    if summary:
+        if not marked:
+            (errors if args.gate else warns).append(
+                "the test run recorded no coverage markers — journey tests must call flowStep('PF-xx.n') at each "
+                "step and tests must call covers(...) for the items they check (templates/e2e/*/asdr-cover.*)")
+        else:
+            gap = errors if args.gate else warns
+            for pid, f in flows.items():
+                if f["priority"] != "must":
+                    continue
+                for x in [st["id"] for st in f["steps"]] + [e["id"] for e in f["exceptions"]]:
+                    if not executed_by.get(x):
+                        gap.append(f"{x} was never reached by a passing test — mark it with flowStep('{x}') "
+                                   "where a test walks it")
+            for tid, t in tcs.items():
+                if tc_state.get(tid) != "passed":
+                    continue
+                for x in t["covers"]:
+                    got = set(marked.get(tid, set()))
+                    for y in list(got):
+                        if y in step_info:
+                            got |= set(step_info[y][1]["uc"]) | set(step_info[y][1]["feature"])
+                    if x not in got:
+                        gap.append(f"{tid} says it covers {x}, but its test never marked it — call covers('{x}') "
+                                   "at the assertion that proves it")
+            unknown_marks = sorted({x for v in marked.values() for x in v if x not in testable and kind_of(x) != "PF"})
+            if unknown_marks:
+                warns.append(f"tests marked items no document defines: {', '.join(unknown_marks[:10])}")
+            unreached = [x for x in testable if not executed_by.get(x)]
+            if unreached:
+                warns.append(f"{len(unreached)} testable item(s) no passing test reached: "
+                             f"{', '.join(unreached[:15])}{' …' if len(unreached) > 15 else ''} — add covers(...) "
+                             "where a test proves each one (docs/product-map.md lists them)")
 
     # sprints that deliver each flow (optional "flows" list on sprint entries)
     sprint_flows = defaultdict(list)
@@ -438,8 +641,17 @@ def main() -> int:
                      for fid, f in features.items()},
         "test_cases": {tid: {"title": t["title"], "type": t["type"], "flow": t["flow"], "priority": t["priority"],
                              "state": tc_state.get(tid)} for tid, t in tcs.items()},
+        "coverage": {k: {"total": sum(1 for v in testable.values() if v[0] == k),
+                         "declared": sum(1 for x, v in testable.items() if v[0] == k and declared_by.get(x)),
+                         "executed": sum(1 for x, v in testable.items() if v[0] == k and executed_by.get(x))}
+                     for k in KIND_ORDER if any(v[0] == k for v in testable.values())},
+        "items": {x: {"kind": k, "description": d, "declared_by": sorted(declared_by.get(x, [])),
+                      "executed_by": sorted(executed_by.get(x, []))} for x, (k, d) in testable.items()},
         "errors": len(errors), "warnings": len(warns),
     }
+    model["counts"]["items"] = len(testable)
+    model["counts"]["items_declared"] = sum(1 for x in testable if declared_by.get(x))
+    model["counts"]["items_executed"] = sum(1 for x in testable if executed_by.get(x))
 
     if not args.no_write:
         Path(args.json).parent.mkdir(parents=True, exist_ok=True)
@@ -454,7 +666,9 @@ def main() -> int:
     c = model["counts"]
     print(f"{'FAIL' if errors else 'OK'}: {c['flows']} flows ({c['flows_proven']} proven), {c['steps']} steps, "
           f"{c['features']} features, {c['use_cases']} use cases, {c['requirements_tested']}/{c['requirements']} "
-          f"requirements tested, {c['test_cases']} test cases ({c['test_cases_passing']} passing)"
+          f"requirements tested, {c['test_cases']} test cases ({c['test_cases_passing']} passing); "
+          f"{c['items_declared']}/{c['items']} testable items named by a test case"
+          + (f", {c['items_executed']} reached by a passing test" if summary else "")
           + (f" — {len(errors)} error(s)" if errors else ""))
     return 1 if errors else 0
 
@@ -472,7 +686,9 @@ def render_map(model, flows, features, ucs, tcs, tc_state, journeys, exc_tested,
            + (f" · test results from run `{model['results_run']}` (commit `{model['results_commit']}`)" if model["results_run"] else " · no test results linked"),
            "",
            f"**{c['flows_proven']}/{c['flows']} flows proven end to end** · {c['test_cases_passing']}/{c['test_cases']} test cases passing · "
-           f"{c['requirements_tested']}/{c['requirements']} requirements tested · {c['features']} features · {c['use_cases']} use cases", ""]
+           f"{c['requirements_tested']}/{c['requirements']} requirements tested · {c['features']} features · {c['use_cases']} use cases · "
+           f"{c.get('items_declared', 0)}/{c.get('items', 0)} testable items named by a test case"
+           + (f", {c.get('items_executed', 0)} reached by a passing test" if model["results_run"] else ""), ""]
     if errors:
         out += [f"## Gaps to fix ({len(errors)})", ""] + [f"- {e}" for e in errors] + [""]
     if lifecycle:
@@ -503,6 +719,31 @@ def render_map(model, flows, features, ucs, tcs, tc_state, journeys, exc_tested,
         used = model["features"][fid]["flows"]
         out.append(f"| {fid} · {f['name']} | {f['priority'].title()} | {', '.join(used) or '⚠️ none'} |")
     out.append("")
+    if model.get("items"):
+        ran = bool(model["results_run"])
+        out += ["## Coverage of every testable item", "",
+                "Every item the documents define, the test cases that name it, and — from the latest run — the "
+                "passing tests that actually reached it (flowStep / covers markers).", "",
+                "| Kind | Items | Named by a test case | Reached by a passing test |", "|---|---|---|---|"]
+        for k, v in model["coverage"].items():
+            out.append(f"| {KIND_LABEL[k]} | {v['total']} | {v['declared']} | {v['executed'] if ran else '—'} |")
+        out.append("")
+        for k in KIND_ORDER:
+            rows_k = [(x, i) for x, i in model["items"].items() if i["kind"] == k]
+            if not rows_k:
+                continue
+            out += [f"### {KIND_LABEL[k]}", "", "| Item | What | Test cases | Reached by | Status |", "|---|---|---|---|---|"]
+            for x, i in rows_k:
+                if i["executed_by"]:
+                    st = "✅ tested"
+                elif i["declared_by"]:
+                    st = "⚠️ named, not reached" if ran else "· named"
+                else:
+                    st = "❌ no test case"
+                what = (i["description"] or "").replace("|", "/")
+                out.append(f"| {x} | {what} | {', '.join(i['declared_by']) or '—'} | "
+                           f"{', '.join(i['executed_by']) or '—'} | {st} |")
+            out.append("")
     if warns:
         out += [f"## Warnings ({len(warns)})", ""] + [f"- {w}" for w in warns] + [""]
     return "\n".join(out)

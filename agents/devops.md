@@ -103,6 +103,12 @@ output path.
     git-ignored.
   - Accessibility: add `@axe-core/playwright` (and `axe-core` for Cypress or
     Selenium) as dev dependencies and copy the `asdr-a11y` helpers.
+  - Coverage markers: copy the `asdr-cover` helpers unchanged
+    (`asdr-cover.ts`; Cypress `support/asdr-cover.js`, imported from
+    `support/e2e.js`, and `plugins/asdr-cover-plugin.js`, registered in
+    `setupNodeEvents` as the template config shows; Selenium
+    `asdr_cover.py`). They write `<run>/coverage/<framework>.jsonl`, which
+    `run_tests.py` collects for the release gate.
   - Smoke it: `python3 .harness/scripts/run_tests.py` must pass on the empty
     app with one sample test before you stop. This full suite is what the
     evaluator re-runs each sprint and again at the release gate.

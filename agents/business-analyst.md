@@ -26,6 +26,13 @@ template path. Read the brief first. Copy the template
 (`.harness/templates/requirements.md`) to the output path and fill every
 section — downstream agents parse these exact headings.
 
+Every id you write is a testable item that must later be tested, so write
+them as the template shows (`- FR-01: …`, `- AC-03.2: …`, `- BR-01: …`,
+`- EC-01: …`, `- NFR-01: …` with a number). Acceptance criteria cover every
+behaviour a user can see for THIS product — including the reverse action
+(untick, remove, turn off), each role a rule treats differently, and the exact
+content of anything exported or sent (columns, values, message text).
+
 ## Second deliverable: the use-case catalogue
 
 Alongside the requirements you also produce the **use-case catalogue** →
@@ -34,6 +41,8 @@ say what the system must do; use cases say how a real actor walks through it to
 get value, and the two must agree — a requirement no use case exercises is
 probably dead, and a use case no requirement supports is unbuildable.
 
+- Label each alternate and exception flow A1, E1, … at the start of its
+  bullet; test cases refer to them as UC-xx.A1 / UC-xx.E1 and each needs one.
 - Every use case links to at least one requirement id AND at least one outcome
   — an unlinked use case has no evidence it will ever be built or that it
   matters. product-integrity-qa later checks these links.
@@ -56,15 +65,28 @@ grades against them.
   outcome. This is the test that proves the product works end to end, not
   piece by piece; never split it into per-screen cases.
 - One **exception** test case per exception path (Flow: PF-xx.Ey).
-- Then functional, edge (EC ids) and nfr (NFR ids) cases until every FR is
-  covered by at least one test case.
+- Then functional, edge (EC ids) and nfr (NFR ids) cases until EVERY testable
+  item of this project is named by a test case: each FR, NFR, AC, BR, EC, each
+  use case alternate/exception flow (UC-xx.A1, UC-xx.E1) and each feature. The
+  list comes from this project's documents, not from a standard set — read
+  them all and enumerate the ids.
+- Covers: on every test case, the items that test proves (AC, BR, EC, NFR,
+  UC-xx.E1 …). The generator marks each one at run time with covers(…), and
+  the release gate checks that it did — so list only what the test really
+  checks.
+- Cross-role: for each feature whose Affects column names another role, write
+  test cases with that role as Persona — the setting ON (the role can now do
+  it) and, for a switch, OFF (the role cannot). Testing a permission only from
+  the admin's side proves nothing about the people it governs.
+- nfr cases measure: name the value the test records (metric name, unit,
+  budget from the NFR).
 - Steps are written as the user acts; Expected result is observable on screen
   or in data, with exact messages where the flow gives them.
 - Automation names the file and the test title the generator must create;
   the title starts with the id in brackets, e.g. `[TC-04] admin adds a
   category`. Use "manual: <reason>" only where a browser cannot do it.
-- Run `python3 .harness/scripts/validate_product_map.py` and fix every ERROR
-  line about test cases before you stop.
+- Run `python3 .harness/scripts/validate_product_map.py --require-coverage`
+  and fix every ERROR line about test cases and coverage before you stop.
 
 ## Operating standard
 

@@ -10,14 +10,21 @@ Rules the validator enforces:
     that exist in docs/02d-process-flows.md, 02b-use-cases.md, 02-requirements.md
   - every Must feature appears in at least one process flow's Features line
   - every row has a "### F-xx · name" detail section below
+  - Affects (optional 9th column): the OTHER roles whose abilities this
+    feature changes — an admin setting, a permission, a shared list. Write the
+    role as it appears in personas; add "(on/off)" when it is a switch. The
+    validator then requires a process-flow step where that role meets the
+    effect, and test cases with Persona <role> that cover the feature: one for
+    a plain effect, two for a switch (on and off). Leave it "—" when the
+    feature only affects its own users.
 Priority is MoSCoW: Must | Should | Could | Won't. Release is MVP or a version. -->
 
 ## Summary
 
-| ID | Feature | Persona(s) | Priority | Release | Flows | Use cases | Requirements |
-|---|---|---|---|---|---|---|---|
-| F-01 | <short name> | <persona> | Must | MVP | PF-01 | UC-01 | FR-01, FR-02 |
-| F-02 | <short name> | <persona> | Should | MVP | PF-02 | UC-02 | FR-03 |
+| ID | Feature | Persona(s) | Priority | Release | Flows | Use cases | Requirements | Affects |
+|---|---|---|---|---|---|---|---|---|
+| F-01 | <short name> | <persona> | Must | MVP | PF-01 | UC-01 | FR-01, FR-02 | — |
+| F-02 | <admin setting> | <admin persona> | Should | MVP | PF-03, PF-05 | UC-07 | FR-09 | <member persona> (on/off) |
 
 ## Feature detail
 

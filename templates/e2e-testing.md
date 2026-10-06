@@ -14,9 +14,9 @@ and the release gate treat them the same.
 
 | Framework | Use it for | Template in `.harness/templates/e2e/` |
 |---|---|---|
-| Playwright (default) | journey tests, manual tours, multi-tab, downloads | `playwright/` (config + `asdr-manual.ts`) |
-| Cypress | teams that already use it; component-heavy UIs | `cypress/` (config + `asdr-manual.js` + plugin) |
-| Selenium (pytest) | browsers or grids Playwright can't drive; existing Selenium suites | `selenium/` (`conftest.py`, `asdr_manual.py`, `pytest.ini`) |
+| Playwright (default) | journey tests, manual tours, multi-tab, downloads | `playwright/` (config + `asdr-*.ts` helpers) |
+| Cypress | teams that already use it; component-heavy UIs | `cypress/` (config + `asdr-*.js` helpers + plugins) |
+| Selenium (pytest) | browsers or grids Playwright can't drive; existing Selenium suites | `selenium/` (`conftest.py`, `asdr_*.py` helpers, `pytest.ini`) |
 
 - Decision for this project: <Playwright for journeys and tours; add Cypress/Selenium only with a reason>
 - Services with no UI: API-level E2E via <pytest + httpx / supertest>, still JUnit.
@@ -29,6 +29,20 @@ title starts with the id: `test('[TC-03] …')`, `it('[TC-03] …')`, or
 process flow works end to end. Journey test cases are one test each that walks
 the whole flow.
 
+A passing title is not enough proof on its own, so every test also marks what
+it reached (helpers `asdr-cover.ts` / `asdr-cover.js` / `asdr_cover.py`):
+
+| Marker | Playwright | Cypress | Selenium |
+|---|---|---|---|
+| a flow step, after its System response is checked | `await flowStep('PF-02.3')` | `cy.flowStep('PF-02.3')` | `flow_step("PF-02.3")` |
+| items this test proves (its Covers line), at the assertion that proves them | `covers('AC-03.2', 'BR-01')` | `cy.covers('AC-03.2')` | `covers("AC-03.2")` |
+| a measured value for an NFR | `metric('search-ms', ms, 'ms', 1000)` | `cy.metric(…)` | `metric(…)` |
+
+At the release gate (`validate_product_map.py --gate`) every step and
+exception path of every Must flow, and every item on each test case's Covers
+line, must have been marked by a PASSING test in the latest run.
+`docs/product-map.md` shows the full coverage matrix.
+
 ## 3. Folder structure
 
 ```
@@ -36,6 +50,7 @@ playwright.config.ts                 # from templates/e2e/playwright/
 e2e/playwright/
   asdr-manual.ts                     # copied unchanged (manual tours)
   asdr-a11y.ts, asdr-auth.ts         # copied unchanged (accessibility, saved logins)
+  asdr-cover.ts                      # copied unchanged (flowStep / covers / metric markers)
   auth.setup.ts                      # copied unchanged: one sign-in per role
   login.ts                           # project-specific: roles + how each signs in
   journeys.spec.ts                   # [TC-xx] journey tests, one per process flow
@@ -124,4 +139,6 @@ explanations the user has not approved (`--review-page`, then `--approve`).
 - The FULL suite runs every sprint (regression) and again at the release gate.
 - A suite that produces no JUnit results counts as failed.
 - The evaluator cites screenshot/video paths from the run's `summary.json` as evidence.
+- Each assertion checks what the user would check: the exact text, count, column or value — a test that would still pass with the feature removed or faked is not a test.
+- Features that change another role's abilities are tested from that role's side, on and off.
 - Manuals are rebuilt from a fresh run at every release; never edit their screenshots by hand.

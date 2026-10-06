@@ -8,9 +8,12 @@ flowchart LR
   PF01["PF-01 · First sign-in and first task"] --> PF02["PF-02 · Daily work on the board"]
   PF02 -->|every day| PF02
   PF02 --> PF04["PF-04 · Weekly round-up and export"]
+  PF03 -. allows deleting .-> PF05["PF-05 · Team member tidies the board"]
+  PF02 --> PF05
 ```
 
 - Entry flows: PF-01 (a new team member), PF-03 (the team admin)
+- Cross-role: PF-03 changes what team members can do in PF-01 (categories) and PF-05 (deleting)
 - Core loop: PF-02, repeated daily
 
 ### PF-01 · First sign-in and first task
@@ -45,7 +48,7 @@ flowchart TD
 |---|---|---|---|---|---|---|
 | PF-01.1 | Team member | Opens the TaskBoard link | Shows the sign-in page | UC-01 | F-01 | — |
 | PF-01.2 | Team member | Enters a name, keeps the Team member role, clicks Sign in | Shows the empty board and the name in the top bar | UC-01 | F-01 | session user created |
-| PF-01.3 | Team member | Types a task, picks a category, clicks Add task | Lists the task; counter shows "1 open · 0 done" | UC-02 | F-02 | task created |
+| PF-01.3 | Team member | Types a task, picks a category, clicks Add task | Lists the task; counter shows "1 open · 0 done" | UC-02 | F-02, F-06 | task created |
 
 **Exception paths**
 
@@ -103,7 +106,7 @@ flowchart TD
 - Priority: Must
 - Features: F-01, F-06, F-07
 - Preceded by: none
-- Followed by: PF-02
+- Followed by: PF-02, PF-05
 
 ```mermaid
 flowchart TD
@@ -157,3 +160,40 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | PF-04.1 | Team member | Clicks Done | Shows only finished tasks | UC-04 | F-04 | — |
 | PF-04.2 | Team member | Clicks Export CSV | Downloads tasks.csv with every task | UC-05 | F-05 | file exported |
+
+### PF-05 · Team member tidies the board
+
+- Persona(s): Team member
+- Trigger: the board has a stale or duplicate task
+- Outcome: the task is gone from the board and the counter has dropped by one — only if an admin allowed members to delete
+- Priority: Should
+- Features: F-07
+- Preceded by: PF-03, PF-02
+- Followed by: none
+
+```mermaid
+flowchart TD
+  subgraph Admin
+    A[Ticks Team members can delete tasks in PF-03]
+  end
+  subgraph Member
+    B[Opens the board] --> C{Delete button shown?}
+    C -- yes --> D[Clicks Delete on the stale task]
+    C -- no --> E[Asks an admin]
+  end
+  A -. enables .-> C
+  D --> F[Task removed, counter drops]
+```
+
+**Steps**
+
+| Step | Actor | Action | System response | Use case | Feature | Data |
+|---|---|---|---|---|---|---|
+| PF-05.1 | Team member | Opens the board after an admin allowed deleting | Shows a Delete button on each task | UC-07 | F-07 | — |
+| PF-05.2 | Team member | Clicks Delete on a stale task | Removes the task; the counter drops by one | UC-07 | F-07 | task deleted |
+
+**Exception paths**
+
+| Path | At step | Condition | System response | Rejoins at |
+|---|---|---|---|---|
+| PF-05.E1 | PF-05.1 | Deleting is not allowed | No Delete button on any task | ends |

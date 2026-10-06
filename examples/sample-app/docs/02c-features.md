@@ -2,16 +2,16 @@
 
 ## Summary
 
-| ID | Feature | Persona(s) | Priority | Release | Flows | Use cases | Requirements |
-|---|---|---|---|---|---|---|---|
-| F-01 | Sign-in with roles | Team member, Team admin | Must | MVP | PF-01, PF-03 | UC-01 | FR-01, FR-11 |
-| F-02 | Task capture | Team member | Must | MVP | PF-01, PF-02 | UC-02 | FR-02, FR-06 |
-| F-03 | Completion and counter | Team member | Must | MVP | PF-02 | UC-03 | FR-03, FR-05 |
-| F-04 | Status filters | Team member | Should | MVP | PF-02, PF-04 | UC-04 | FR-04, FR-05 |
-| F-05 | CSV export | Team member | Should | MVP | PF-04 | UC-05 | FR-07 |
-| F-06 | Category management | Team admin | Must | MVP | PF-03 | UC-06 | FR-08, FR-11 |
-| F-07 | Delete permission | Team admin | Should | MVP | PF-03 | UC-07 | FR-09 |
-| F-08 | Sign-out with saved board | Team member, Team admin | Must | MVP | PF-02 | UC-08 | FR-10 |
+| ID | Feature | Persona(s) | Priority | Release | Flows | Use cases | Requirements | Affects |
+|---|---|---|---|---|---|---|---|---|
+| F-01 | Sign-in with roles | Team member, Team admin | Must | MVP | PF-01, PF-03 | UC-01 | FR-01, FR-11 | — |
+| F-02 | Task capture | Team member | Must | MVP | PF-01, PF-02 | UC-02 | FR-02, FR-06 | — |
+| F-03 | Completion and counter | Team member | Must | MVP | PF-02 | UC-03 | FR-03, FR-05 | — |
+| F-04 | Status filters | Team member | Should | MVP | PF-02, PF-04 | UC-04 | FR-04, FR-05 | — |
+| F-05 | CSV export | Team member | Should | MVP | PF-04 | UC-05 | FR-07 | — |
+| F-06 | Category management | Team admin, Team member | Must | MVP | PF-03, PF-01 | UC-06 | FR-08, FR-11 | Team member |
+| F-07 | Delete permission | Team admin, Team member | Should | MVP | PF-03, PF-05 | UC-07 | FR-09 | Team member (on/off) |
+| F-08 | Sign-out with saved board | Team member, Team admin | Must | MVP | PF-02 | UC-08 | FR-10 | — |
 
 ## Feature detail
 
@@ -82,7 +82,7 @@
 - Value: tasks are grouped the way the team thinks
 - In scope: add categories
 - Out of scope: rename and delete categories
-- Where it sits in the journey: PF-03.2–PF-03.3
+- Where it sits in the journey: PF-03.2–PF-03.3 (admin), PF-01.3 (a team member picks the category)
 - Success measure: a new category appears in members' menu with no reload
 - Dependencies: F-01
 - Open questions: none
@@ -94,7 +94,7 @@
 - Value: the admin chooses tidiness or safety
 - In scope: one switch; admins can always delete
 - Out of scope: undo
-- Where it sits in the journey: PF-03.4–PF-03.5
+- Where it sits in the journey: PF-03.4–PF-03.5 (admin), PF-05.1–PF-05.2 (team member)
 - Success measure: "Settings saved." shown within 1 second of the change
 - Dependencies: F-06
 - Open questions: none

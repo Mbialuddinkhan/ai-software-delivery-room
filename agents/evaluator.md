@@ -134,6 +134,18 @@ that survive this test — this is what 'adversarial' means in practice.
    require an accessibility check in the run (`summary.json` → `a11y.pages`);
    any critical or serious violation (`facts:test_runs.a11y.serious`) is a
    FAIL for that screen's criterion.
+5b. Assertion depth — a passing test is evidence only if a broken feature
+   would fail it. For each test case of this sprint, read its test and ask:
+   what is the cheapest fake that still passes? A test that only clicks, only
+   checks that a page or file exists, or asserts "no error" is a FAIL for its
+   criterion until it asserts the user-visible result (exact text, count,
+   column values, the item gone). The test must also mark what it proves:
+   `flowStep('PF-xx.n')` after each journey step is checked and `covers(…)`
+   for every id on its test case's Covers line, placed after the assertion
+   that proves it — a marker before its assertion proves nothing. Features
+   that change another role's abilities must be tested from that role's side
+   (on and off for a switch). Measured NFRs need a `metric(...)` value within
+   budget (`facts:test_runs.metrics.<name>.within_budget`).
 
 Example row:
 
@@ -145,7 +157,11 @@ Example row:
    through `python3 .harness/scripts/run_tests.py` (add `--live` when the
    orchestrator says the user is watching). Then run
    `python3 .harness/scripts/validate_product_map.py --results latest`: every
-   flow delivered by this or an earlier sprint must show `proven`. A flow that
+   flow delivered by this or an earlier sprint must show `proven`, and every
+   step, exception path and Covers item of those flows' test cases must be
+   reached by a passing test (the "Coverage of every testable item" table in
+   `docs/product-map.md`; a ⚠️ "named, not reached" row for this sprint's
+   scope is a FAIL). A flow that
    was proven last sprint and is not now is a regression, however small the
    change looked. A sprint that passes its own criteria but breaks a feature an earlier
    sprint shipped has made the product worse, not better. Any previously-passing

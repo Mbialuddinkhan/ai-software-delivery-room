@@ -6,7 +6,7 @@ description: >
   before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -105,11 +105,15 @@ Invoke **business-analyst** with: inputs `docs/02-requirements.md`,
 `docs/02b-use-cases.md`, `docs/02c-features.md`, `docs/02d-process-flows.md`;
 output `docs/02e-test-cases.md` (template `.harness/templates/test-cases.md`).
 Stage-id `test-cases`. One journey test case per flow, one per exception path,
-then functional/edge/nfr cases until every FR is covered.
+then functional/edge/nfr cases until every testable item of this project is
+named — each FR, NFR, AC, BR, EC, use-case alternate/exception flow and
+feature — with a Covers line on each, and test cases from the affected role's
+side (on and off) for every feature that changes another role's abilities.
 
-Then run `python3 .harness/scripts/validate_product_map.py`. It checks the
-whole chain (lifecycle → flow → step → use case → feature → requirement →
-test case) and writes `docs/product-map.md`. Send every ERROR line to its
+Then run `python3 .harness/scripts/validate_product_map.py --require-coverage`.
+It checks the whole chain (lifecycle → flow → step → use case → feature →
+requirement → test case), treats every coverage gap as an error, and writes
+`docs/product-map.md` with the coverage matrix. Send every ERROR line to its
 owner — product-manager for features and flows, business-analyst for use
 cases and test cases — max 2 rounds, then carry what remains to the critic.
 

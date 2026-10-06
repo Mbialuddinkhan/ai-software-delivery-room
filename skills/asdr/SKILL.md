@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.5.0"
+  version: "3.5.1"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -90,10 +90,15 @@ that produced the file.
   evaluator sees a draft: unmeasurable numbers, self-report of command output,
   zero-delta over an edited file, regex conflicts, cost-metric floors, file
   overload (>7 criteria naming one integration file), new-file budget.
-- `validate_product_map.py [--gate]` — the end-to-end chain: every feature
-  on a journey, every use case on a flow, every flow reachable and proven by
-  a journey test case; `--gate` adds passing `[TC-xx]` results. Writes
-  `docs/product-map.md`.
+- `validate_product_map.py [--require-coverage] [--gate]` — the end-to-end
+  chain: every feature on a journey, every use case on a flow, every flow
+  reachable and proven by a journey test case, and every testable item of
+  THIS project (FR, NFR, AC, BR, EC, use-case alternate/exception flows,
+  features, flow steps) named by a test case; features that change another
+  role's abilities tested from that role's side. `--gate` adds passing
+  `[TC-xx]` results and the runtime markers (`flowStep` / `covers`) that
+  prove each Must step and each Covers item was reached. Writes
+  `docs/product-map.md` with the coverage matrix.
 - `validate_contract.py` and `validate_sprints.py` (which also requires each
   sprint's `flows` and every Must flow delivered) run in later phases.
 
@@ -188,7 +193,7 @@ first two agents.
    `features`, `process-flows`).
 2d. **business-analyst** (test cases) — inputs rows 2, 2b, 2c, 2d + row 2e
    paths. Stage-id `test-cases`. Then run
-   `python3 .harness/scripts/validate_product_map.py`; send ERROR lines to the
+   `python3 .harness/scripts/validate_product_map.py --require-coverage`; send ERROR lines to the
    owner (product-manager for features/flows, business-analyst for use cases
    and test cases), max 2 rounds. Discovery cannot pass with a broken chain:
    this is where "the pieces don't connect" is caught for the price of a doc

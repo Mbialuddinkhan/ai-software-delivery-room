@@ -249,6 +249,9 @@ def test_run_facts(root, commit):
         "totals": s.get("totals"),
         "suites": {x["name"]: x["totals"] for x in s.get("suites", [])},
         "a11y": ({"checks": s["a11y"]["checks"], **s["a11y"]["by_impact"]} if s.get("a11y") else None),
+        "metrics": {m["name"]: {"value": m["value"], "unit": m["unit"], "budget": m["budget"],
+                                "within_budget": m["within_budget"]}
+                    for m in ((s.get("coverage") or {}).get("metrics") or []) if m.get("name")},
         "manual_tours": len(s.get("manual", {}).get("tours", [])),
         "manual_screenshots": s.get("manual", {}).get("screenshots", 0),
         "manual_current": all(t.get("current") for t in s.get("manual", {}).get("tours", [])),
@@ -259,8 +262,11 @@ def test_run_facts(root, commit):
 def product_map_facts(root):
     """End-to-end chain state written by validate_product_map.py.
 
-    Criteria cite e.g. `facts:product_map.flows.PF-02.journey_passing == true`
-    or `facts:product_map.errors == 0`.
+    Criteria cite e.g. `facts:product_map.flows.PF-02.journey_passing == true`,
+    `facts:product_map.errors == 0`, or coverage of every testable item:
+    `facts:product_map.counts.items_executed == facts:product_map.counts.items`
+    and `facts:product_map.coverage.<kind>.executed` (kinds FR, NFR, AC, BR,
+    EC, UC, UC-ALT, F, STEP, EXC).
     """
     p = root / ".harness" / "product-map.json"
     if not p.is_file():
@@ -271,6 +277,7 @@ def product_map_facts(root):
         return None, f"product_map: unreadable ({e})"
     return {"generated_at": m.get("generated_at"), "results_run": m.get("results_run"),
             "errors": m.get("errors"), "warnings": m.get("warnings"), "counts": m.get("counts"),
+            "coverage": m.get("coverage"),
             "flows": {k: {"status": v.get("status"), "journey_passing": v.get("journey_passing"),
                           "priority": v.get("priority")} for k, v in (m.get("flows") or {}).items()}}, None
 

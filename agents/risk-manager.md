@@ -66,7 +66,11 @@ output — never "appears fine"):
 10. End-to-end journeys — run `python3 .harness/scripts/validate_product_map.py
    --gate` and read `docs/product-map.md`: which process flows are proven by
    a passing journey test on the latest run, which are not, and which test
-   cases are manual. Read `.harness/facts.json` → `test_runs` for the run's
+   cases are manual. Its "Coverage of every testable item" table shows, for
+   this project's own FR, NFR, AC, BR, EC, use-case flows, features and flow
+   steps, which a passing test actually reached (`facts:product_map.counts.items_executed`
+   vs `.items`), and its Measurements (`facts:test_runs.metrics.*`) show
+   whether measured NFRs are within budget. Read `.harness/facts.json` → `test_runs` for the run's
    status, mode and commit.
 
 ## Classification — mechanical rules first
@@ -85,8 +89,13 @@ Apply these before judgment; they are not overridable:
   uncovered requirement as a warning
 
 - `validate_product_map.py --gate` exits 1 because a Must flow's journey or
-  exception test failed → **Not ready** (the product does not work end to end
-  for that journey)
+  exception test failed, a Must step or exception path was never reached by a
+  passing test, or a test case's Covers item was never marked → **Not ready**
+  (the product does not work end to end for that journey)
+- Testable items no passing test reached (`items_executed < items`) →
+  cannot be Production-ready; list them as warnings for MVP
+- A measured NFR over budget (`facts:test_runs.metrics.<name>.within_budget`
+  false) → cannot be Production-ready
 - A Must flow has no result yet (not automated, or not run on this commit),
   or `facts:test_runs.commit_matches_head` is false → cannot be
   Production-ready (at most **MVP-ready**, carried as a warning)

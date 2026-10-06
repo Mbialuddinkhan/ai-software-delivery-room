@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.5.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.5.1
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -22,6 +22,18 @@ private claude.ai page; GitHub Pages only if you opt in). Every release builds
 persona, and Beginner / Everyday / Power user / Administrator — as HTML and
 PDF, stamped with the version and commit. A worked example lives in
 `examples/sample-app/`.
+
+**v3.5.1 — every item of your own documents is tested, and the run proves
+it.** Coverage is per project: the validator enumerates every functional and
+non-functional requirement, acceptance criterion, business rule, edge case,
+use-case alternate/exception flow, feature and flow step THIS project's
+documents define, and requires a test case for each. Tests mark what they
+actually reached at run time (`flowStep('PF-02.3')`, `covers('AC-03.2')`,
+`metric(...)` for measured NFRs) in Playwright, Cypress and Selenium, and the
+release gate requires every Must step and every promised item to be reached
+by a passing test. Admin settings that change what another role can do must
+be tested from that role's side, on and off. `docs/product-map.md` shows the
+full coverage matrix.
 
 **v3.5 — manuals a person signs off, accessibility, saved logins, screen
 diffs.** Manual explanations are checked against the text on each screenshot
@@ -299,7 +311,7 @@ scripts/
   uupm_design_system.py      ← drafts docs/03b via UI UX Pro Max when installed (v3.3)
   check_updates.py           ← installed vs upstream versions + changelog excerpt (v3.3)
   upstream.json              ← where check_updates.py looks for each item's latest version
-  validate_product_map.py    ← end-to-end chain check + docs/product-map.md (v3.4)
+  validate_product_map.py    ← end-to-end chain + coverage of every testable item + docs/product-map.md (v3.4, v3.5.1)
   run_tests.py               ← runs Playwright / Cypress / Selenium suites, --live (v3.4)
   publish_test_report.py     ← HTML report: repo, CI, private Artifact; Pages opt-in (v3.4)
   build_manual.py            ← persona + tier user manuals, HTML + PDF (v3.4)
@@ -379,7 +391,8 @@ docs/00..10-*.md                blueprint and gate documents
 6. Generator cannot declare a sprint done; evaluator cannot write implementation code.
 7. Risk Manager can block release even if all sprints pass.
 8. Every Must process flow is proven end to end by a passing journey test on
-   the release commit — enforced by `validate_product_map.py --gate`.
+   the release commit, and every Must step and every test case's Covers item
+   is reached by a passing test — enforced by `validate_product_map.py --gate`.
 
 ---
 

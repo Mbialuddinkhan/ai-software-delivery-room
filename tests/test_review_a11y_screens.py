@@ -266,6 +266,11 @@ class TestTemplateCopies(unittest.TestCase):
             ("templates/e2e/cypress/asdr-a11y-plugin.js", "examples/sample-app/cypress/plugins/asdr-a11y-plugin.js"),
             ("templates/e2e/selenium/asdr_auth.py", "examples/sample-app/e2e/selenium/asdr_auth.py"),
             ("templates/e2e/selenium/asdr_a11y.py", "examples/sample-app/e2e/selenium/asdr_a11y.py"),
+            ("templates/e2e/playwright/asdr-cover.ts", "examples/sample-app/e2e/playwright/asdr-cover.ts"),
+            ("templates/e2e/cypress/asdr-cover.js", "examples/sample-app/cypress/support/asdr-cover.js"),
+            ("templates/e2e/cypress/asdr-cover-plugin.js", "examples/sample-app/cypress/plugins/asdr-cover-plugin.js"),
+            ("templates/e2e/selenium/asdr_cover.py", "examples/sample-app/e2e/selenium/asdr_cover.py"),
+            ("templates/e2e/cypress/cypress.config.js", "examples/sample-app/cypress.config.js"),
         ]
         for a, b in pairs:
             self.assertEqual((REPO / a).read_text(), (REPO / b).read_text(), f"{b} drifted from {a}")

@@ -56,7 +56,8 @@ Produce (paths are canonical; the orchestrator may override):
    release commit (commit everything else first, so the commit is final):
    1. `python3 .harness/scripts/run_tests.py --label v<version>` — must pass.
    2. `python3 .harness/scripts/validate_product_map.py --gate` — every Must
-      flow proven end to end on this run.
+      flow proven end to end on this run, and every testable item reached by
+      a passing test (the coverage matrix in `docs/product-map.md`).
    3. `python3 .harness/scripts/publish_test_report.py --label v<version>`
       → `docs/test-reports/v<version>/` (and the private single-file copy
       it prints, which the orchestrator publishes).
@@ -88,6 +89,8 @@ each gets a real check, not an assumed tick:
 - [ ] CI pipeline passes
 - [ ] `run_tests.py` passed on the release commit (`facts:test_runs.status == passed`, `facts:test_runs.commit_matches_head == true`)
 - [ ] Every Must process flow is proven end to end (`validate_product_map.py --gate` exit 0)
+- [ ] Every testable item reached by a passing test (`facts:product_map.counts.items_executed == facts:product_map.counts.items`)
+- [ ] Every measured NFR within budget (`facts:test_runs.metrics.*.within_budget == true`)
 - [ ] Test report published to `docs/test-reports/v<version>/`
 - [ ] User manuals built for every persona and tier in `docs/manuals/<version>/` (HTML + PDF)
 - [ ] Every manual explanation approved by a person (`build_manual.py --require-review` exit 0)
