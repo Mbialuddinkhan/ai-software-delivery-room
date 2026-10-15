@@ -1,0 +1,19 @@
+[
+  {
+    "_about": "docs/assess/findings.json — solution-architect (architecture, code, performance), security-compliance (security), devops (operations), business-analyst (process). One object per confirmed finding; delete this example. validate_assessment.py --strict rejects uncited findings and pasted secret values.",
+    "id": "T-01",
+    "area": "architecture|code|security|performance|operations|process|data",
+    "title": "<one line>",
+    "severity": "critical|high|medium|low",
+    "confidence": "confirmed|likely|unconfirmed",
+    "evidence": [
+      "<path:line>",
+      "<tool: semgrep rule … at path:line>",
+      "<db: …>"
+    ],
+    "what": "<one or two plain sentences>",
+    "business_impact": "<one sentence an owner understands>",
+    "fix": "<concrete recommendation>",
+    "effort": "S|M|L"
+  }
+]

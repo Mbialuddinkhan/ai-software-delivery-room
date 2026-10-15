@@ -79,6 +79,11 @@ Report", update the same artifact each time so the link stays stable) and give
 the user the link. Without that tool, tell the user the repo path instead.
 Never make a report public on your own.
 
+Every report also has a PDF beside its HTML (`test-report.pdf`, the manuals'
+PDFs, `dashboard.pdf`, `assessment.pdf`), exported by headless Chrome through
+`report_style.to_pdf()`. Without Chrome the HTML still prints from a browser;
+pass `--no-pdf` to skip the export.
+
 ## User manuals
 
 1. Tours: tests ending in `.tour.spec.ts` (Playwright), `.tour.cy.js`
@@ -158,3 +163,27 @@ testable item" shows each item: tested, named but not reached, or missing.
 agent invocations, evaluations and negotiation rounds per sprint, stage QA
 rounds, context-pack sizes and test-run history. Run it at the end of Phase 3
 and Phase 5 and show the user the table.
+
+## Project dashboard
+
+`python3 .harness/scripts/build_dashboard.py` writes `docs/dashboard/index.html`
+and `dashboard.pdf` (A4, printable), and `dashboard-artifact.html` when
+`publish.json` → `claude_artifact` is on (publish it as the private page
+"<Product> Dashboard", same artifact each time). Run it at the end of every
+phase and sprint, and whenever the user asks for status.
+
+| Section | Source |
+|---|---|
+| Status (blocked > at risk > on track, with reasons) | progress, product map, facts, open questions, risk register, regressions against `.harness/dashboard-snapshot.json` |
+| Expected delivery ± standard deviation, 95% range, drift | `.harness/sprint-clock.jsonl` (finish-to-finish cycle times); history in `.harness/forecast-history.jsonl` |
+| Features and their status | product map features and flows + `sprints.json` |
+| Documents | the canonical file map (present / missing / not yet / only if needed) + every other file under `docs/` |
+| Environments, repos, links | `.harness/dashboard.json` + test-config `app.url`; live check unless `"check": false` |
+| Questions and answers | `.harness/questions.jsonl` (`log_question.py`; a later entry with the same id supersedes) |
+
+Forecast: expected remaining = k × mean cycle − hours since the last finish;
+SD = s·√(k + k²/n); the 95% range uses Student-t with n−1 degrees of freedom.
+No date is shown until two sprints have finished. Sprint stamps:
+`sprint_clock.py start|done|torn-down sprint-NN` — the orchestrator stamps
+start and torn-down, the evaluator stamps done. Never put credentials in
+`dashboard.json`; list role names only.

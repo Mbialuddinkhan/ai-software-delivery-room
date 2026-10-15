@@ -35,6 +35,15 @@ Templates live in `.harness/templates/`.
 | 16 | Manual spec | `docs/manuals/manual.json` | documentation | e2e/manual.json |
 | 17 | User manuals (generated) | `docs/manuals/<version>/` (HTML + PDF) | `build_manual.py` | — |
 | 18 | Run metrics (generated) | `docs/run-metrics.md` (+ `.harness/metrics.json`) | `run_metrics.py` | — |
+| 19 | Project dashboard (generated) | `docs/dashboard/index.html`, `dashboard.pdf` | `build_dashboard.py` | dashboard.json |
+| 19b | Dashboard inputs | `.harness/dashboard.json` (environments, repos, links), `.harness/questions.jsonl`, `.harness/sprint-clock.jsonl`, `.harness/forecast-history.jsonl`, `.harness/dashboard-snapshot.json` | orchestrator, devops, evaluator, `log_question.py`, `sprint_clock.py` | dashboard.json |
+| A1 | Assessment intake (assess only) | `docs/assess/intake.json` | assess skill | assess/intake.json |
+| A2 | Scanner evidence (assess only) | `docs/assess/evidence/scan-summary.{json,md}` + raw outputs | `assess_scan.py` | — |
+| A3 | As-is processes (assess only) | `docs/assess/as-is.json` | business-analyst (ASSESS) | assess/as-is.json |
+| A4 | Technical review + findings (assess only) | `docs/assess/technical.md`, `docs/assess/findings.json` | solution-architect, security-compliance, devops, business-analyst (ASSESS) | assess/technical.md, assess/findings.json |
+| A5 | Opportunities and options (assess only) | `docs/assess/opportunities.json` | product-owner (ASSESS) | assess/opportunities.json |
+| A6 | Assessment critique + decision | `docs/critique-assessment.md`, `docs/decision-assessment.md` | critic, judge | critique.md, decision.md |
+| A7 | Assessment report (generated, private) | `docs/assess/report/index.html`, `assessment.pdf` | `build_assess_report.py` | assess/brand.json |
 
 Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
 

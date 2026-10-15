@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # Release — Release Packaging Orchestrator
@@ -139,3 +139,5 @@ Print:
 
 This is the final step. The human deploys manually — automated deployment
 is outside this system's authority.
+
+At the end of this skill, rebuild the project dashboard: `python3 .harness/scripts/build_dashboard.py` (log every question you asked the user with `log_question.py` first).

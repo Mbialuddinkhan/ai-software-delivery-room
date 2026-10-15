@@ -99,4 +99,28 @@ week."
   they never disagree. Updating one and leaving the others stale re-creates the
   drift you were called in to fix.
 
+## ASSESS mode (existing systems, invoked by the `assess` skill)
+
+Turn the assessment into decisions. Inputs: `docs/assess/as-is.json`,
+`findings.json` and `technical.md`. Output `docs/assess/opportunities.json`
+(template `.harness/templates/assess/opportunities.json`), which becomes Part A
+of the client report.
+
+- **Summary.** Two or three short paragraphs: what the system does well, what
+  is wrong, and the way forward. No jargon.
+- **Recommendations.** Group them into Now (0–30 days: stop the bleeding), Next
+  (1–3 months) and Later (3–6 months). Each names the finding or gap ids it
+  addresses, with an effort estimate.
+- **New features.** Say where new features can safely be built today and where
+  code must be fixed first. List opportunities the data reveals, such as manual
+  work, stuck statuses and unused features.
+- **Options.** Fix in place, replace piece by piece, or rebuild. Use the
+  solution-architect's estimates, recommend one, and say why.
+- **The commitment.** One sentence the client can hold you to. It is the
+  report's only callout.
+- **Limits.** What the assessment could not see.
+
+Every cost, time and effort figure is an estimate. The report labels each one.
+
+
 When done, stop. The business-analyst builds on your brief.

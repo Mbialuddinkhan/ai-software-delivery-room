@@ -1,0 +1,32 @@
+{
+  "client": "Example client (sample)",
+  "system": "TaskBoard",
+  "date": "15 Oct 2026",
+  "reference": "AS-2026-001",
+  "based_on": "examples/sample-app at v3.6.0",
+  "contact": "assessor@example.com",
+  "scope": {
+    "access": [
+      "source code",
+      "running app (each role)",
+      "browser storage"
+    ],
+    "in_scope": [
+      "business processes",
+      "architecture",
+      "code health",
+      "security design",
+      "operations"
+    ],
+    "out_of_scope": [
+      "load testing",
+      "attack testing",
+      "hosting infrastructure"
+    ]
+  },
+  "authorization": {
+    "summary": "Sample assessment of ASDR's own reference app; no client authorisation needed.",
+    "recorded_by": "orchestrator",
+    "live_testing": false
+  }
+}

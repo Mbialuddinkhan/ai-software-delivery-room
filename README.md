@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.5.1
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.6.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -22,6 +22,26 @@ private claude.ai page; GitHub Pages only if you opt in). Every release builds
 persona, and Beginner / Everyday / Power user / Administrator — as HTML and
 PDF, stamped with the version and commit. A worked example lives in
 `examples/sample-app/`.
+
+**v3.6 — assess an existing system, and a dashboard for every project.**
+`/assess` takes over a system someone else built — legacy, poorly built or
+undocumented — without making the client explain it again. It recovers how
+the business runs on it (roles, features and whether they are used, flows,
+rules and where each is enforced, where processes break) and reviews
+architecture, code health, security, performance and operations from evidence:
+scanners first (`assess_scan.py`), then agents triage every hit in the code.
+`validate_assessment.py` blocks any claim without a resolvable `path:line` or
+data note, and any secret pasted into a document. `build_assess_report.py`
+writes a two-part report — business first, technical appendix second — with a
+roadmap, where new features fit, three options with labelled estimates and the
+questions for the client, as HTML and a branded A4 PDF that stays private.
+Every ASDR project also gets a **dashboard** (`build_dashboard.py`), rebuilt at
+each phase and sprint end and on `/asdr status`: status with reasons, phases,
+the **expected delivery date with its standard deviation** (from measured
+sprint cycle times; none until two sprints have finished), roadmap, features
+and their status, speed, quality, risks, decisions, every document, every
+environment (with a live check), repos, and every question asked with its
+answer — printable and exported to PDF.
 
 **v3.5.1 — every item of your own documents is tested, and the run proves
 it.** Coverage is per project: the validator enumerates every functional and
@@ -242,6 +262,7 @@ release   →  Documentation + Release-Manager → Changelog + Deploy guide
 | `architect` | **Architecture** — solution + AI + security + devops + critic + judge |
 | `riskgate` | **Risk gate** — security review + deployment readiness + classification |
 | `release` | **Release** — docs + changelog + release notes + deployment checklist |
+| `assess` | **Assess an existing system** — recover processes, review the code, two-part report, hand-off into a build (v3.6) |
 
 Trigger phrases like "build me…", "let's build…", "run the delivery room",
 "design the architecture", "is this ready to ship", etc. map to the skills.
@@ -285,13 +306,13 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.4.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.6.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → v3.1 → v3.2 → v3.3 change log
+CHANGELOG.md                 ← full v2.1 → v3 → … → v3.6 change log
 agents/                      ← 18 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa, product-manager)
-skills/                      ← 6 orchestrator skills (asdr, discover, architect,
-                               longhorizon, riskgate, release)
+skills/                      ← 7 orchestrator skills (asdr, discover, architect,
+                               longhorizon, riskgate, release, assess)
 scripts/
   init_asdr.py               ← project initializer (seeds harness + rigor dial + matrix)
   next_action.py             ← sprint state machine (self-healing circuit breakers)
@@ -318,16 +339,24 @@ scripts/
   run_metrics.py             ← per-run metrics: rounds, attempts, packs, tests (v3.4)
   report_style.py            ← shared look for reports and manuals (v3.4)
   compare_screens.py         ← screenshot diffs between runs or releases (v3.5)
+  build_dashboard.py         ← project dashboard, HTML + PDF, delivery forecast with SD (v3.6)
+  log_question.py            ← every question asked and its answer → dashboard (v3.6)
+  sprint_clock.py            ← sprint start / done / torn-down stamps for the forecast (v3.6)
+  assess_scan.py             ← /assess: inventory + scanners + hotspots (v3.6)
+  validate_assessment.py     ← /assess: evidence gate + pasted-secret check (v3.6)
+  build_assess_report.py     ← /assess: two-part report, HTML + branded PDF (v3.6)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
                                integrity-report, git-workflow, e2e-testing (v3.1),
                                design-system, agent-runtime.yaml, build-ladder (v3.3),
                                feature-list, process-flows, test-cases, publish.json,
-                               ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4)
+                               ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4),
+                               dashboard.json, assess/ (v3.6)
 examples/sample-app/         ← TaskBoard: a small app with every v3.4 artifact —
                                product docs, [TC-xx] tests in all three frameworks,
-                               tours, manual.json (v3.4)
+                               tours, manual.json (v3.4), and a worked assessment
+                               of the app in docs/assess/ (v3.6)
 .github/workflows/ci.yml     ← release gate: unit tests, validate, both install
                                paths, sample e2e, .plugin asset on tag (v3.4)
 docs/
@@ -336,7 +365,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m pytest tests (74 tests)
+tests/                       ← python3 -m unittest discover -s tests (127 tests)
 ```
 
 ## The 18 agents at a glance

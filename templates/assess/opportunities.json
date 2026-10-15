@@ -1,0 +1,83 @@
+{
+  "_about": "docs/assess/opportunities.json — product-owner (with solution-architect for options and estimates). Part A of the report is built from this. Label every effort, cost and time as an estimate (the report does it automatically).",
+  "summary": [
+    "<2–3 short paragraphs: what the system is, the verdict, the way forward>"
+  ],
+  "recommendations": [
+    {
+      "horizon": "Now (0–30 days)",
+      "items": [
+        {
+          "action": "<…>",
+          "why": "<finding/gap ids it addresses>",
+          "effort": "S"
+        }
+      ]
+    },
+    {
+      "horizon": "Next (1–3 months)",
+      "items": []
+    },
+    {
+      "horizon": "Later (3–6 months)",
+      "items": []
+    }
+  ],
+  "new_features": {
+    "summary": [
+      "<where new features can safely be built and where code must be fixed first>"
+    ],
+    "safe_areas": [
+      {
+        "area": "<…>",
+        "why": "<…>"
+      }
+    ],
+    "fix_first": [
+      {
+        "area": "<…>",
+        "why": "<…>"
+      }
+    ],
+    "ideas": [
+      {
+        "idea": "<…>",
+        "impact": "<…>",
+        "effort": "M"
+      }
+    ]
+  },
+  "options": [
+    {
+      "name": "Fix in place",
+      "description": "<…>",
+      "cost": "<range>",
+      "time": "<range>",
+      "risk": "<…>",
+      "recommended": false
+    },
+    {
+      "name": "Replace piece by piece",
+      "description": "<…>",
+      "cost": "<range>",
+      "time": "<range>",
+      "risk": "<…>",
+      "recommended": false
+    },
+    {
+      "name": "Rebuild",
+      "description": "<…>",
+      "cost": "<range>",
+      "time": "<range>",
+      "risk": "<…>",
+      "recommended": false,
+      "why": "<why this is the recommendation, if it is>"
+    }
+  ],
+  "commitment": [
+    "<the one commitment you make to the client — rendered as the document's single callout>"
+  ],
+  "limits": [
+    "<what this assessment could not see>"
+  ]
+}

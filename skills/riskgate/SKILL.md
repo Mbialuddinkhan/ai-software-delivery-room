@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -126,3 +126,5 @@ Print:
 
 Do not deploy. Do not package. This skill only classifies — mixing the
 gate with the release would let the gate approve its own work.
+
+At the end of this skill, rebuild the project dashboard: `python3 .harness/scripts/build_dashboard.py` (log every question you asked the user with `log_question.py` first).

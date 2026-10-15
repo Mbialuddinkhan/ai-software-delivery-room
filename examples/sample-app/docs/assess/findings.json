@@ -1,0 +1,75 @@
+[
+  {
+    "id": "T-01",
+    "area": "architecture",
+    "title": "All data lives in each user's browser; nothing is shared or stored centrally",
+    "severity": "high",
+    "confidence": "confirmed",
+    "evidence": [
+      "app/app.js:7-13"
+    ],
+    "what": "State is read from and written to localStorage under one key; there is no server or database.",
+    "business_impact": "The team cannot work on one board, and a cleared browser loses all tasks for that person.",
+    "fix": "Add a small API and database for tasks, categories and settings; keep the current UI.",
+    "effort": "M"
+  },
+  {
+    "id": "T-02",
+    "area": "security",
+    "title": "The admin role is self-selected at sign-in",
+    "severity": "high",
+    "confidence": "confirmed",
+    "evidence": [
+      "app/index.html:28-31",
+      "app/app.js:63"
+    ],
+    "what": "The role comes from a drop-down the user fills in; there are no accounts or passwords.",
+    "business_impact": "Anyone can change categories and the delete rule, so permissions give no real control.",
+    "fix": "Introduce real accounts with roles assigned by an administrator, checked on the server.",
+    "effort": "M"
+  },
+  {
+    "id": "T-03",
+    "area": "security",
+    "title": "Permissions are enforced only in the browser",
+    "severity": "medium",
+    "confidence": "confirmed",
+    "evidence": [
+      "app/app.js:26",
+      "app/app.js:33",
+      "app/app.js:78-82"
+    ],
+    "what": "Settings and Delete are hidden by the page itself; the delete handler does not re-check the permission.",
+    "business_impact": "Once data is shared, a user could bypass the delete rule; today it only affects their own copy.",
+    "fix": "Check permissions on the server for every change once an API exists.",
+    "effort": "S"
+  },
+  {
+    "id": "T-04",
+    "area": "operations",
+    "title": "No backup, restore or import",
+    "severity": "medium",
+    "confidence": "confirmed",
+    "evidence": [
+      "app/app.js:86-92"
+    ],
+    "what": "The only way out is a CSV export; there is no way to load tasks back.",
+    "business_impact": "Lost or wiped browsers mean permanently lost work.",
+    "fix": "Server-side storage with daily backups; add CSV import.",
+    "effort": "S"
+  },
+  {
+    "id": "T-05",
+    "area": "code",
+    "title": "All logic in one file with no separation of concerns",
+    "severity": "low",
+    "confidence": "confirmed",
+    "evidence": [
+      "app/app.js:4-109"
+    ],
+    "what": "State, rendering, routing and events share one 109-line closure.",
+    "business_impact": "Small today; new features will get slower and riskier to add as the file grows.",
+    "fix": "Split into state, view and API modules when the server is added.",
+    "effort": "S"
+  }
+]

@@ -70,4 +70,26 @@ Example of the required concreteness in Conventions:
   middleware converts it to `{error: {code, message}}` JSON with the
   matching HTTP status. No other error shape leaves the API."
 
+## ASSESS mode (existing systems, invoked by the `assess` skill)
+
+Review the system as built; do not redesign it yet. Inputs: the source path and
+`docs/assess/evidence/scan-summary.md`. Write sections 01 (architecture,
+with one Mermaid diagram), 02 (code health) and 04 (performance) of
+`docs/assess/technical.md`. Add findings to `docs/assess/findings.json`
+(areas architecture / code / performance, ids `A-01`…).
+
+- Architecture: components, how they talk, where data lives, coupling, single
+  points of failure, what blocks scaling or change.
+- Code health: start from the scan's hotspots (complexity × change frequency);
+  confirm each in the code before calling it a problem. Note tests that exist
+  and what they cover.
+- Performance: query patterns, work done on the request path, missing indexes,
+  caching. State whether you measured it or read it from the code.
+- Every finding: evidence, a plain business impact, a concrete fix and an
+  effort (S/M/L).
+- Then give the product-owner the three options (fix in place, replace piece by
+  piece, rebuild) with cost and time ranges and the risks of each, labelled as
+  estimates.
+
+
 When done, stop. Security and DevOps build on your design.

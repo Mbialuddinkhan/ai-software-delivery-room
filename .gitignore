@@ -27,3 +27,7 @@ examples/sample-app/docs/manuals/index.html
 examples/sample-app/docs/manuals/latest.json
 examples/sample-app/docs/product-map.md
 examples/sample-app/package-lock.json
+examples/sample-app/docs/dashboard/
+examples/sample-app/docs/assess/evidence/
+examples/sample-app/docs/assess/report/
+docs/dashboard/

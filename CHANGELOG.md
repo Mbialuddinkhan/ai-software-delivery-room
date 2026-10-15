@@ -3,6 +3,72 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.6.0] — assess an existing system; a dashboard for every project
+
+### Added
+- **`/assess` skill.** For a client's existing system (legacy, poorly built or
+  undocumented) whose owner will not sit through discovery again. Recovers the
+  business processes (roles, features with a "used?" signal, flows, rules and
+  where each is enforced, gaps, unknowns) and reviews architecture, code
+  health, security, performance and operations, then writes a two-part report
+  (business + technical appendix) with a Now / Next / Later roadmap, where new
+  features fit, three options (fix in place, replace piece by piece, rebuild)
+  and the questions only the client can answer. Phase 10 hands it into a build.
+  Ground rules: authorisation recorded first, defensive only (no attack or
+  load testing), every claim cites evidence, no secret value ever copied into
+  a document, reports stay private.
+- `scripts/assess_scan.py`: inventory plus whatever is installed — OSV-Scanner
+  (npm audit fallback), Trivy, Semgrep (`p/default` + `p/owasp-top-ten`),
+  gitleaks on code and history (`--redact`), lizard, jscpd and git churn —
+  and hotspots (churn × complexity). A missing tool is reported, never fatal.
+  Writes `docs/assess/evidence/scan-summary.{json,md}`.
+- `scripts/validate_assessment.py`: every feature, rule, flow step and finding
+  needs evidence that resolves (`path:line` that exists, or a `db:` / `api:` /
+  `tool:` note, or a scanner output); fixed vocabularies for severity,
+  confidence, area and effort; a pasted secret fails even without `--strict`.
+- `scripts/build_assess_report.py`: branded HTML + A4 PDF. The health
+  scorecard follows a stated rule (any critical → Critical, high → Weak,
+  medium → Fair, low only → Good); every cost, time and effort figure carries
+  an "estimate" label. Brand from `--brand`, `.harness/brand.json`,
+  `~/.asdr/brand.json`, else neutral.
+- `templates/assess/` (intake, as-is, findings, opportunities, technical,
+  brand) and a worked sample in `examples/sample-app/docs/assess/`.
+- REA (`rea-agents@6.4.0`) as an opt-in tool for live-only systems, only when
+  the client's authorisation allows it.
+- **Project dashboard** (`scripts/build_dashboard.py`) for every ASDR project,
+  rebuilt at every phase and sprint end and on `/asdr status`: status (blocked
+  > at risk > on track, with reasons), phases and overall progress, **expected
+  delivery date with standard deviation and a 95% range** (from measured
+  finish-to-finish sprint cycle time; no date before two sprints have
+  finished), forecast drift, roadmap Gantt, features and their status
+  (planned → in progress → delivered → verified), development speed, quality,
+  open risks, decisions, every document (present / missing / not yet / only if
+  needed, plus all others), environments with a live reachability check and
+  test roles, repositories, links, every question asked and its answer, and
+  activity. Regressions since the last build are flagged. Writes
+  `docs/dashboard/index.html` and `dashboard.pdf` (A4, printable); a private
+  claude.ai page is published from it.
+- `scripts/log_question.py` (`.harness/questions.jsonl`) and
+  `scripts/sprint_clock.py` (`.harness/sprint-clock.jsonl`; start / done /
+  torn-down). `templates/dashboard.json` lists environments, repos and links —
+  role names only, never credentials.
+- PDF for every report: the test report now writes `test-report.pdf` beside
+  its HTML. `report_style.to_pdf()` is the shared headless-Chrome exporter.
+
+### Changed
+- business-analyst, solution-architect, security-compliance, devops and
+  product-owner gained an ASSESS mode; critic has mandatory assessment checks;
+  generator writes characterisation tests before changing an existing system.
+- evaluator stamps `sprint_clock.py done` on a pass; the orchestrator stamps
+  `start` and `torn-down`, logs every question it asks, and asks for
+  environments, repos and links during setup.
+- discover, architect, riskgate and release rebuild the dashboard at the end.
+- `init_asdr.py` seeds `.harness/dashboard.json` and `.harness/questions.jsonl`.
+
+### Fixed
+- The pasted-secret check scanned the JSON encoding of each item, where quotes
+  are escaped, so `api_key = "…"` slipped through; it now scans raw values.
+
 ## [3.5.1] — every documented item tested, and proven at run time
 
 ### Added

@@ -1,0 +1,284 @@
+{
+  "meta": {
+    "assessed": "2026-10-15",
+    "evidence_root": "examples/sample-app/",
+    "note": "Sample: ASDR's TaskBoard reference app assessed as if it were a client system."
+  },
+  "roles": [
+    {
+      "id": "R-01",
+      "name": "Team member",
+      "distinguished_by": "role chosen from a list at sign-in",
+      "can": "Add, tick, filter and export tasks; delete only when an admin allowed it.",
+      "evidence": [
+        "app/index.html:29",
+        "app/app.js:63",
+        "app/app.js:33"
+      ]
+    },
+    {
+      "id": "R-02",
+      "name": "Team admin",
+      "distinguished_by": "role chosen from the same list at sign-in",
+      "can": "Everything a member can, plus add categories, decide whether members may delete, and always delete.",
+      "evidence": [
+        "app/index.html:30",
+        "app/app.js:26",
+        "app/app.js:33"
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "F-01",
+      "name": "Sign-in with a name and a role",
+      "roles": [
+        "Team member",
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:58-64"
+      ],
+      "used": "browser storage: user saved under taskboard.v1",
+      "confidence": "high"
+    },
+    {
+      "id": "F-02",
+      "name": "Add tasks with a category",
+      "roles": [
+        "Team member",
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:67-73"
+      ],
+      "used": "browser storage: tasks array",
+      "confidence": "high"
+    },
+    {
+      "id": "F-03",
+      "name": "Tick tasks done and the open/done counter",
+      "roles": [
+        "Team member",
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:74-77",
+        "app/app.js:42-43"
+      ],
+      "used": "browser storage: task.done",
+      "confidence": "high"
+    },
+    {
+      "id": "F-04",
+      "name": "Filter All / Active / Done",
+      "roles": [
+        "Team member",
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:83-85"
+      ],
+      "used": "browser storage: filter",
+      "confidence": "high"
+    },
+    {
+      "id": "F-05",
+      "name": "Export tasks to CSV",
+      "roles": [
+        "Team member",
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:86-92"
+      ],
+      "used": "no data (download only)",
+      "confidence": "high"
+    },
+    {
+      "id": "F-06",
+      "name": "Category management",
+      "roles": [
+        "Team admin"
+      ],
+      "evidence": [
+        "app/app.js:98-103"
+      ],
+      "used": "browser storage: categories",
+      "confidence": "high"
+    },
+    {
+      "id": "F-07",
+      "name": "Delete permission for members",
+      "roles": [
+        "Team admin",
+        "Team member"
+      ],
+      "evidence": [
+        "app/app.js:104",
+        "app/app.js:33",
+        "app/app.js:78-82"
+      ],
+      "used": "browser storage: membersCanDelete",
+      "confidence": "high"
+    }
+  ],
+  "use_cases": [],
+  "flows": [
+    {
+      "id": "PF-01",
+      "title": "A team member records and completes work",
+      "trigger": "The member opens the board",
+      "outcome": "Tasks are listed and ticked off; the counter shows open and done",
+      "steps": [
+        {
+          "id": "1",
+          "actor": "Team member",
+          "action": "Signs in with a name and picks a role",
+          "response": "Board opens with the name and role in the top bar",
+          "evidence": [
+            "app/app.js:58-64",
+            "app/app.js:19"
+          ]
+        },
+        {
+          "id": "2",
+          "actor": "Team member",
+          "action": "Adds a task with a category",
+          "response": "Task listed, counter updated",
+          "evidence": [
+            "app/app.js:67-73"
+          ]
+        },
+        {
+          "id": "3",
+          "actor": "Team member",
+          "action": "Ticks the task done",
+          "response": "Task crossed out, counter moves",
+          "evidence": [
+            "app/app.js:74-77"
+          ]
+        }
+      ],
+      "exceptions": [
+        "E1 (step 1): empty name \u2192 message, board stays closed (app/app.js:61-62)"
+      ]
+    },
+    {
+      "id": "PF-02",
+      "title": "An admin sets up the team",
+      "trigger": "A new team starts",
+      "outcome": "Categories exist and the delete rule is set",
+      "steps": [
+        {
+          "id": "1",
+          "actor": "Team admin",
+          "action": "Opens Settings",
+          "response": "Settings page shown to admins only",
+          "evidence": [
+            "app/app.js:26",
+            "app/app.js:20"
+          ]
+        },
+        {
+          "id": "2",
+          "actor": "Team admin",
+          "action": "Adds a category",
+          "response": "Category listed and offered when adding tasks",
+          "evidence": [
+            "app/app.js:98-103",
+            "app/app.js:32"
+          ]
+        },
+        {
+          "id": "3",
+          "actor": "Team admin",
+          "action": "Allows members to delete",
+          "response": "Settings saved; Delete appears for members",
+          "evidence": [
+            "app/app.js:104",
+            "app/app.js:33"
+          ]
+        }
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "BR-01",
+      "text": "Only admins see Settings.",
+      "enforcement": "browser only (no server exists)",
+      "evidence": [
+        "app/app.js:20",
+        "app/app.js:26"
+      ]
+    },
+    {
+      "id": "BR-02",
+      "text": "Members can delete only when an admin allowed it; admins always can.",
+      "enforcement": "browser only: the Delete button is not drawn; the click handler does not re-check",
+      "evidence": [
+        "app/app.js:33",
+        "app/app.js:78-82"
+      ]
+    },
+    {
+      "id": "BR-03",
+      "text": "A task needs a non-empty title.",
+      "enforcement": "browser",
+      "evidence": [
+        "app/app.js:69-70"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G-01",
+      "text": "The 'team' board is not shared: each person's tasks live only in their own browser, so team members never see each other's work.",
+      "evidence": [
+        "app/app.js:7-13"
+      ]
+    },
+    {
+      "id": "G-02",
+      "text": "Admin settings (categories, delete permission) apply only on the device where they were set, not to the team.",
+      "evidence": [
+        "app/app.js:13",
+        "app/app.js:104"
+      ]
+    },
+    {
+      "id": "G-03",
+      "text": "Anyone can choose 'Team admin' at sign-in, so the admin role controls nothing.",
+      "evidence": [
+        "app/index.html:28-31",
+        "app/app.js:63"
+      ]
+    },
+    {
+      "id": "G-04",
+      "text": "Clearing the browser's data deletes every task; there is no backup or import, only a CSV export.",
+      "evidence": [
+        "app/app.js:7-13",
+        "app/app.js:86-92"
+      ]
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-01",
+      "question": "Is the board meant to be shared by the whole team, or is one board per person intended?",
+      "why": "The name says 'team board' but the code keeps data per browser."
+    },
+    {
+      "id": "U-02",
+      "question": "Who should be allowed to be an admin, and how are people added or removed?",
+      "why": "There are no accounts; the role is self-selected."
+    },
+    {
+      "id": "U-03",
+      "question": "How many people and tasks should it support in a year?",
+      "why": "Sizes the move to a server and database."
+    }
+  ]
+}

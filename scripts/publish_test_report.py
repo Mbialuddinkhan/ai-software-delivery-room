@@ -4,7 +4,7 @@
 Usage:
   python3 publish_test_report.py [--run latest|<run_dir>] [--label TEXT]
                                  [--out docs/test-reports] [--no-repo]
-                                 [--inline FILE] [--fragment] [--max-inline-mb 12]
+                                 [--inline FILE] [--fragment] [--max-inline-mb 12] [--no-pdf]
 
 Where the report goes is set per project in .harness/publish.json (seeded by
 init_asdr.py). Private by default:
@@ -14,7 +14,7 @@ init_asdr.py). Private by default:
    "claude_artifact": true,  a single-file copy for a private claude.ai page
    "github_pages": false}    public. Only when the user opts in for the project
 
-repo: writes docs/test-reports/<label>/index.html with the screenshots,
+repo: writes docs/test-reports/<label>/index.html (and test-report.pdf) with the screenshots,
 videos, traces, logs and Playwright HTML report it links to, plus
 docs/test-reports/index.html listing every published run.
 
@@ -350,6 +350,7 @@ def main() -> int:
     ap.add_argument("--inline", metavar="FILE", default=None, help="write a single-file report here")
     ap.add_argument("--fragment", action="store_true", help="omit doctype/head/body (Artifact tool format)")
     ap.add_argument("--max-inline-mb", type=float, default=12.0)
+    ap.add_argument("--no-pdf", action="store_true", help="skip the PDF copy of the repo report")
     args = ap.parse_args()
 
     root = Path.cwd()
@@ -375,6 +376,11 @@ def main() -> int:
         (out_dir / "summary.json").write_text(json.dumps(s, indent=2))
         write_index(Path(args.out))
         outputs["repo"] = str(out_dir / "index.html")
+        if not args.no_pdf:
+            from report_style import to_pdf
+            pdf = out_dir / "test-report.pdf"
+            outputs["pdf"] = str(pdf) if to_pdf(out_dir / "index.html", pdf) else \
+                "no Chrome found — open the report in a browser and print to PDF"
 
     inline_path = args.inline
     if not inline_path and pub.get("claude_artifact"):

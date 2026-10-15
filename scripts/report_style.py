@@ -126,3 +126,48 @@ def page(title: str, body: str, fragment: bool = False, extra_head: str = "") ->
     return ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
             f"{head}</head>\n<body>\n{body}\n</body>\n</html>\n")
+
+
+# ── PDF export (shared) ──────────────────────────────────────────────────────
+# Every ASDR report and the dashboard are PDF-exportable and printable from one
+# code path: the @media print block in CSS above governs the printed layout,
+# and to_pdf() renders the same HTML to PDF with headless Chrome when one is
+# available. No Chrome → the caller keeps the HTML (still printable by the user
+# from a browser) and says so; it is never an error.
+
+def find_chrome() -> "str | None":
+    """Locate a headless-capable Chrome/Chromium, or None. Shared with build_manual.py."""
+    import os
+    import shutil
+    cands = [os.environ.get("ASDR_CHROME"), "/opt/pw-browsers/chromium",
+             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+             "/Applications/Chromium.app/Contents/MacOS/Chromium"]
+    from pathlib import Path
+    home = Path.home()
+    for pat in ("Library/Caches/ms-playwright/chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
+                "Library/Caches/ms-playwright/chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
+                ".cache/ms-playwright/chromium-*/chrome-linux*/chrome"):
+        cands += sorted(str(x) for x in home.glob(pat))
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"):
+        w = shutil.which(name)
+        if w:
+            cands.append(w)
+    return next((c for c in cands if c and Path(c).is_file()), None)
+
+
+def to_pdf(html_file, pdf_file, chrome: "str | None" = None) -> bool:
+    """Render an HTML file to PDF with headless Chrome. Returns True on success,
+    False if no Chrome is available or the render failed — never raises."""
+    import subprocess
+    from pathlib import Path
+    chrome = chrome or find_chrome()
+    if not chrome:
+        return False
+    html_file, pdf_file = Path(html_file), Path(pdf_file)
+    cmd = [chrome, "--headless=new", "--disable-gpu", "--no-sandbox", "--no-pdf-header-footer",
+           "--virtual-time-budget=8000", f"--print-to-pdf={pdf_file}", html_file.resolve().as_uri()]
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=120)
+    except Exception:  # noqa: BLE001
+        return False
+    return pdf_file.is_file() and pdf_file.stat().st_size > 1000

@@ -1,0 +1,14 @@
+{
+  "_about": "Brand for assessment reports. Copy to ~/.asdr/brand.json (all your projects) or .harness/brand.json (one project). Without one, reports use a neutral ASDR style.",
+  "name": "<Your firm>",
+  "monogram": "<AB>",
+  "lockup": "<Your Name>",
+  "footer": "<YOURFIRM.COM> · CONFIDENTIAL",
+  "email": "<you@yourfirm.com>",
+  "linkedin": "<linkedin.com/in/you>",
+  "reference_prefix": "<AB>",
+  "colors": {"ink": "#111214", "graphite": "#3C3F44", "slate": "#62666C", "hairline": "#DCDCDC",
+             "tint": "#F7F8FA", "blue": "#23408E", "deep": "#152C66"},
+  "fonts": {"words": "\"Helvetica Neue\", Helvetica, Arial, sans-serif",
+            "meta": "\"IBM Plex Mono\", ui-monospace, Menlo, monospace"}
+}

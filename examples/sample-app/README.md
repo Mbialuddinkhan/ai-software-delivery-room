@@ -1,7 +1,7 @@
 # TaskBoard — ASDR reference project
 
 A small team to-do board (plain HTML/JS, no build step) that carries every
-artifact ASDR 3.5 produces, so you can see them working together and copy
+artifact ASDR 3.6 produces, so you can see them working together and copy
 the patterns. CI runs it end to end on every push.
 
 | What | Where |
@@ -15,6 +15,7 @@ the patterns. CI runs it end to end on every push.
 | Selenium (pytest) tests + tour | `e2e/selenium/` |
 | Suites for `run_tests.py` | `test-config.json` |
 | Manual spec (4 persona manuals + 4 tiers) | `docs/manuals/manual.json` |
+| A worked assessment of the app as if it were a client's existing system (v3.6) | `docs/assess/` (intake, as-is processes, findings T-01…T-05, opportunities, technical review) |
 
 ## Run it
 
@@ -37,8 +38,18 @@ step and `covers('AC-03.2', …)` at the assertion that proves an item
 gate then checks that every documented item — all 81 here — was reached by a
 passing test, and `docs/product-map.md` shows the matrix.
 
+The assessment and the dashboard:
+
+```bash
+python3 ../../scripts/assess_scan.py --target app --out docs/assess/evidence    # whatever scanners are installed
+python3 ../../scripts/validate_assessment.py --root . --strict                  # every claim has evidence
+python3 ../../scripts/build_assess_report.py                                    # docs/assess/report/ (HTML + PDF)
+python3 ../../scripts/build_dashboard.py                                        # docs/dashboard/ (HTML + PDF)
+```
+
 The app itself: `python3 -m http.server 4173 --directory app`, then open
 http://localhost:4173.
 
 Generated output (`.harness/`, `docs/test-reports/`, `docs/manuals/<version>/`,
-`docs/product-map.md`) is not committed.
+`docs/product-map.md`, `docs/dashboard/`, `docs/assess/evidence/`, `docs/assess/report/`)
+is not committed.

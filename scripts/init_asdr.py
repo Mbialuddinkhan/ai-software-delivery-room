@@ -91,6 +91,18 @@ def main() -> int:
                                        "claude_artifact": True, "github_pages": False},
                                       indent=2) + "\n")
 
+    # Dashboard inputs (v3.6): where the project runs and lives, and the log of
+    # every question asked and answered. Never holds credentials.
+    dash = root / ".harness" / "dashboard.json"
+    tmpl = root / ".harness" / "templates" / "dashboard.json"
+    if not dash.exists() and tmpl.exists():
+        cfg = json.loads(tmpl.read_text())
+        cfg["project"] = root.name
+        dash.write_text(json.dumps(cfg, indent=2) + "\n")
+    q = root / ".harness" / "questions.jsonl"
+    if not q.exists():
+        q.write_text("")
+
     progress = root / ".harness" / "progress.json"
     if not progress.exists():
         progress.write_text(json.dumps(PROGRESS_SEED, indent=2) + "\n")
@@ -125,6 +137,8 @@ def main() -> int:
     print("  python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>")
     print("Browser tests (v3.4): copy .harness/templates/e2e/test-config.json to")
     print("  .harness/test-config.json, then: python3 .harness/scripts/run_tests.py [--live]")
+    print("Dashboard (v3.6): fill .harness/dashboard.json (environments, repos, links), then")
+    print("  python3 .harness/scripts/build_dashboard.py   → docs/dashboard/ (HTML + PDF)")
     print("Next: python3 .harness/scripts/next_action.py")
     return 0
 

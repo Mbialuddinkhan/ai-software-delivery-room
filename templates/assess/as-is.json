@@ -1,0 +1,103 @@
+{
+  "_about": "docs/assess/as-is.json — business-analyst (ASSESS mode). Recovered from evidence only: code, the running app used as each role, the data, logs/tickets. Every item carries evidence; confidence is honest; what code cannot answer goes to unknowns.",
+  "meta": {
+    "assessed": "<YYYY-MM-DD>",
+    "evidence_root": "<path the file:line citations are relative to>",
+    "note": "<caveats, e.g. data is seed data>"
+  },
+  "roles": [
+    {
+      "id": "R-01",
+      "name": "<role>",
+      "distinguished_by": "<how the code tells this role apart>",
+      "can": "<what it can do>",
+      "evidence": [
+        "<path:line>"
+      ]
+    }
+  ],
+  "features": [
+    {
+      "id": "F-01",
+      "name": "<feature>",
+      "roles": [
+        "<role>"
+      ],
+      "evidence": [
+        "<path:line>"
+      ],
+      "used": "<db: query → rows | no data>",
+      "confidence": "high|med|low"
+    }
+  ],
+  "use_cases": [
+    {
+      "id": "UC-01",
+      "name": "<goal>",
+      "actor": "<role>",
+      "goal": "<one sentence>",
+      "main_flow": [
+        "<step>"
+      ],
+      "alternates": [
+        "A1: <…>"
+      ],
+      "exceptions": [
+        "E1: <…>"
+      ],
+      "features": [
+        "F-01"
+      ],
+      "evidence": [
+        "<path:line>"
+      ]
+    }
+  ],
+  "flows": [
+    {
+      "id": "PF-01",
+      "title": "<journey>",
+      "trigger": "<what starts it>",
+      "outcome": "<what is true at the end>",
+      "steps": [
+        {
+          "id": "1",
+          "actor": "<role>",
+          "action": "<does>",
+          "response": "<system response>",
+          "data": "<written/changed>",
+          "evidence": [
+            "<path:line>"
+          ]
+        }
+      ],
+      "exceptions": [
+        "E1 (step n): <condition> → <response>"
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "BR-01",
+      "text": "<rule>",
+      "enforcement": "<server-side | browser only | not enforced>",
+      "evidence": [
+        "<path:line>"
+      ]
+    }
+  ],
+  "gaps": [
+    {
+      "id": "G-01",
+      "text": "<where the process breaks, in plain words>",
+      "evidence": "<path:line, db: …>"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-01",
+      "question": "<question for the client>",
+      "why": "<why code and data cannot answer it>"
+    }
+  ]
+}

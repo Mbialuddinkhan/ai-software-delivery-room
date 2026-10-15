@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -57,11 +57,39 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    This step is the only place the check runs — ASDR makes no network
    call at session start — and the only place the user decides.
 
+5b. Ask the user once for the project's environments, repositories and links
+   (test, staging, production URLs; repository URLs; CI) and write them to
+   `.harness/dashboard.json` (`environments`, `repos`, `links`). List test
+   login role names only; credentials stay in environment variables.
+
 6. Read `references/file-map.md` (in this skill's base directory) now: the
    canonical paths, the stage table and the state fields. Rows cited below
    ("row 2c") are rows of that file map. Browser testing, live runs,
    publishing and manuals are in `references/testing-and-manuals.md`;
    companion rules in `references/companions.md`.
+
+### Questions, sprint clock and the dashboard (every phase)
+
+- **Every question you ask the user** (AskUserQuestion or in chat) and its
+  answer: `python3 .harness/scripts/log_question.py --q "<question>" --a
+  "<answer>" --phase <phase> --asked-by <who asked> [--changed <docs it
+  changed>]`. A question still waiting for an answer gets logged with `--status
+  open`; log it again under the same `--id` once it is answered.
+- **Sprint clock**: `python3 .harness/scripts/sprint_clock.py start <sprint>`
+  when a sprint is activated, and `torn-down <sprint>` on a teardown (the evaluator stamps `done` itself). The
+  delivery date is computed from these.
+- **Dashboard**: at the end of every phase and every sprint, and whenever the
+  user asks for the status, run `python3 .harness/scripts/build_dashboard.py`.
+  It writes `docs/dashboard/index.html` and `dashboard.pdf`. Publish
+  `docs/dashboard/dashboard-artifact.html` as the private Artifact
+  "<Product> Dashboard", updating the same one each time so the link stays the
+  same, and send the PDF on request.
+- **"/asdr status"** (or "where are we?"): rebuild the dashboard and answer
+  from it with:
+  - status and its reasons;
+  - expected delivery ± its standard deviation;
+  - what is waiting on the user;
+  - the link to the dashboard.
 
 ### Resume protocol
 
@@ -99,6 +127,12 @@ that produced the file.
   `[TC-xx]` results and the runtime markers (`flowStep` / `covers`) that
   prove each Must step and each Covers item was reached. Writes
   `docs/product-map.md` with the coverage matrix.
+- `build_dashboard.py` — the project dashboard (status by a fixed rule,
+  expected delivery ± standard deviation, roadmap, features, documents,
+  environments, repositories, questions and decisions); HTML + PDF, private.
+  Fed by `log_question.py` and `sprint_clock.py`.
+- `assess_scan.py`, `validate_assessment.py`, `build_assess_report.py` — the
+  `assess` skill's scanner run, evidence gate and two-part report.
 - `validate_contract.py` and `validate_sprints.py` (which also requires each
   sprint's `flows` and every Must flow delivered) run in later phases.
 
@@ -302,7 +336,10 @@ Drive the loop with the script — after every agent invocation:
 1. Run `python3 .harness/scripts/next_action.py`.
 2. Do exactly what its JSON says (`next_agent`, `mode`, `sprint`, `attempt`).
 3. When it says `activate`: update `sprints.json` and `progress.json` as
-   instructed, then rerun the script.
+   instructed, run `python3 .harness/scripts/sprint_clock.py start <sprint>`,
+   then rerun the script. The evaluator stamps `done` itself when it passes a
+   sprint; on a teardown, run `sprint_clock.py torn-down <sprint>`. Rebuild the
+   dashboard after every sprint.
 4. When invoking generator/evaluator, pass: sprint id, mode, and attempt.
 4b. Before the evaluator's EVALUATE run, tell it whether the user wants to
    watch (`run_tests.py --live`). After it reports, publish the test report it
@@ -382,7 +419,9 @@ Set phase to `done`. Print:
 4. How to run locally, test, deploy (from `CLAUDE.md` / docs)
 5. Where the results are: the test report and the user manuals (links to the
    private pages, and the repo paths), and the product-map flow table
-6. Run metrics: `python3 .harness/scripts/run_metrics.py`, show the table
+6. Run metrics: `python3 .harness/scripts/run_metrics.py`, show the table;
+   then the final dashboard: `python3 .harness/scripts/build_dashboard.py`
+   (link and PDF)
 7. Known limitations
 8. Next recommended steps
 

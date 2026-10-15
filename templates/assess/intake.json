@@ -1,0 +1,39 @@
+{
+  "_about": "docs/assess/intake.json — written by the orchestrator in Phase 1 with the user. Scope, access and authorisation; the report cover reads client/system/date/reference/based_on/contact.",
+  "client": "<Client name>",
+  "system": "<System name>",
+  "date": "<15 Oct 2026>",
+  "reference": "<BK-2026-001>",
+  "based_on": "<repo + commit or version assessed>",
+  "contact": "<assessor e-mail>",
+  "scope": {
+    "access": [
+      "<source code>",
+      "<test environment, one login per role>",
+      "<database structure + anonymised data>",
+      "<logs / tickets>"
+    ],
+    "in_scope": [
+      "business processes",
+      "architecture",
+      "code health",
+      "security design",
+      "performance",
+      "operations"
+    ],
+    "out_of_scope": [
+      "<attack testing>",
+      "<production systems>"
+    ]
+  },
+  "authorization": {
+    "summary": "<Who authorised the assessment, of what, on what date, by what document>",
+    "authorized_by": "<name, role>",
+    "date": "<YYYY-MM-DD>",
+    "document": "<signed SOW / e-mail reference>",
+    "live_testing": false,
+    "rea_allowed": false,
+    "recorded_by": "orchestrator"
+  },
+  "confidentiality": "<NDA in place? client consent to send code to the model provider? any data that must not leave their environment>"
+}

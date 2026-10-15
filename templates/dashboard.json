@@ -1,0 +1,20 @@
+{
+  "_about": "Copied to .harness/dashboard.json by init. build_dashboard.py reads it for the things no other ASDR file knows: where the project runs and lives. Never put passwords, tokens or keys here — test logins list role names only; credentials stay in environment variables.",
+  "project": "<Product name>",
+  "environments": [
+    {"name": "Local dev", "url": "http://localhost:3000", "purpose": "developer machine", "branch": "feature/*", "check": false},
+    {"name": "Test / QA", "url": "<https://test.example.com>", "purpose": "automated suites and manual QA", "deployed": "<commit or version>", "test_roles": ["<member>", "<admin>"], "health_url": "<https://test.example.com/health>"},
+    {"name": "Staging / UAT", "url": "<https://staging.example.com>", "purpose": "client acceptance", "deployed": "<release candidate>", "test_roles": ["<member>", "<admin>"]},
+    {"name": "Production", "url": "<https://app.example.com>", "purpose": "live users", "deployed": "<version>"}
+  ],
+  "repos": [
+    {"name": "app", "url": "<https://github.com/org/app>", "purpose": "application code"},
+    {"name": "infra", "url": "<https://github.com/org/infra>", "purpose": "infrastructure as code and CI"}
+  ],
+  "links": [
+    {"label": "CI pipeline", "url": "<https://github.com/org/app/actions>"},
+    {"label": "Test report (private page)", "url": "<claude.ai artifact link>"},
+    {"label": "User manuals (private page)", "url": "<claude.ai artifact link>"},
+    {"label": "Issue tracker", "url": "<https://…>"}
+  ]
+}

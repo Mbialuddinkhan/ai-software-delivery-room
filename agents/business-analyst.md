@@ -140,4 +140,29 @@ brief, each has at least one criterion with a number or an observable
 behavior, and each edge-case category (empty, limit, concurrency, malformed
 input) has at least one EC. Fix gaps, then stop.
 
+## ASSESS mode (existing systems, invoked by the `assess` skill)
+
+The system already exists and the client will not explain it again. Recover
+what it does from evidence; do not design anything. Output
+`docs/assess/as-is.json` (template `.harness/templates/assess/as-is.json`).
+
+- Read the code paths that change data (routes, handlers, jobs, triggers), the
+  data model, and the screens each role can reach. Use the running app the way
+  that role normally would; never try to get around a control.
+- Use the data to tell live features from dead code: row counts, status values,
+  last-modified dates. Mark a feature "used" only with data behind it.
+- For every business rule, say where it is enforced: on the server, in the
+  browser only, or nowhere. The difference is often the most important finding.
+- Write the end-to-end flows with every step, actor and system response, plus
+  the exception paths. Each step cites `path:line`, `db:` or `api:` evidence.
+- Gaps are places where the process breaks: dead ends, steps with no owner,
+  data written but never read, rules that do not hold.
+- Unknowns are only questions that code and data cannot answer (why a rule
+  exists, who does a manual step, what a status means to the business).
+  Twelve at most; each says why the code cannot answer it.
+- Process problems serious enough for a severity also go to
+  `docs/assess/findings.json`, area `process`, ids `P-01`….
+- Never paste a credential or personal data into a document; cite where it is.
+
+
 When done, stop. The critic challenges your work next.

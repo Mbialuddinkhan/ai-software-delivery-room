@@ -90,4 +90,25 @@ for the final gate), an output path, and a template path. Copy the template
   (or baseline, in release-gate mode) was covered — an unaddressed section
   is an unassessed risk.
 
+## ASSESS mode (existing systems, invoked by the `assess` skill)
+
+A defensive design and code review of a system the client has authorised you
+to examine. Read code and configuration; do not attack the system, do not
+try to bypass controls, and do not test against production. Write section 03
+of `docs/assess/technical.md`; add findings to `docs/assess/findings.json`
+(area security, ids `S-01`…).
+
+- Review authentication, session handling, authorisation on every route that
+  reads or changes data, input handling, file handling, secrets management,
+  logging of sensitive data, security headers and configuration.
+- Triage every scanner hit in `docs/assess/evidence/` (Semgrep, gitleaks, OSV):
+  confirm it in the code, or record it as a false alarm and why. Report the
+  confirmed ones only; Section 06 lists the counts.
+- Dependencies: summarise known-vulnerable packages by severity, and say which
+  are actually used by the code paths that matter.
+- Never copy a secret value, key or token into any document. Cite the file and
+  line, and recommend rotating it.
+- Each finding gets a business impact an owner understands and a concrete fix.
+
+
 When done, stop.

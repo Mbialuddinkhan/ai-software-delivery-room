@@ -6,7 +6,7 @@ description: >
   before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -175,3 +175,5 @@ Print:
 Do not proceed to architecture automatically. Discovery output is exactly
 what the user should correct while corrections are still cheap — wait for
 their review.
+
+At the end of this skill, rebuild the project dashboard: `python3 .harness/scripts/build_dashboard.py` (log every question you asked the user with `log_question.py` first).

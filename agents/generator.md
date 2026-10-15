@@ -175,6 +175,10 @@ notes go in the sprint's build log, not in place of a criterion.
      `sign_in_as(driver, base_url, '<role>')`). Journey tests that include
      sign-in walk it for real. Test users come from the seed step, never real
      accounts.
+4a. Existing systems (an `assess` hand-off, or any code you did not write):
+   before changing existing behaviour, write characterisation tests that pin
+   what the code does today in the areas you will touch, and run them green
+   first. They are how a refactor proves it broke nothing that worked.
 4b. Run local smoke checks before handoff: build succeeds, app starts, and
    `python3 .harness/scripts/run_tests.py` passes — handing the evaluator
    something that doesn't start burns an entire attempt on a triviality.

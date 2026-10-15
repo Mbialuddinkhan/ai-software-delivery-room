@@ -1,0 +1,109 @@
+{
+  "summary": [
+    "TaskBoard does what a single person needs: add, complete, filter and export tasks, with good automated tests and accessibility. It does not yet do what its name promises: the board is not shared, and the admin role controls nothing because anyone can pick it.",
+    "The fix is contained. A small server for storing tasks, settings and accounts turns it into a real team board without rewriting the interface."
+  ],
+  "recommendations": [
+    {
+      "horizon": "Now (0\u201330 days)",
+      "items": [
+        {
+          "action": "Confirm whether one shared team board is intended (U-01)",
+          "why": "Every other recommendation depends on it",
+          "effort": "S"
+        },
+        {
+          "action": "Add CSV import so exported tasks can be restored",
+          "why": "Removes the risk of permanent loss in the meantime",
+          "effort": "S"
+        }
+      ]
+    },
+    {
+      "horizon": "Next (1\u20133 months)",
+      "items": [
+        {
+          "action": "Add an API and database for tasks, categories and settings",
+          "why": "Makes the board shared and durable (T-01, G-01, G-02)",
+          "effort": "M"
+        },
+        {
+          "action": "Add accounts with administrator-assigned roles, checked on the server",
+          "why": "Makes permissions real (T-02, T-03, G-03)",
+          "effort": "M"
+        }
+      ]
+    },
+    {
+      "horizon": "Later (3\u20136 months)",
+      "items": [
+        {
+          "action": "Due dates, assignees and a weekly summary",
+          "why": "The most-requested next step for team task boards",
+          "effort": "M"
+        }
+      ]
+    }
+  ],
+  "new_features": {
+    "summary": [
+      "The interface and tests are a safe base. Anything that depends on several people seeing the same data must wait for the server."
+    ],
+    "safe_areas": [
+      {
+        "area": "Board interface, filters, export",
+        "why": "Well tested (28 test cases, all journeys proven) and accessible"
+      }
+    ],
+    "fix_first": [
+      {
+        "area": "Anything shared or permission-based",
+        "why": "Data and roles exist only in each browser today"
+      }
+    ],
+    "ideas": [
+      {
+        "idea": "Assign tasks to people with due dates",
+        "impact": "Turns a list into a team plan",
+        "effort": "M"
+      },
+      {
+        "idea": "Weekly summary e-mail from the CSV data",
+        "impact": "Replaces the manual weekly round-up",
+        "effort": "S"
+      }
+    ]
+  },
+  "options": [
+    {
+      "name": "Extend in place",
+      "description": "Keep the interface; add a small API, database and accounts behind it.",
+      "cost": "2\u20133 developer-weeks",
+      "time": "3\u20134 weeks",
+      "risk": "Low \u2014 tests already cover every journey",
+      "recommended": true,
+      "why": "The interface and tests are sound; the gap is storage and identity, which can be added behind them."
+    },
+    {
+      "name": "Replace piece by piece",
+      "description": "Move features one at a time to a new app.",
+      "cost": "4\u20136 developer-weeks",
+      "time": "6\u20138 weeks",
+      "risk": "Medium"
+    },
+    {
+      "name": "Rebuild",
+      "description": "Start again on a new stack.",
+      "cost": "6\u20138 developer-weeks",
+      "time": "8\u201310 weeks",
+      "risk": "Medium \u2014 throws away working, tested code"
+    }
+  ],
+  "commitment": [
+    "Every finding in this report points to the exact place in the code or data that shows it. Before any change, we record the current behaviour as tests, so nothing that works today breaks unnoticed."
+  ],
+  "limits": [
+    "This sample assesses ASDR's own reference app as if it were a client system.",
+    "Effort and cost figures are estimates."
+  ]
+}

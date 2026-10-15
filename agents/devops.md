@@ -134,4 +134,23 @@ output path.
 - The production checklist contains only verifiable items (commands, file
   existence), no judgment calls.
 
+## ASSESS mode (existing systems, invoked by the `assess` skill)
+
+Review how the existing system is built, deployed and run. Write section 05 of
+`docs/assess/technical.md` and add findings (area operations, ids `O-01`…).
+Cover:
+
+- build and deploy (repeatable? who can deploy? rollback?);
+- environments (dev, test, staging, production: what exists, and how close test
+  is to production);
+- backups and restore (has a restore ever been tested?);
+- monitoring and alerting;
+- infrastructure as code;
+- dependency and runtime versions past end of life.
+
+Fill `.harness/dashboard.json` → `environments` with each environment's URL and
+purpose, so the dashboard links to them. List role names only, never
+credentials.
+
+
 When done, stop.

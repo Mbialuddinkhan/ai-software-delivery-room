@@ -179,6 +179,8 @@ Example row:
    (`verdict`, `sprint`, `attempt`, `failed_criteria`, `required_next_action`).
 8. Update state — you are the only role allowed to:
    - On pass: set the sprint's status to `done` in `sprints.json`.
+     Then stamp it: `python3 .harness/scripts/sprint_clock.py done <sprint-id>`
+     (the dashboard's delivery forecast is computed from these stamps).
    - On teardown: set it to `torn-down`.
    - Always: set `last_eval_result` and `awaiting` in `.harness/progress.json`
      (`awaiting: null` on pass/teardown, `awaiting: build` on fail).

@@ -452,29 +452,15 @@ def index_body(levels: list, ctx: dict, link) -> str:
 
 
 def find_chrome() -> str | None:
-    cands = [os.environ.get("ASDR_CHROME"), "/opt/pw-browsers/chromium",
-             "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-             "/Applications/Chromium.app/Contents/MacOS/Chromium"]
-    home = Path.home()
-    for pat in ("Library/Caches/ms-playwright/chromium-*/chrome-mac*/Chromium.app/Contents/MacOS/Chromium",
-                "Library/Caches/ms-playwright/chromium-*/chrome-mac*/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing",
-                ".cache/ms-playwright/chromium-*/chrome-linux*/chrome"):
-        cands += sorted(str(x) for x in home.glob(pat))
-    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser", "chrome"):
-        w = shutil.which(name)
-        if w:
-            cands.append(w)
-    return next((c for c in cands if c and Path(c).is_file()), None)
+    """Shared with every ASDR report (report_style.find_chrome)."""
+    from report_style import find_chrome as _fc
+    return _fc()
 
 
 def to_pdf(chrome: str, html_file: Path, pdf_file: Path) -> bool:
-    cmd = [chrome, "--headless=new", "--disable-gpu", "--no-sandbox", "--no-pdf-header-footer",
-           "--virtual-time-budget=8000", f"--print-to-pdf={pdf_file}", html_file.resolve().as_uri()]
-    try:
-        subprocess.run(cmd, capture_output=True, timeout=120)
-    except Exception:  # noqa: BLE001
-        return False
-    return pdf_file.is_file() and pdf_file.stat().st_size > 1000
+    """Shared with every ASDR report (report_style.to_pdf)."""
+    from report_style import to_pdf as _tp
+    return _tp(html_file, pdf_file, chrome)
 
 
 # ── human review ───────────────────────────────────────────────────────────

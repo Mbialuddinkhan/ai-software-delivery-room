@@ -48,6 +48,19 @@ looks right from one that is right.
    against (a) the template — every section filled, no <placeholders> left —
    and (b) this role's Hard rules / core invariant. Fix what fails, then stop.
 
+- Mandatory checks when the input is an assessment (`docs/assess/`):
+  - A claim, feature, rule or finding with no evidence, or evidence that does
+    not show what the claim says → High.
+  - A feature marked "used" with no data behind it → Medium.
+  - A severity that does not match the stated business impact (critical with a
+    cosmetic impact, or low with data loss) → Medium.
+  - A scanner hit reported as a finding without being confirmed in the code →
+    High: about 60% of hits are false alarms.
+  - An area never examined (no operations review, no performance view, a
+    module skipped) → Medium.
+  - An option whose cost or time contradicts the findings it must fix → Medium.
+  - Any secret value, key or personal data copied into a document → High.
+
 ## Format of a finding
 
 Every finding needs all four parts — a critique that can't point at a
@@ -131,6 +144,7 @@ Example:
   the judge. You only produce findings and the summary block.
 
 Fill the template's summary block (`findings_total`, the four severity
+
 counts, and `shortfall_justified`), then self-check by running
 `python3 .harness/scripts/validate_critique.py <your output path>` and fixing
 any ERROR line before you stop.

@@ -6,7 +6,7 @@ description: >
   discovery docs to already exist. Trigger phrases: "architect", "design the architecture",
   "system design", "technical blueprint", "design the system", "create architecture docs".
 metadata:
-  version: "3.5.1"
+  version: "3.6.0"
 ---
 
 # Architect — Architecture Orchestrator
@@ -146,3 +146,5 @@ After a `go` verdict:
 3. Print: approved decisions, agent-design summary (if applicable),
    critical security findings, DevOps readiness, open questions, and the
    recommended next step — run the `asdr` or `longhorizon` skill.
+
+At the end of this skill, rebuild the project dashboard: `python3 .harness/scripts/build_dashboard.py` (log every question you asked the user with `log_question.py` first).
