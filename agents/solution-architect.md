@@ -74,9 +74,11 @@ Example of the required concreteness in Conventions:
 
 Review the system as built; do not redesign it yet. Inputs: the source path and
 `docs/assess/evidence/scan-summary.md`. Write sections 01 (architecture,
-with one Mermaid diagram), 02 (code health) and 04 (performance) of
-`docs/assess/technical.md`. Add findings to `docs/assess/findings.json`
-(areas architecture / code / performance, ids `A-01`…).
+with one Mermaid diagram), 02 (code health) and 04 (performance) to
+`docs/assess/technical-architecture.md` and your findings to
+`docs/assess/findings-architecture.json` (areas architecture / code /
+performance, ids `A-01`…). Other reviewers run at the same time: never write
+their files.
 
 - Architecture: components, how they talk, where data lives, coupling, single
   points of failure, what blocks scaling or change.
@@ -87,9 +89,16 @@ with one Mermaid diagram), 02 (code health) and 04 (performance) of
   caching. State whether you measured it or read it from the code.
 - Every finding: evidence, a plain business impact, a concrete fix and an
   effort (S/M/L).
-- Then give the product-owner the three options (fix in place, replace piece by
-  piece, rebuild) with cost and time ranges and the risks of each, labelled as
-  estimates.
+- State your effort scale (S / M / L in person-weeks) and the rate you assume;
+  every reviewer's S/M/L is costed on it.
+- **Second invocation (Phase 5), after every register exists:** add
+  "## Options and effort" to `technical-architecture.md`. One table lists
+  every finding from every register (P-, A-, S-, O-) with its effort on your
+  scale; each option — fix in place, replace piece by piece, rebuild — totals
+  the rows it still has to fix, plus any work that is not a finding (say what
+  it is). Give time ranges and the risks of each. Every figure is an estimate
+  and labelled so; the product-owner takes them from this table, and the
+  critic re-adds them.
 
 
 When done, stop. Security and DevOps build on your design.

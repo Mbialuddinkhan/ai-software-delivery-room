@@ -161,8 +161,22 @@ what it does from evidence; do not design anything. Output
   exists, who does a manual step, what a status means to the business).
   Twelve at most; each says why the code cannot answer it.
 - Process problems serious enough for a severity also go to
-  `docs/assess/findings.json`, area `process`, ids `P-01`….
+  `docs/assess/findings-process.json`, area `process`, ids `P-01`….
 - Never paste a credential or personal data into a document; cite where it is.
+
+### Hand-off (assess Phase 10): the parity list
+
+When the assessment turns into a build, write `docs/02f-parity.md` (template
+`.harness/templates/parity.md`) from the as-is features, rules and flow steps
+the client keeps. One `PAR-xx` row per behaviour the business relies on and
+would notice if it changed — what a role sees, what an export contains, what a
+rule allows or blocks — citing its as-is id and evidence. Say what may
+legitimately differ under Ignore (timestamps, generated ids, order). A
+behaviour the client wants changed or retired is `change — approved by <who>,
+<when>, <where>` or `drop — approved by …`; never record an approval the client
+has not given — leave it `keep` and put the question to the user. Every
+non-dropped PAR item is named on a test case's Covers line in
+`docs/02e-test-cases.md`.
 
 
 When done, stop. The critic challenges your work next.

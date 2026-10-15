@@ -4,6 +4,7 @@
     flow_step("PF-02.3")              # a journey test reached this flow step
     covers("AC-03.2", "BR-02")        # right where the test asserts them
     metric("board-render-500", ms, "ms", budget=1000)
+    parity("PAR-02", rows, label="member")   # compared with the old system (existing systems)
 
 The test function name must carry its test-case id: def test_tc_03_…().
 Markers go to <ASDR_RESULTS_DIR>/coverage/selenium.jsonl.
@@ -37,3 +38,8 @@ def covers(*items: str) -> None:
 
 def metric(name: str, value: float, unit: str, budget: float | None = None) -> None:
     _write("metric", name=name, value=value, unit=unit, budget=budget)
+
+
+def parity(item_id: str, value, label: str = "") -> None:
+    """Record what the user sees or gets for a parity item (any JSON-serialisable value)."""
+    _write("parity", items=[item_id], id=item_id, label=label, value=value)

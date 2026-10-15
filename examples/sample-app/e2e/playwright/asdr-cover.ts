@@ -8,6 +8,8 @@
 //   await flowStep('PF-02.3');               // a journey test reached this flow step
 //   covers('AC-03.2', 'BR-02');              // call right where the test asserts them
 //   metric('board-render-500', ms, 'ms', 1000); // a measured value, with its budget
+//   parity('PAR-02', rows, 'member');      // what the user sees/gets, compared with the
+//                                          // old system by compare_parity.py (existing systems)
 //
 // The test's title must carry its test-case id: test('[TC-03] …').
 // Markers go to <ASDR_RESULTS_DIR>/coverage/playwright.jsonl.
@@ -41,4 +43,10 @@ export function covers(...items: string[]): void {
 
 export function metric(name: string, value: number, unit: string, budget?: number): void {
   write('metric', { name, value, unit, budget: budget ?? null });
+}
+
+// value: any JSON-serialisable observation (text, rows, a response body).
+// label: optional, when one item is captured more than once (per role, per record).
+export function parity(id: string, value: unknown, label = ''): void {
+  write('parity', { items: [id], id, label, value: value === undefined ? null : value });
 }

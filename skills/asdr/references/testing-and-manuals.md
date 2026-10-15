@@ -164,6 +164,33 @@ agent invocations, evaluations and negotiation rounds per sprint, stage QA
 rounds, context-pack sizes and test-run history. Run it at the end of Phase 3
 and Phase 5 and show the user the table.
 
+## Parity with the old system (existing systems)
+
+When ASDR takes over a system (the `assess` hand-off), `docs/02f-parity.md`
+lists every behaviour the client keeps as `PAR-xx`, with a decision: `keep`,
+`change — approved by …` or `drop — approved by …`. Tests capture what the
+user sees or gets for each one:
+
+    parity('PAR-02', rows, 'member')          // Playwright (asdr-cover.ts)
+    cy.parity('PAR-02', rows, 'member')       // Cypress
+    parity("PAR-02", rows, label="member")    # Selenium / pytest
+
+1. Baseline, once, before any code changes, against the old system's test
+   environment: `run_tests.py --parity old --base-url <old URL> --no-server`.
+   It runs each suite's `parity_cmd` (else `cmd`), writes
+   `.harness/test-results/parity-baseline.json`, never replaces `latest`,
+   keeps its own saved logins and leaves manual screenshots alone.
+2. Every run of the new build captures the same items; `compare_parity.py`
+   compares them after the Ignore rules (field names; `timestamps`, `uuids`,
+   `order`, `whitespace`, `case`, `numbers-in-ids`) and writes
+   `docs/parity-report.md` with a diff per difference.
+3. A kept behaviour that differs fails the sprint (evaluator) and blocks the
+   release (`compare_parity.py --gate`, and `validate_product_map.py --gate`
+   requires a fresh passing comparison). Captures count only from passing
+   `[TC-xx]` tests; a value that changes between two captures in one run is
+   "unstable" and must be normalised; comparing a URL with itself is refused.
+   Approved changes go into the release notes.
+
 ## Project dashboard
 
 `python3 .harness/scripts/build_dashboard.py` writes `docs/dashboard/index.html`
@@ -183,7 +210,15 @@ phase and sprint, and whenever the user asks for status.
 
 Forecast: expected remaining = k × mean cycle − hours since the last finish;
 SD = s·√(k + k²/n); the 95% range uses Student-t with n−1 degrees of freedom.
-No date is shown until two sprints have finished. Sprint stamps:
+No date is shown until two sprints have finished. Client status report:
+`build_dashboard.py --audience client` → `docs/dashboard/client/index.html`
+and `status-report.pdf`, branded like the assessment report (numbered
+sections, one callout: the delivery estimate). Same status rule, client
+wording; leaves out agent activity, effort, git internals, local paths,
+questions not logged with `--client`, environments marked `"client": false`
+or on localhost, links not marked `"client": true`, risks in
+`client.hide_risks` and process records; agent risk owners show as "Delivery
+team". Sprint stamps:
 `sprint_clock.py start|done|torn-down sprint-NN` — the orchestrator stamps
 start and torn-down, the evaluator stamps done. Never put credentials in
 `dashboard.json`; list role names only.

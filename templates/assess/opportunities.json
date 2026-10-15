@@ -79,5 +79,15 @@
   ],
   "limits": [
     "<what this assessment could not see>"
+  ],
+  "questions": [
+    {
+      "ids": [
+        "<U-01>",
+        "<U-04>"
+      ],
+      "question": "<one plain question for the owner; Part A numbers them Q1, Q2 …>",
+      "why": "<which decision the answer changes>"
+    }
   ]
 }

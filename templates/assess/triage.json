@@ -1,0 +1,10 @@
+[
+  {
+    "tool": "<semgrep | gitleaks | osv-scanner | osv-frontend | \u2026>",
+    "rule": "<rule or advisory id>",
+    "location": "<path:line relative to the source root>",
+    "verdict": "<confirmed | false-alarm | not-applicable>",
+    "finding": "<S-01, or null>",
+    "reason": "<one line: why this verdict>"
+  }
+]

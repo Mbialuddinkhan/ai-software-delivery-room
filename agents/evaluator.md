@@ -169,6 +169,10 @@ Example row:
    failing test and its evidence (command + actual output, or the failed-run
    video/screenshot path), and return FAIL with a `regression:` note naming the
    broken test(s). Never override a regression to declare pass.
+   Existing systems (`docs/02f-parity.md` exists): also run
+   `python3 .harness/scripts/compare_parity.py`. A "keep" behaviour that now
+   differs from the old system is a regression too — FAIL with a `parity:`
+   note naming the PAR item and pasting its diff from `docs/parity-report.md`.
 
 6b. Publish the evidence: `python3 .harness/scripts/publish_test_report.py
    --label <sprint-id>-attempt-<n>`. Put the report path (and the

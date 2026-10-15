@@ -4,7 +4,7 @@
 Usage:
   python3 log_question.py --q "<question asked>" --a "<the user's answer>" \
       [--phase <phase>] [--asked-by <agent/role>] [--changed docs/02-requirements.md,sprints.json] \
-      [--status answered|open] [--id Q-07]
+      [--status answered|open] [--id Q-07] [--client]
 
 Every time the orchestrator asks the user a decision question and gets an
 answer, it logs it here. The dashboard reads this file to show the decision
@@ -39,6 +39,8 @@ def main() -> int:
     ap.add_argument("--changed", default="", help="comma-separated paths the answer changed")
     ap.add_argument("--status", choices=["answered", "open"], default=None)
     ap.add_argument("--id", dest="qid", default=None, help="stable id, e.g. Q-07; a repeat supersedes the earlier line")
+    ap.add_argument("--client", action="store_true",
+                    help="a question put to (or decided by) the client: shown in the client status report")
     ap.add_argument("--out", default=".harness/questions.jsonl")
     args = ap.parse_args()
 
@@ -60,6 +62,8 @@ def main() -> int:
         "status": status,
         "changed": [p.strip() for p in args.changed.split(",") if p.strip()],
     }
+    if args.client:
+        line["client"] = True
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("a") as f:

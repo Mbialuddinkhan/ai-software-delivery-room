@@ -8,7 +8,7 @@ description: >
   system", "audit our existing app", "review this codebase", "legacy system", "take over this project",
   "what's wrong with our software", "modernise".
 metadata:
-  version: "3.6.0"
+  version: "3.7.0"
 ---
 
 # Assess — understand an existing system and say what to do with it
@@ -20,6 +20,16 @@ short list of questions instead of sitting through weeks of workshops.
 
 Subagents share none of your context: every invocation prompt must contain the
 input paths, the output path and the template path.
+
+**You run the evidence gate, not the agents.** business-analyst,
+solution-architect, critic and judge have no shell. After every agent
+returns, run `validate_assessment.py --strict` on what it wrote and send
+every ERROR back to that agent before moving on.
+
+**What to expect** (first full run, eShopOnWeb: 15k lines of .NET, source
+only): about 2 hours end to end, 13 agent runs, about 3.5M subagent tokens;
+45 findings after challenge; Part A 9 pages, Part B about 50. Tell the user
+before starting on a larger system, and split it by module (Phase 3).
 
 **Ground rules (not overridable):**
 
@@ -44,8 +54,11 @@ input paths, the output path and the template path.
 
 1. Resolve PLUGIN_ROOT (two levels above this skill's base directory).
 2. `python3 PLUGIN_ROOT/scripts/init_asdr.py --source PLUGIN_ROOT`
-3. `mkdir -p docs/assess` and copy `.harness/templates/assess/*.json` and
-   `technical.md` there as starting points (do not overwrite existing files).
+3. `mkdir -p docs/assess` and copy `intake.json`, `as-is.json` and
+   `opportunities.json` from `.harness/templates/assess/` there as starting
+   points (do not overwrite existing files). The findings and technical
+   templates stay in `.harness/templates/assess/`: each reviewer writes its own
+   `findings-<area>.json` and `technical-<area>.md` (Phase 4).
 
 ## Phase 1 — Intake and authorisation
 
@@ -69,13 +82,20 @@ write them into any file.
 
     python3 .harness/scripts/assess_scan.py --target <source path> --out docs/assess/evidence
 
-It runs whatever is installed — OSV-Scanner (dependencies), Semgrep, gitleaks
-(code and history, redacted), lizard (complexity), jscpd (duplication) and git
-churn — and writes `evidence/scan-summary.md`. Show the user its tool table. A
-missing tool is reported, not fatal; tell the user what installing it would add.
+It runs whatever is installed — OSV-Scanner (dependencies; for .NET without a
+lock file it reads the packages from the project files), Semgrep, gitleaks
+(code and history, redacted), lizard (complexity), jscpd (duplication), git
+churn, and a front-end check (libman.json and CDN `<script>`/`<link>` tags,
+looked up in OSV) — and writes `evidence/scan-summary.md`. Show the user its
+tool table. A missing tool is reported, not fatal; tell the user what
+installing it would add. The evidence keeps locations only: copied code
+(clone fragments, matched lines) is stripped, because it can carry a password.
 
-Scanner hits are not findings. Semgrep measured about 40% precision on a real
-codebase, so every hit is triaged in the code by the agents in Phase 4.
+Scanner hits are not findings. Precision was about 40% on one codebase and
+over 90% on another, and recall was poor on both: hard-coded keys, open
+database firewalls and authorisation flaws were found only by reading the
+code. Every hit is triaged in the code in Phase 4, and the summary's "What
+these scanners do not cover" goes into the report's limits.
 
 **No source code** (live system only): skip the code scanners. Phase 3 then
 works from the running app as each role and its network traffic, and confidence
@@ -99,9 +119,12 @@ merge, so no single pass outgrows its context.
 
 ## Phase 4 — Technical review (run in parallel)
 
-Each writes its part of `docs/assess/technical.md` and appends findings to
-`docs/assess/findings.json` (template `.harness/templates/assess/findings.json`).
-Use one id prefix per agent so ids never collide.
+They run at the same time, so **each writes its own files** — never a shared
+one: `docs/assess/technical-<area>.md` (its narrative) and
+`docs/assess/findings-<area>.json` (its findings; template
+`.harness/templates/assess/findings.json`), with `<area>` = architecture,
+security, operations or process. The validator and the report merge them.
+Each agent keeps its own id prefix; a repeated id is an error.
 
 | Agent (ASSESS mode) | Covers | Prefix |
 |---|---|---|
@@ -110,10 +133,24 @@ Use one id prefix per agent so ids never collide.
 | **devops** | build, deploy, environments, backups, monitoring, infrastructure as code | `O-` |
 | **business-analyst** | process findings worth a severity (from the gaps) | `P-` |
 
-## Phase 5 — Opportunities and options
+security-compliance also writes `docs/assess/evidence/triage.json` (template
+`.harness/templates/assess/triage.json`): a verdict for every scanner hit —
+confirmed, false-alarm or not-applicable — so the report can show what the
+scanners were worth. Then run the gate over everything: its `DUPLICATE?`
+lines are the same issue filed by two reviewers, for the critic to settle.
 
-Invoke **product-owner** in ASSESS mode with: `as-is.json`, `findings.json`,
-`technical.md`; output `docs/assess/opportunities.json` (template). It writes:
+## Phase 5 — Effort, options, opportunities
+
+1. **solution-architect** (second invocation, now that every register exists):
+   add "## Options and effort" to `technical-architecture.md` — one table with
+   every finding from every register, one S/M/L → person-week scale, one rate
+   assumption, and each option's total built from the rows it still has to
+   fix. Every figure is labelled an estimate. (In the first run the options
+   left out the security and operations work, and the totals could not be
+   reproduced.)
+2. **product-owner** in ASSESS mode with: `as-is.json`, every
+   `findings*.json` and `technical*.md`; output `docs/assess/opportunities.json`
+   (template). It takes every figure from the architect's table and writes:
 
 - the summary;
 - recommendations for Now (0–30 days), Next (1–3 months) and Later (3–6 months);
@@ -121,29 +158,38 @@ Invoke **product-owner** in ASSESS mode with: `as-is.json`, `findings.json`,
 - opportunities;
 - the three options — fix in place, replace piece by piece, or rebuild — with
   cost, time and risk estimates from **solution-architect**;
-- the one commitment to the client;
-- the limits of the assessment.
+- the one commitment to the client — only what the Now list actually delivers;
+- the limits of the assessment;
+- `questions`: the few the client must answer (`{ids, question, why}`); the
+  report numbers them Q1, Q2 … and lists every as-is unknown in Part B.
 
 ## Phase 6 — Challenge
 
-Invoke **critic** with all of `docs/assess/`; output
-`docs/critique-assessment.md`. Its assessment checks:
+Invoke **critic** with all of `docs/assess/` and the gate's `DUPLICATE?`
+lines; output `docs/critique-assessment.md`. It opens the cited lines and
+checks: unsupported claims; severity against business impact; "used" claims
+with no data; areas never examined; duplicates across registers and
+severity disagreements between reviewers; options whose estimates leave out
+a register or contradict the findings; a commitment the plan cannot keep;
+scanner gaps the limits do not state.
 
-- unsupported or uncited claims;
-- severity that does not match the stated business impact;
-- "used" claims with no data behind them;
-- areas never examined;
-- options whose estimates contradict the findings.
-
-Then **judge** → `docs/decision-assessment.md`; owners fix the required
-changes, max 2 rounds.
+Then **judge** → `docs/decision-assessment.md`, with every required change
+numbered (RC-01 …) and assigned to one owner and file. Owners revise in
+parallel — product-owner last, because it takes the revised figures — and you
+run the gate after the round. The judge then appends "Round 2" with a
+verdict. Max 2 rounds. A merged finding keeps a "merged from O-12" note for
+traceability; no live reference to a removed id may remain.
 
 ## Phase 7 — Evidence gate
 
     python3 .harness/scripts/validate_assessment.py --root <source path> --strict
 
-Send every ERROR to its owner until it passes. A SECRET line means a value was
-pasted into a document: replace it with its location.
+Send every ERROR to its owner until it passes. The gate requires every
+`path:line` an item cites to exist (a wrong line next to a right one fails),
+and searches every file under `docs/assess/`, evidence included, for the
+credential values the source assigns — never printing them. A SECRET line
+means a value reached a document or the evidence: remove it and cite the
+location instead.
 
 ## Phase 8 — Report
 
@@ -155,10 +201,11 @@ from `~/.asdr/brand.json`, else `.harness/brand.json`, else a neutral style.
 - **Part A** (business, for owners): summary, health scorecard, how the
   business runs today, where processes break, the most serious risks in
   business terms, recommendations, adding new features, options, the
-  commitment, and the questions for the client.
-- **Part B** (technical appendix): scope and method, architecture and code
-  health, findings register and detail with evidence, process detail, scanner
-  results, limits.
+  commitment, and the numbered questions for the client.
+- **Part B** (technical appendix): scope and method (stating what access was
+  and was not available), architecture and code health, findings register
+  and detail with evidence, process detail and every open point, scanner
+  results with the triage counts, limits.
 
 Give the user the PDF (SendUserFile in Cowork) and the file path. Do not
 publish it as a page unless they ask for a private one.
@@ -178,12 +225,29 @@ architecture or sprint planning:
    marked keep / fix / new; `docs/02d-process-flows.md` from the as-is flows
    (to-be), with the gaps fixed.
 2. **business-analyst**: `docs/02-requirements.md` (rules and fixes become
-   requirements), `docs/02e-test-cases.md`.
+   requirements), `docs/02e-test-cases.md`, and **`docs/02f-parity.md`**
+   (template `.harness/templates/parity.md`): every behaviour the client keeps
+   becomes a `PAR-xx` item; an intended difference is a `change` with the
+   client's approval (who, when, where), a retired one a `drop`. Ask the user
+   for any approval that is not on record; never assume one.
 3. **Characterisation tests first.** Before any sprint changes existing code,
    the generator writes tests that pin the current behaviour of every area it
-   will touch, so refactoring cannot silently break what works. These test
-   cases are the "keep" items.
-4. Run `validate_product_map.py --require-coverage`, then continue with the
+   will touch, so refactoring cannot silently break what works. Tests that
+   observe a parity item call `parity('PAR-xx', value)`.
+4. **Baseline the old system** before any code changes, on its test
+   environment (never production):
+
+       python3 .harness/scripts/run_tests.py --parity old --base-url <old system test URL> --no-server
+
+   It records `.harness/test-results/parity-baseline.json`. Suites may define
+   `parity_cmd` in the test config to run only the parity tests.
+5. From then on, every sprint's regression run and the release gate compare
+   the new build with that baseline (`compare_parity.py`; `--gate` at release),
+   writing `docs/parity-report.md`. A kept behaviour that differs fails the
+   sprint and blocks the release. Optional, when the client's authorisation
+   allows it: REA's `compare-web-captures` for a deeper DOM / network diff of
+   web screens.
+6. Run `validate_product_map.py --require-coverage`, then continue with the
    `architect` skill or Phase 2 of `asdr`.
 
 ## Dashboard

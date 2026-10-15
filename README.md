@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.6.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.7.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -22,6 +22,21 @@ private claude.ai page; GitHub Pages only if you opt in). Every release builds
 persona, and Beginner / Everyday / Power user / Administrator — as HTML and
 PDF, stamped with the version and commit. A worked example lives in
 `examples/sample-app/`.
+
+**v3.7 — rebuild an old system without breaking it, report to the client,
+and an assessment you can trust.** When ASDR takes over an existing system,
+every behaviour the client keeps becomes a `PAR-xx` item; tests capture it on
+the old system once and on every build of the new one, and
+`compare_parity.py` blocks the release while a kept behaviour differs (an
+intended difference needs the client's recorded approval). The dashboard
+gains a **client status report** (`--audience client`): your brand, the same
+facts and status rule, nothing internal. And `/assess` was run end to end on
+a real open-source system (eShopOnWeb): the run exposed gaps that are now
+closed — every cited line must exist, the evidence keeps no copied code and
+is searched for the source's own credential values, duplicate findings across
+reviewers are flagged, front-end libraries are checked, option estimates come
+from one finding-level table, and the client's questions are numbered in the
+report.
 
 **v3.6 — assess an existing system, and a dashboard for every project.**
 `/assess` takes over a system someone else built — legacy, poorly built or
@@ -262,7 +277,7 @@ release   →  Documentation + Release-Manager → Changelog + Deploy guide
 | `architect` | **Architecture** — solution + AI + security + devops + critic + judge |
 | `riskgate` | **Risk gate** — security review + deployment readiness + classification |
 | `release` | **Release** — docs + changelog + release notes + deployment checklist |
-| `assess` | **Assess an existing system** — recover processes, review the code, two-part report, hand-off into a build (v3.6) |
+| `assess` | **Assess an existing system** — recover processes, review the code, two-part report, hand-off into a build with a parity gate (v3.6, v3.7) |
 
 Trigger phrases like "build me…", "let's build…", "run the delivery room",
 "design the architecture", "is this ready to ship", etc. map to the skills.
@@ -306,9 +321,9 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.6.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.7.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → … → v3.6 change log
+CHANGELOG.md                 ← full v2.1 → v3 → … → v3.7 change log
 agents/                      ← 18 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa, product-manager)
 skills/                      ← 7 orchestrator skills (asdr, discover, architect,
@@ -345,6 +360,7 @@ scripts/
   assess_scan.py             ← /assess: inventory + scanners + hotspots (v3.6)
   validate_assessment.py     ← /assess: evidence gate + pasted-secret check (v3.6)
   build_assess_report.py     ← /assess: two-part report, HTML + branded PDF (v3.6)
+  compare_parity.py          ← old system vs new build, behaviour by behaviour; release gate (v3.7)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -352,7 +368,7 @@ templates/                   ← fill-in templates: contract, plan, qa-report,
                                design-system, agent-runtime.yaml, build-ladder (v3.3),
                                feature-list, process-flows, test-cases, publish.json,
                                ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4),
-                               dashboard.json, assess/ (v3.6)
+                               dashboard.json, assess/ (v3.6), parity.md, assess/triage.json (v3.7)
 examples/sample-app/         ← TaskBoard: a small app with every v3.4 artifact —
                                product docs, [TC-xx] tests in all three frameworks,
                                tours, manual.json (v3.4), and a worked assessment
@@ -365,7 +381,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (127 tests)
+tests/                       ← python3 -m unittest discover -s tests (171 tests)
 ```
 
 ## The 18 agents at a glance

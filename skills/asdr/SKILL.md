@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.6.0"
+  version: "3.7.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -74,7 +74,9 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
   answer: `python3 .harness/scripts/log_question.py --q "<question>" --a
   "<answer>" --phase <phase> --asked-by <who asked> [--changed <docs it
   changed>]`. A question still waiting for an answer gets logged with `--status
-  open`; log it again under the same `--id` once it is answered.
+  open`; log it again under the same `--id` once it is answered. Add
+  `--client` when the question is for the client (a business decision, an
+  approval, access): only those appear in the client status report.
 - **Sprint clock**: `python3 .harness/scripts/sprint_clock.py start <sprint>`
   when a sprint is activated, and `torn-down <sprint>` on a teardown (the evaluator stamps `done` itself). The
   delivery date is computed from these.
@@ -90,6 +92,14 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
   - expected delivery ± its standard deviation;
   - what is waiting on the user;
   - the link to the dashboard.
+- **Client status report** (only when the user asks for one, e.g. "status
+  report for the client"): `python3 .harness/scripts/build_dashboard.py
+  --audience client` writes `docs/dashboard/client/status-report.pdf` in the
+  user's brand (`~/.asdr/brand.json`), from the same facts and the same status
+  rule, without agent activity, effort, internal questions, local paths or
+  internal links. Fill `client` in `.harness/dashboard.json` first (name,
+  reference). Give the user the PDF to read and send themselves; never publish
+  it and never send it to the client yourself.
 
 ### Resume protocol
 
@@ -133,6 +143,11 @@ that produced the file.
   Fed by `log_question.py` and `sprint_clock.py`.
 - `assess_scan.py`, `validate_assessment.py`, `build_assess_report.py` — the
   `assess` skill's scanner run, evidence gate and two-part report.
+- `compare_parity.py [--gate]` — existing systems only (`docs/02f-parity.md`):
+  compares what tests captured with `parity('PAR-xx', …)` on the old system
+  (`run_tests.py --parity old`) and on the new build; a kept behaviour that
+  differs fails the sprint and blocks the release. `validate_product_map.py
+  --gate` requires a fresh, passing comparison.
 - `validate_contract.py` and `validate_sprints.py` (which also requires each
   sprint's `flows` and every Must flow delivered) run in later phases.
 
@@ -147,6 +162,8 @@ Before dispatching ANY agent in the sprint loop, run these in order:
     python3 .harness/scripts/validate_product_map.py --results latest
                                                   # -> .harness/product-map.json (journey state;
                                                   #    ERROR lines are expected mid-build)
+    python3 .harness/scripts/compare_parity.py    # existing systems only (docs/02f-parity.md)
+                                                  # -> .harness/parity.json
     python3 .harness/scripts/emit_facts.py        # -> .harness/facts.json (diffs against
                                                   #    progress.json -> sprint_base_ref)
     python3 .harness/scripts/build_graph.py       # -> graph in .harness/traceability.json

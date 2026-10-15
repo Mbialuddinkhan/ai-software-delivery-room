@@ -55,11 +55,31 @@ looks right from one that is right.
   - A severity that does not match the stated business impact (critical with a
     cosmetic impact, or low with data loss) → Medium.
   - A scanner hit reported as a finding without being confirmed in the code →
-    High: about 60% of hits are false alarms.
+    High: precision ranged from about 40% to over 90% across trials, so no
+    hit is trusted unchecked. `docs/assess/evidence/triage.json` must give a
+    verdict for every hit.
+  - The same issue in two registers (the validator's `DUPLICATE?` lines, or any
+    pair you spot) left as two findings → Medium. Name the one to keep; the
+    other is removed and its id noted in the kept one's evidence or text.
+  - Two reviewers disagreeing on the severity of the same issue → Medium. Say
+    which severity stands and why.
+  - An option whose estimate leaves out the work to fix any register
+    (security, operations, process) → Medium.
+  - A scanner gap left unsaid: if a class of weakness was found by reading
+    the code but not by any scanner (hard-coded keys, infrastructure rules,
+    front-end libraries), the limits must say what the scanners do not cover
+    → Low.
   - An area never examined (no operations review, no performance view, a
     module skipped) → Medium.
   - An option whose cost or time contradicts the findings it must fix → Medium.
   - Any secret value, key or personal data copied into a document → High.
+- Mandatory checks when `docs/02f-parity.md` exists (work on an existing system):
+  - A "keep" feature or rule from the as-is documents with no PAR item, when
+    the build will touch it → High: nothing would notice if it broke.
+  - A `change` or `drop` with no named approver, date and source → High.
+  - An Ignore so broad that the comparison proves nothing (ignoring the very
+    field the behaviour is about) → High.
+  - A PAR item no test case names on its Covers line → Medium.
 
 ## Format of a finding
 

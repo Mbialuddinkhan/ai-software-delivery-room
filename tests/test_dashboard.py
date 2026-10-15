@@ -7,6 +7,7 @@ every section the user asked for."""
 import datetime as dt
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -144,7 +145,7 @@ class TestForecast(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
 
-class TestDashboardBuild(unittest.TestCase):
+class Fixture(unittest.TestCase):
     def setUp(self):
         self.d = Path(tempfile.mkdtemp(prefix="asdr-dash-"))
         h = self.d / ".harness"
@@ -192,6 +193,8 @@ class TestDashboardBuild(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.d, ignore_errors=True)
 
+
+class TestDashboardBuild(Fixture):
     def test_every_section_and_rule(self):
         r = run([str(S / "build_dashboard.py"), "--no-pdf"], self.d)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
@@ -234,6 +237,79 @@ class TestDashboardBuild(unittest.TestCase):
         self.assertIn("after 2 sprints", h)
 
 
+class TestClientView(Fixture):
+    """--audience client: same facts and status rule, nothing internal, in the consultant's brand."""
+
+    def build_client(self, *extra):
+        home = self.d / "home"
+        home.mkdir(exist_ok=True)
+        cfg = json.loads((self.d / ".harness/dashboard.json").read_text())
+        cfg["client"] = {"name": "Acme Logistics", "reference": "BK-2026-014", "hide_risks": ["R-9"]}
+        cfg["environments"].append({"name": "Internal sandbox", "url": "https://sandbox.asdr-test.invalid", "client": False})
+        cfg["links"].append({"label": "UAT form", "url": "https://forms.asdr-test.invalid/uat", "client": True})
+        (self.d / ".harness/dashboard.json").write_text(json.dumps(cfg))
+        with (self.d / ".harness/questions.jsonl").open("a") as f:
+            f.write(json.dumps({"id": "Q-10", "question": "Which date format do your reports use?", "answer": None,
+                                "status": "open", "client": True}) + "\n")
+            f.write(json.dumps({"id": "Q-11", "question": "Internal: switch the ORM?", "answer": "No",
+                                "status": "answered"}) + "\n")
+        with (self.d / "docs/09-risk-register.md").open("a") as f:
+            f.write("| R-9 | Margin on fixed price | High | Low | Bilal | track hours | Open |\n"
+                    "| R-3 | Vendor API limits | Medium | Low | solution-architect | cache | Open |\n")
+        brand = self.d / "brand.json"
+        brand.write_text(json.dumps({"monogram": "BK", "lockup": "Bilal Uddin Khan", "footer": "BILALKHAN.CONSULTING · CONFIDENTIAL"}))
+        r = run([str(S / "build_dashboard.py"), "--audience", "client", "--no-pdf", "--brand", str(brand), *extra], self.d,
+                env={"HOME": str(home)})
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        return r, (self.d / "docs/dashboard/client/index.html").read_text()
+
+    def test_client_report_content(self):
+        r, h = self.build_client()
+        for i, title in enumerate(["Summary", "Phases", "Delivery forecast", "Roadmap", "Features", "Quality", "Risks",
+                                   "Decisions and what we need from you", "Deliverables", "Environments and links"], 1):
+            self.assertIn(f'<span class="no">{i:02d} ·</span>{title}</h2>', h)
+        self.assertIn("Prepared for Acme Logistics", h)
+        self.assertIn("BK-2026-014", h)
+        self.assertIn(">BK<", h)
+        self.assertIn("BILALKHAN.CONSULTING · CONFIDENTIAL", h)
+        self.assertEqual(h.count('class="callout"'), 1)                  # one callout: the delivery estimate
+        self.assertIn("Expected delivery · estimate", h)
+        self.assertIn("Which date format do your reports use?", h)       # client question shown
+        self.assertIn("staging.asdr-test.invalid", h)
+        self.assertIn("forms.asdr-test.invalid/uat", h)
+        self.assertIn("Delivery team", h)                                # agent owner → delivery team
+        self.assertIn("read it before you send it", r.stdout)
+
+    def test_nothing_internal_leaks(self):
+        _, h = self.build_client()
+        for leak in ("Internal: switch the ORM", "localhost", "sandbox.asdr-test.invalid", "ci.asdr-test.invalid",
+                     "Margin on fixed price", "solution-architect", "ASDR effort", "Recent activity", "Local path",
+                     ".harness", "evaluator", "attempt"):
+            self.assertNotIn(leak, h, leak)
+
+    def test_status_matches_the_private_view(self):
+        _, h = self.build_client()
+        run([str(S / "build_dashboard.py"), "--no-pdf"], self.d)
+        private = (self.d / "docs/dashboard/index.html").read_text()
+        state = re.search(r'pill state \w+">([A-Z ]+)<', private).group(1).lower()
+        self.assertIn(f'class="r ', h)
+        self.assertIn(f'>{state}</span>', h)
+        self.assertIn("decision(s) waiting on you", h)
+
+    def test_classify_full_same_state_client_wording(self):
+        qs = [{"status": "open"}, {"status": "open", "client": True}]
+        pm = {"flows": {"PF-01": {"status": "failing", "priority": "must", "title": "First sign-in"}}}
+        state, private, client = bd.classify_full({"attempt": 5, "sprint": "sprint-02"}, pm, {}, qs, [], [])
+        self.assertEqual(state, "blocked")
+        self.assertEqual(len(private), len(client))
+        joined = "; ".join(client)
+        self.assertIn("1 decision(s) waiting on you", joined)
+        self.assertIn("waiting on an internal decision", joined)
+        self.assertIn("First sign-in", joined)
+        self.assertNotIn("sprint-02", joined)
+        self.assertNotIn("PF-01", joined)
+
+
 class TestLogAndClock(unittest.TestCase):
     def setUp(self):
         self.d = Path(tempfile.mkdtemp(prefix="asdr-log-"))
@@ -245,11 +321,14 @@ class TestLogAndClock(unittest.TestCase):
         run([str(S / "log_question.py"), "--q", "Which provider?", "--phase", "arch"], self.d)
         run([str(S / "log_question.py"), "--q", "Which provider?", "--a", "Stripe", "--id", "Q-01",
              "--changed", "docs/03-architecture.md, docs/05-security.md"], self.d)
+        run([str(S / "log_question.py"), "--q", "Date format?", "--client"], self.d)
         rows = [json.loads(x) for x in (self.d / ".harness/questions.jsonl").read_text().splitlines()]
         self.assertEqual(rows[0]["status"], "open")
         self.assertEqual(rows[0]["id"], "Q-01")
         self.assertEqual(rows[1]["status"], "answered")
         self.assertEqual(rows[1]["changed"], ["docs/03-architecture.md", "docs/05-security.md"])
+        self.assertNotIn("client", rows[1])
+        self.assertTrue(rows[2]["client"])
 
     def test_sprint_clock(self):
         self.assertEqual(run([str(S / "sprint_clock.py"), "start", "sprint-03"], self.d).returncode, 0)

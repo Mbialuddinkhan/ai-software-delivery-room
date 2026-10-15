@@ -3,6 +3,87 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.7.0] — parity with the old system, a client status report, and /assess hardened by a real run
+
+### Added
+- **Parity gate (existing systems).** At the `/assess` hand-off the
+  business-analyst writes `docs/02f-parity.md` (template `templates/parity.md`):
+  every behaviour the client keeps is a `PAR-xx` item with a decision — `keep`,
+  or `change` / `drop` with the client's approval (who, when, where). Tests
+  capture what the user sees or gets with `parity('PAR-xx', value)` in
+  Playwright, Cypress and Selenium. `run_tests.py --parity old --base-url <old
+  test URL>` records the old system once as the baseline;
+  `scripts/compare_parity.py` compares every later run with it after Ignore
+  rules (field names, `timestamps`, `uuids`, `order`, `whitespace`, `case`,
+  `numbers-in-ids`) and writes `docs/parity-report.md` with a diff per
+  difference. A kept behaviour that differs fails the sprint and blocks the
+  release; captures count only from passing tests; a value that changes within
+  one run is "unstable"; comparing a URL with itself is refused. PAR items join
+  the coverage rules (`validate_product_map.py`), facts (`facts:parity.*`), the
+  dashboard's status rule, the critic's checks and the release notes.
+- **Client status report.** `build_dashboard.py --audience client` writes
+  `docs/dashboard/client/index.html` and `status-report.pdf` in your brand:
+  the same facts and status rule in client wording, without agent activity,
+  effort, git internals, local paths, internal questions (`log_question.py
+  --client` marks the ones for the client), local or internal environments,
+  internal links, hidden risks or process records. Never published, never
+  sent by ASDR.
+- `scripts/assess_scan.py`: a front-end library check (libman.json and CDN
+  `<script>`/`<link>` tags, with the integrity flag, looked up in OSV npm →
+  `evidence/osv-frontend.json`); NuGet packages read from the project files
+  when a .NET repo has no lock file; a "What these scanners do not cover"
+  section for the report's limits.
+- `evidence/triage.json` (template `templates/assess/triage.json`): a verdict
+  for every scanner hit; Part B shows the counts per tool.
+- `opportunities.json` → `questions`: the report numbers them Q1, Q2 … in
+  Part A and lists every as-is unknown in Part B.
+
+### Changed (from the first full /assess run — eShopOnWeb, 15k lines of .NET)
+- Reviewers run in parallel, so each writes its own `findings-<area>.json` and
+  `technical-<area>.md`; the gate and the report merge them.
+- Phase 5 starts with the solution-architect's "Options and effort" table:
+  every finding from every register on one S/M/L scale and one rate, so the
+  option totals can be reproduced. The first run's options left out the
+  security and operations work.
+- Phase 6 runs as numbered required changes (RC-01 …) with owners revising in
+  parallel, the product-owner last, then a judge "Round 2" verdict.
+- The orchestrator runs the evidence gate after every agent:
+  business-analyst, solution-architect, critic and judge have no shell.
+- Critic: duplicates across registers, severity disagreements between
+  reviewers, options missing a register, a commitment the plan cannot keep,
+  unstated scanner gaps. Product-owner: figures only from the architect's
+  table, a commitment that promises only what the Now list delivers, numbered
+  questions, short summary paragraphs. Security: triage file, look for
+  constants, route authorisation and infrastructure network rules whatever the
+  scans say.
+- Hotspots need at least two changes; a file changed once was ranked first on
+  its size alone.
+- The report's method line states what access was NOT available (no running
+  system, no data) instead of assuming it.
+- The dashboard keeps a regression flagged until it is fixed.
+
+### Fixed
+- **The evidence gate accepted a finding if any one citation resolved.** Every
+  `path:line` must now exist; `git: <commit> path:line` marks a file that
+  exists only in history, and paths inside URLs are ignored.
+- **A password reached the evidence folder** through jscpd clone fragments.
+  Scanner output now keeps locations only (fragments, matched lines and
+  gitleaks lines are stripped), and the gate harvests the credential values
+  the source assigns and fails if any file under `docs/assess/`, evidence
+  included, contains one — without printing it — plus a key/token/password
+  pattern sweep of the evidence.
+- Two reviewers filing the same issue went unnoticed: the gate lists likely
+  duplicates (similar titles plus the same primary citation or most citations
+  shared) for the critic.
+- `--findings` naming one of the merged files counted it twice.
+- osv-scanner treated a folder named `source` as its subcommand, and on a .NET
+  repo without a lock file reported "0 vulnerable" after scanning nothing; it
+  now reports that nothing was read, then scans the packages from the project
+  files.
+- `.cshtml`, `.razor` and project files were missing from the inventory.
+- The report never showed the client the curated questions that Part A
+  referred to; the triage table vanished when there was no scan summary.
+
 ## [3.6.0] — assess an existing system; a dashboard for every project
 
 ### Added

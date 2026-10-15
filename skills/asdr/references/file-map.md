@@ -16,6 +16,7 @@ Templates live in `.harness/templates/`.
 | 2c | Feature list (requirements by feature) | `docs/02c-features.md` | product-manager | feature-list.md |
 | 2d | Process flows (end-to-end journeys) | `docs/02d-process-flows.md` | product-manager | process-flows.md |
 | 2e | Test cases | `docs/02e-test-cases.md` | business-analyst | test-cases.md |
+| 2f | Parity list (existing systems only) | `docs/02f-parity.md` | business-analyst (assess hand-off) | parity.md |
 | 3 | Discovery critique | `docs/critique-discovery.md` | critic | critique.md |
 | 4 | Discovery decision | `docs/decision-discovery.md` | judge | decision.md |
 | 5 | Architecture | `docs/03-architecture.md` | solution-architect | architecture.md |
@@ -38,12 +39,13 @@ Templates live in `.harness/templates/`.
 | 19 | Project dashboard (generated) | `docs/dashboard/index.html`, `dashboard.pdf` | `build_dashboard.py` | dashboard.json |
 | 19b | Dashboard inputs | `.harness/dashboard.json` (environments, repos, links), `.harness/questions.jsonl`, `.harness/sprint-clock.jsonl`, `.harness/forecast-history.jsonl`, `.harness/dashboard-snapshot.json` | orchestrator, devops, evaluator, `log_question.py`, `sprint_clock.py` | dashboard.json |
 | A1 | Assessment intake (assess only) | `docs/assess/intake.json` | assess skill | assess/intake.json |
-| A2 | Scanner evidence (assess only) | `docs/assess/evidence/scan-summary.{json,md}` + raw outputs | `assess_scan.py` | — |
+| A2 | Scanner evidence (assess only) | `docs/assess/evidence/scan-summary.{json,md}`, `osv-frontend.json` + raw outputs (locations only, no copied code); `triage.json` (a verdict per hit, security-compliance) | `assess_scan.py`, security-compliance | assess/triage.json |
 | A3 | As-is processes (assess only) | `docs/assess/as-is.json` | business-analyst (ASSESS) | assess/as-is.json |
-| A4 | Technical review + findings (assess only) | `docs/assess/technical.md`, `docs/assess/findings.json` | solution-architect, security-compliance, devops, business-analyst (ASSESS) | assess/technical.md, assess/findings.json |
+| A4 | Technical review + findings (assess only) | one pair per reviewer: `docs/assess/technical-<area>.md`, `docs/assess/findings-<area>.json` (area = process, architecture, security, operations); the architect's also holds "Options and effort" | business-analyst, solution-architect, security-compliance, devops (ASSESS) | assess/technical.md, assess/findings.json |
 | A5 | Opportunities and options (assess only) | `docs/assess/opportunities.json` | product-owner (ASSESS) | assess/opportunities.json |
 | A6 | Assessment critique + decision | `docs/critique-assessment.md`, `docs/decision-assessment.md` | critic, judge | critique.md, decision.md |
 | A7 | Assessment report (generated, private) | `docs/assess/report/index.html`, `assessment.pdf` | `build_assess_report.py` | assess/brand.json |
+| A8 | Parity with the old system (generated) | `docs/parity-report.md` (+ `.harness/parity.json`; baseline `.harness/test-results/parity-baseline.json`) | `compare_parity.py`, `run_tests.py --parity old` | — |
 
 Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
 

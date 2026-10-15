@@ -18,6 +18,9 @@ It reads the discovery documents and follows every link in the chain
                             roles whose experience the feature changes)
   docs/02d-process-flows.md PF-00 lifecycle + one section per flow
   docs/02e-test-cases.md    TC sections; "Covers:" lists the items each one tests
+  docs/02f-parity.md        existing systems only: PAR items, behaviour kept from the
+                            old system (keep / change / drop); with --gate a fresh,
+                            passing compare_parity.py result is required too
 
 and reports every broken link as an "ERROR:" line (exit 1) — a feature no
 journey uses, a use case on no flow, a flow nothing leads to, a flow without a
@@ -62,12 +65,13 @@ NONE_WORDS = {"", "none", "—", "-", "n/a", "na"}
 
 
 ITEM_RE = re.compile(r"\b(PF-\d+\.E\d+|PF-\d+\.\d+|UC-\d+\.[AE]\d+|UC-\d+|AC-\d+\.\d+|"
-                     r"NFR-\d+|FR-\d+|BR-\d+|EC-\d+|F-\d+)\b")
-KIND_ORDER = ["FR", "NFR", "AC", "BR", "EC", "UC", "UC-ALT", "F", "STEP", "EXC"]
+                     r"NFR-\d+|FR-\d+|BR-\d+|EC-\d+|PAR-\d+|F-\d+)\b")
+KIND_ORDER = ["FR", "NFR", "AC", "BR", "EC", "UC", "UC-ALT", "F", "STEP", "EXC", "PAR"]
 KIND_LABEL = {"FR": "Functional requirements", "NFR": "Non-functional requirements",
               "AC": "Acceptance criteria", "BR": "Business rules", "EC": "Edge cases",
               "UC": "Use cases (main flow)", "UC-ALT": "Use case alternate and exception flows",
-              "F": "Features", "STEP": "Process flow steps", "EXC": "Process flow exception paths"}
+              "F": "Features", "STEP": "Process flow steps", "EXC": "Process flow exception paths",
+              "PAR": "Parity items (behaviour kept from the old system)"}
 
 
 def kind_of(item: str) -> str:
@@ -206,6 +210,13 @@ def main() -> int:
     f_md = read(d / "02c-features.md", errors)
     pf_md = read(d / "02d-process-flows.md", errors)
     tc_md = read(d / "02e-test-cases.md", errors)
+    par_md = read(d / "02f-parity.md", errors, required=False)     # existing systems only (v3.7)
+    parity = {}                                                     # PAR id -> (behaviour, decision)
+    for line in par_md.splitlines():
+        m = re.match(r"^\s*\|\s*(PAR-\d+)\s*\|\s*([^|]*)\|(?:[^|]*\|){3}\s*([^|]*)\|?", line)
+        if m:
+            dec = (re.match(r"(keep|change|drop)", m.group(3).strip(), re.IGNORECASE) or [None, "keep"])[1].lower()
+            parity[m.group(1)] = (m.group(2).strip()[:160], dec)
 
     # ── requirements & use cases ──
     frs = []
@@ -446,7 +457,7 @@ def main() -> int:
                 cover_gap.append(f"{r} is not covered by any test case")
         for tid, t in tcs.items():
             for x in t["covers"]:
-                known = (x in req_items or x in ucs or x in uc_alts or x in features
+                known = (x in req_items or x in ucs or x in uc_alts or x in features or x in parity
                          or any(x == st["id"] for f in flows.values() for st in f["steps"]) or x in exc_ids)
                 if not known:
                     errors.append(f"{tid} covers {x}, which no document defines")
@@ -509,6 +520,9 @@ def main() -> int:
             testable[st["id"]] = ("STEP", f"{st['actor']}: {st['action']}")
         for e in f["exceptions"]:
             testable[e["id"]] = ("EXC", e["condition"])
+    for x, (behaviour, dec) in parity.items():
+        if dec != "drop":                            # a retired behaviour has nothing left to test
+            testable[x] = ("PAR", behaviour)
 
     declared_by = defaultdict(set)                  # item -> test cases that name it
     for tid, t in tcs.items():
@@ -592,6 +606,26 @@ def main() -> int:
                 warns.append(f"{len(unreached)} testable item(s) no passing test reached: "
                              f"{', '.join(unreached[:15])}{' …' if len(unreached) > 15 else ''} — add covers(...) "
                              "where a test proves each one (docs/product-map.md lists them)")
+
+    # parity with the old system (existing systems): the gate needs a fresh, passing comparison
+    if args.gate and any(dec != "drop" for _, dec in parity.values()):
+        pj = Path(".harness/parity.json")
+        if not pj.is_file():
+            errors.append("docs/02f-parity.md lists behaviours to keep, but there is no comparison with the old "
+                          "system — run compare_parity.py --gate (baseline: run_tests.py --parity old)")
+        else:
+            try:
+                par = json.loads(pj.read_text())
+            except ValueError:
+                par = {}
+            if summary and (par.get("new") or {}).get("run_id") != summary.get("run_id"):
+                errors.append(f"the parity comparison is for run {(par.get('new') or {}).get('run_id')}, not the "
+                              f"latest run {summary.get('run_id')} — rerun compare_parity.py --gate")
+            elif par.get("errors") or not par.get("all_kept_match"):
+                pc = par.get("counts") or {}
+                errors.append(f"parity with the old system fails: {pc.get('same', 0)}/{pc.get('keep', 0)} kept "
+                              f"behaviours match, {pc.get('differs', 0)} differ, {pc.get('missing', 0)} not compared "
+                              "(docs/parity-report.md)")
 
     # sprints that deliver each flow (optional "flows" list on sprint entries)
     sprint_flows = defaultdict(list)

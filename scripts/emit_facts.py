@@ -282,6 +282,29 @@ def product_map_facts(root):
                           "priority": v.get("priority")} for k, v in (m.get("flows") or {}).items()}}, None
 
 
+def parity_facts(root):
+    """Parity with the old system, written by compare_parity.py (existing systems).
+
+    Criteria cite e.g. `facts:parity.all_kept_match == true`,
+    `facts:parity.counts.differs == 0` or `facts:parity.items.PAR-03.status == "same"`.
+    None when the project has no docs/02f-parity.md.
+    """
+    if not (root / "docs" / "02f-parity.md").is_file():
+        return None, None
+    p = root / ".harness" / "parity.json"
+    if not p.is_file():
+        return None, "parity: docs/02f-parity.md exists but no .harness/parity.json (run compare_parity.py)"
+    try:
+        m = json.loads(p.read_text())
+    except ValueError as e:
+        return None, f"parity: unreadable ({e})"
+    return {"generated_at": m.get("generated_at"), "all_kept_match": m.get("all_kept_match"),
+            "errors": m.get("errors"), "counts": m.get("counts"),
+            "new_run": (m.get("new") or {}).get("run_id"), "old_run": (m.get("old") or {}).get("run_id"),
+            "items": {k: {"status": v.get("status"), "decision": v.get("decision")}
+                      for k, v in (m.get("items") or {}).items()}}, None
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=None,
@@ -339,6 +362,7 @@ def main() -> int:
         "tests": tests,
         "test_runs": None,
         "product_map": None,
+        "parity": None,
         "notes": notes,
     }
 
@@ -348,6 +372,9 @@ def main() -> int:
     facts["product_map"], merr = product_map_facts(root)
     if merr:
         notes.append(merr)
+    facts["parity"], perr = parity_facts(root)
+    if perr:
+        notes.append(perr)
 
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)

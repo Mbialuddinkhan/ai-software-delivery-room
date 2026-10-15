@@ -9,10 +9,11 @@ Usage:
 Reads (all under --dir):
   intake.json          client, system, scope, authorisation, reference, contact
   as-is.json           roles, features, use cases, flows, rules, gaps, unknowns
-  findings.json        technical findings (validate_assessment.py schema)
+  findings.json        technical findings (validate_assessment.py schema), plus
+  findings-*.json      one file per reviewing agent (merged)
   opportunities.json   summary, recommendations by horizon, new-feature fit,
                        options (fix / replace piece by piece / rebuild), commitment
-  technical.md         architecture and code-health narrative (optional)
+  technical.md         narrative (optional), plus technical-<area>.md per agent (merged in order)
   evidence/scan-summary.json   scanner results (optional, from assess_scan.py)
 
 Brand: --brand, else .harness/brand.json, else ~/.asdr/brand.json, else a
@@ -264,13 +265,33 @@ def tbl(head, rows) -> str:
             + "</tbody></table></div>")
 
 
+def method_text(scope: dict, scan: dict) -> str:
+    """Say what was actually used — never claim a running system or data that were not available."""
+    access = [a for a in as_list(scope.get("access")) if a and not str(a).startswith("<")]
+    ran = [k for k, v in (scan.get("status") or {}).items() if v == "ran"]
+    txt = "Read-only review of " + (", ".join(access) if access else "the source code") + "."
+    if ran:
+        txt += f" Scanners: {', '.join(ran)}; every hit was checked in the code before it became a finding."
+    if not any("environment" in str(a).lower() or "running" in str(a).lower() or "live" in str(a).lower() for a in access):
+        txt += " The running system was not used, so behaviour is inferred from the code."
+    if not any("data" in str(a).lower() or "database" in str(a).lower() for a in access):
+        txt += " No production data was available, so whether a feature is used is not known."
+    return txt + " No attack testing."
+
+
 def build(d: Path, brand) -> "tuple[str, dict]":
     intake = read_json(d / "intake.json", {})
     asis = read_json(d / "as-is.json", {})
-    findings = read_json(d / "findings.json", [])
+    findings = []
+    for fp in [d / "findings.json"] + sorted(d.glob("findings-*.json")):     # one file per reviewing agent
+        findings += [f for f in (read_json(fp, []) or []) if isinstance(f, dict) and "_about" not in f]
     opp = read_json(d / "opportunities.json", {})
     scan = read_json(d / "evidence" / "scan-summary.json", {})
-    tech_md = (d / "technical.md").read_text(errors="ignore") if (d / "technical.md").is_file() else ""
+    parts = [d / "technical.md"] + [d / f"technical-{a}.md" for a in ("architecture", "security", "operations", "process")]
+    parts += [p for p in sorted(d.glob("technical-*.md")) if p not in parts]
+    parts = [p for p in parts if p.is_file() and not re.search(r"<(?:System|Components|Hotspots)[^>]*>", p.read_text(errors="ignore"))]
+    tech_md = "\n\n".join(re.sub(r"^#\s+.*\n", "", p.read_text(errors="ignore"), count=1) if i else p.read_text(errors="ignore")
+                           for i, p in enumerate(x for x in parts if x.is_file()))
     findings = sorted(findings, key=lambda f: (SEV_ORDER.index(f.get("severity")) if f.get("severity") in SEV_ORDER else 9, f.get("id", "")))
     gaps = asis.get("gaps", [])
     today = dt.date.today()
@@ -380,11 +401,21 @@ def build(d: Path, brand) -> "tuple[str, dict]":
                    + "".join(f"<p>{inline(p)}</p>" for p in as_list(opp["commitment"])) + "</div>")
 
     unk = asis.get("unknowns", [])
+    qs = [({"question": q} if isinstance(q, str) else q) for q in as_list(opp.get("questions")) if q]
     out.append(h2("What we need from you"))
-    out.append(f'<p>These questions cannot be answered from the code or the data. A short review of this report '
-               f'and answers to these {len(unk)} questions replaces a full discovery exercise.</p>')
-    out.append(tbl(["", "Question", "Why we are asking"],
-                   [[f'<span class="mono">{e(u.get("id"))}</span>', e(u.get("question")), e(u.get("why"))] for u in unk]))
+    if qs:      # the product-owner's curated list: numbered, because Part A refers to "question 2"
+        out.append(f'<p>These questions cannot be answered from the code or the data. A short review of this report '
+                   f'and answers to these {len(qs)} questions replaces a full discovery exercise. Every open point '
+                   f'behind them is listed in Part B.</p>')
+        out.append(tbl(["", "Question", "Why we are asking", "Covers"],
+                       [[f'<span class="mono">Q{i}</span>', e(q.get("question")), e(q.get("why")),
+                         f'<span class="mono">{e(", ".join(str(x) for x in as_list(q.get("ids"))))}</span>']
+                        for i, q in enumerate(qs, 1)]))
+    else:
+        out.append(f'<p>These questions cannot be answered from the code or the data. A short review of this report '
+                   f'and answers to these {len(unk)} questions replaces a full discovery exercise.</p>')
+        out.append(tbl(["", "Question", "Why we are asking"],
+                       [[f'<span class="mono">{e(u.get("id"))}</span>', e(u.get("question")), e(u.get("why"))] for u in unk]))
 
     # PART B — technical appendix
     out.append('<section class="part"><span class="eyebrow">Part B · Technical appendix</span></section>')
@@ -394,8 +425,7 @@ def build(d: Path, brand) -> "tuple[str, dict]":
                               [e("In scope"), e(", ".join(as_list(sc.get("in_scope"))) or "—")],
                               [e("Out of scope"), e(", ".join(as_list(sc.get("out_of_scope"))) or "—")],
                               [e("Authorisation"), e((intake.get("authorization") or {}).get("summary") or "—")],
-                              [e("Method"), e("Read-only: source code review, standard scanners, the database structure and "
-                                              "data counts, and the running application used as each role. No attack testing.")]]))
+                              [e("Method"), e(method_text(sc, scan))]]))
     if scan.get("status"):
         out.append("<h3>Tools run</h3>" + tbl(["Tool", "Status"], [[e(k), e(v)] for k, v in scan["status"].items()]))
     if tech_md:
@@ -433,10 +463,15 @@ def build(d: Path, brand) -> "tuple[str, dict]":
         out.append("<h3>Features</h3>" + tbl(["", "Feature", "Used by", "Evidence of use", "Confidence"],
                    [[f'<span class="mono">{e(f.get("id"))}</span>', e(f.get("name")), e(", ".join(as_list(f.get("roles")))),
                      e(f.get("used")), e(f.get("confidence"))] for f in feats]))
+    if qs and unk:
+        out.append("<h3>Every open point (behind the questions in Part A)</h3>" + tbl(["", "Open point", "Why the code cannot answer it"],
+                   [[f'<span class="mono">{e(u.get("id"))}</span>', e(u.get("question")), e(u.get("why"))] for u in unk]))
 
-    if scan.get("tools"):
+    triage = read_json(d / "evidence" / "triage.json", [])
+    triage = [x for x in triage if isinstance(x, dict) and "<" not in str(x.get("tool", ""))] if isinstance(triage, list) else []
+    if scan.get("tools") or triage:
         out.append(h2("Scanner results"))
-        t = scan["tools"]
+        t = scan.get("tools") or {}
         o = (t.get("deps") or {}).get("osv-scanner") or {}
         if o.get("status") == "ran":
             out.append(f'<p>Dependencies: {o.get("vulnerable_packages")} packages with {o.get("advisories")} known advisories '
@@ -445,6 +480,22 @@ def build(d: Path, brand) -> "tuple[str, dict]":
         if s.get("status") == "ran":
             out.append(f'<p>Static analysis: {s.get("findings")} raw hits, each triaged in the code; only confirmed ones '
                        'appear as findings above.</p>')
+        fe = t.get("frontend") or {}
+        if fe.get("status") == "ran":
+            out.append(f'<p>Front-end libraries: {fe.get("libraries")} found ({fe.get("from_cdn")} loaded from a public CDN, '
+                       f'{fe.get("cdn_without_integrity")} without an integrity check); versions with known advisories: '
+                       f'{", ".join(fe.get("vulnerable") or []) or "none"}.</p>')
+        if triage:
+            agg = {}
+            for x in triage:
+                if isinstance(x, dict):
+                    row = agg.setdefault(str(x.get("tool") or "?"), {"confirmed": 0, "false-alarm": 0, "not-applicable": 0})
+                    v = str(x.get("verdict") or "")
+                    row[v if v in row else "not-applicable"] += 1
+            out.append("<h3>How the scanner hits were triaged</h3>" + tbl(
+                ["Tool", "Hits", "Confirmed", "False alarms", "Not applicable"],
+                [[e(k), e(sum(v.values())), e(v["confirmed"]), e(v["false-alarm"]), e(v["not-applicable"])]
+                 for k, v in sorted(agg.items())]))
         if scan.get("hotspots"):
             out.append("<h3>Hotspots: code that is both complex and changed often</h3>" + tbl(
                 ["File", "Changes", "Complexity", "Score"],
@@ -471,7 +522,7 @@ def main() -> int:
     args = ap.parse_args()
 
     d = Path(args.dir)
-    if not (d / "findings.json").is_file() and not (d / "as-is.json").is_file():
+    if not (d / "findings.json").is_file() and not (d / "as-is.json").is_file() and not list(d.glob("findings-*.json")):
         print(f"ERROR: no findings.json or as-is.json in {d}")
         return 1
     brand, brand_src = load_brand(args.brand)

@@ -136,8 +136,10 @@ output path.
 
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 
-Review how the existing system is built, deployed and run. Write section 05 of
-`docs/assess/technical.md` and add findings (area operations, ids `O-01`…).
+Review how the existing system is built, deployed and run. Write section 05
+("Operations") to `docs/assess/technical-operations.md` and your findings to
+`docs/assess/findings-operations.json` (area operations, ids `O-01`…). Other
+reviewers run at the same time: never write their files.
 Cover:
 
 - build and deploy (repeatable? who can deploy? rollback?);

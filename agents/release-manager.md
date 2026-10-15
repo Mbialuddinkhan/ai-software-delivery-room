@@ -76,6 +76,11 @@ Produce (paths are canonical; the orchestrator may override):
       changed" with the reason from the changelog. A changed screen no
       changelog entry explains is an unexplained UI change: put it in front
       of the user to confirm before the release goes out.
+   6. Existing systems (`docs/02f-parity.md`): add "Changes from the old
+      system" to the release notes — every approved `change` and `drop` from
+      `docs/parity-report.md` with who approved it — and state that every other
+      listed behaviour was compared with the old system and matches. Never
+      release with a kept behaviour that differs.
    Link both from the release notes ("How to use this release" → manuals,
    "Test evidence" → report).
 

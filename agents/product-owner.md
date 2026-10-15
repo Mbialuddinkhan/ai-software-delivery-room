@@ -101,8 +101,8 @@ week."
 
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 
-Turn the assessment into decisions. Inputs: `docs/assess/as-is.json`,
-`findings.json` and `technical.md`. Output `docs/assess/opportunities.json`
+Turn the assessment into decisions. Inputs: `docs/assess/as-is.json`, every
+`docs/assess/findings*.json` and every `docs/assess/technical*.md`. Output `docs/assess/opportunities.json`
 (template `.harness/templates/assess/opportunities.json`), which becomes Part A
 of the client report.
 
@@ -114,11 +114,19 @@ of the client report.
 - **New features.** Say where new features can safely be built today and where
   code must be fixed first. List opportunities the data reveals, such as manual
   work, stuck statuses and unused features.
-- **Options.** Fix in place, replace piece by piece, or rebuild. Use the
-  solution-architect's estimates, recommend one, and say why.
+- **Options.** Fix in place, replace piece by piece, or rebuild. Take every
+  figure from the solution-architect's "Options and effort" table (check the
+  sums; if they disagree, use the table and say so), recommend one, and say
+  why and what would change the choice.
 - **The commitment.** One sentence the client can hold you to. It is the
-  report's only callout.
-- **Limits.** What the assessment could not see.
+  report's only callout. Promise only what the Now list delivers: if a fix
+  narrows a risk rather than closing it, say so in the sentence.
+- **Limits.** What the assessment could not see, including what the scanners
+  do not cover (`evidence/scan-summary.md`).
+- **Questions.** `questions`: at most 10 `{ids, question, why}`, plain words,
+  each saying which decision the answer changes. The report numbers them Q1,
+  Q2 … in your order, so any "question N" in your text must match.
+- Keep each summary paragraph under about 90 words; detail belongs in Part B.
 
 Every cost, time and effort figure is an estimate. The report labels each one.
 

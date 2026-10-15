@@ -179,6 +179,13 @@ notes go in the sprint's build log, not in place of a criterion.
    before changing existing behaviour, write characterisation tests that pin
    what the code does today in the areas you will touch, and run them green
    first. They are how a refactor proves it broke nothing that worked.
+   When `docs/02f-parity.md` exists, each test that observes a parity item
+   calls `parity('PAR-xx', value)` (Cypress `cy.parity`, pytest `parity(...)`)
+   with what the user sees or gets — visible text, rows, an export, a response
+   body — and names the item on its test case's Covers line. Capture only what
+   is deterministic, or list what varies under Ignore. If the baseline does not
+   exist yet, record it before changing any code:
+   `python3 .harness/scripts/run_tests.py --parity old --base-url <old system test URL> --no-server`.
 4b. Run local smoke checks before handoff: build succeeds, app starts, and
    `python3 .harness/scripts/run_tests.py` passes — handing the evaluator
    something that doesn't start burns an entire attempt on a triviality.

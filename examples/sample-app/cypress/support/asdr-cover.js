@@ -4,6 +4,7 @@
 //   cy.flowStep('PF-02.3');                 // a journey test reached this flow step
 //   cy.covers('AC-03.2', 'BR-02');          // right where the test asserts them
 //   cy.metric('board-render-500', ms, 'ms', 1000);
+//   cy.get('#list').invoke('text').then((t) => cy.parity('PAR-01', t));  // compared with the old system
 //
 // The test title must carry its test-case id: it('[TC-03] …').
 const tcIds = (title) => {
@@ -21,4 +22,7 @@ Cypress.Commands.add('flowStep', (id) => { cy.log(`flow step ${id}`); record('st
 Cypress.Commands.add('covers', (...items) => { record('covers', { items }); });
 Cypress.Commands.add('metric', (name, value, unit, budget) => {
   record('metric', { name, value, unit, budget: budget === undefined ? null : budget });
+});
+Cypress.Commands.add('parity', (id, value, label = '') => {
+  record('parity', { items: [id], id, label, value: value === undefined ? null : value });
 });

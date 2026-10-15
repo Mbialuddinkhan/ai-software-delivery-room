@@ -41,6 +41,7 @@ import csv
 import datetime as dt
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -52,7 +53,10 @@ EXCLUDE_DIRS = {".git", "node_modules", "dist", "build", "vendor", "venv", ".ven
 CODE_EXT = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".py", ".java", ".kt", ".cs", ".go", ".rb", ".php",
             ".rs", ".swift", ".scala", ".c", ".cc", ".cpp", ".h", ".hpp", ".vb", ".sql", ".html", ".vue",
             ".svelte", ".css", ".scss", ".sh", ".ps1", ".tf", ".yml", ".yaml", ".json", ".xml", ".cob", ".cbl",
-            ".pas", ".dpr", ".frm", ".bas", ".cls"}
+            ".pas", ".dpr", ".frm", ".bas", ".cls",
+            # server-rendered views and project files hold real logic in older stacks (found in the eShopOnWeb run)
+            ".cshtml", ".razor", ".aspx", ".ascx", ".master", ".asp", ".jsp", ".jspx", ".erb", ".twig", ".cfm",
+            ".xaml", ".kts", ".groovy", ".dart", ".pl", ".config", ".properties", ".gradle", ".csproj", ".vbproj"}
 STACK_MARKERS = {
     "package.json": "Node.js", "requirements.txt": "Python", "pyproject.toml": "Python", "Pipfile": "Python",
     "pom.xml": "Java (Maven)", "build.gradle": "Java/Kotlin (Gradle)", "go.mod": "Go", "Gemfile": "Ruby",
@@ -105,7 +109,8 @@ def inventory(target: Path) -> dict:
         if ext not in CODE_EXT:
             continue
         try:
-            n = sum(1 for _ in p.open(errors="ignore"))
+            with p.open(errors="ignore") as fh:
+                n = sum(1 for _ in fh)
         except OSError:
             continue
         lines[ext] += n
@@ -119,6 +124,44 @@ def inventory(target: Path) -> dict:
             "lockfiles": [f for f in LOCKFILES if (target / f).is_file()]}
 
 
+def nuget_packages(target: Path) -> dict:
+    """Direct NuGet packages and versions from Directory.Packages.props, *.csproj / *.vbproj and
+    packages.config — OSV-Scanner only reads NuGet lock files, which most .NET repos do not commit."""
+    import re as _re
+    pk = {}
+    for p in walk(target):
+        if p.name == "Directory.Packages.props" or p.suffix in (".csproj", ".vbproj", ".fsproj") or p.name == "packages.config":
+            try:
+                txt = p.read_text(errors="ignore")
+            except OSError:
+                continue
+            for m in _re.finditer(r'<(?:PackageVersion|PackageReference|package)\s+(?:Include|id)="([^"]+)"[^>]*?'
+                                  r'(?:Version|version)="([^"]+)"', txt):
+                name, ver = m.group(1), m.group(2).strip("[]() ").split(",")[0].strip()
+                if ver and not ver.startswith("$"):
+                    pk.setdefault(name, ver)
+            for m in _re.finditer(r'<PackageReference\s+Include="([^"]+)"\s*>\s*<Version>([^<]+)</Version>', txt):
+                pk.setdefault(m.group(1), m.group(2).strip("[]() ").split(",")[0].strip())
+    return pk
+
+
+def osv_parse(so: str, secs, f: Path) -> dict:
+    d = json.loads(so)
+    pkgs = [p for r in d.get("results", []) for p in r.get("packages", [])]
+    sev = collections.Counter()
+    names = []
+    for p in pkgs:
+        scores = [float(g.get("max_severity")) for g in p.get("groups", []) if g.get("max_severity")]
+        top = max(scores) if scores else None
+        band = "unknown" if top is None else ("critical" if top >= 9 else "high" if top >= 7 else "medium" if top >= 4 else "low")
+        sev[band] += 1
+        names.append({"package": p["package"]["name"], "version": p["package"].get("version"),
+                      "advisories": len(p.get("vulnerabilities", [])), "max_cvss": top})
+    return {"status": "ran", "seconds": secs, "output": str(f), "vulnerable_packages": len(pkgs),
+            "advisories": sum(x["advisories"] for x in names), "by_severity": dict(sev),
+            "top": sorted(names, key=lambda x: -(x["max_cvss"] or 0))[:15]}
+
+
 def deps(target: Path, out: Path, lockfile, timeout) -> dict:
     res = {}
     osv = tool("osv-scanner")
@@ -127,23 +170,32 @@ def deps(target: Path, out: Path, lockfile, timeout) -> dict:
         cmd = [osv, "scan", "source", "--format", "json"]
         cmd += ["-L", str(lockfile)] if lockfile else ["-r", str(target)]
         rc, so, se, secs = run(cmd, timeout=timeout, out_file=f)
-        try:
-            d = json.loads(so or "{}")
-            pkgs = [p for r in d.get("results", []) for p in r.get("packages", [])]
-            sev = collections.Counter()
-            names = []
-            for p in pkgs:
-                scores = [float(g.get("max_severity")) for g in p.get("groups", []) if g.get("max_severity")]
-                top = max(scores) if scores else None
-                band = "unknown" if top is None else ("critical" if top >= 9 else "high" if top >= 7 else "medium" if top >= 4 else "low")
-                sev[band] += 1
-                names.append({"package": p["package"]["name"], "version": p["package"].get("version"),
-                              "advisories": len(p.get("vulnerabilities", [])), "max_cvss": top})
-            res["osv-scanner"] = {"status": "ran", "seconds": secs, "output": str(f), "vulnerable_packages": len(pkgs),
-                                  "advisories": sum(x["advisories"] for x in names), "by_severity": dict(sev),
-                                  "top": sorted(names, key=lambda x: -(x["max_cvss"] or 0))[:15]}
-        except ValueError:
-            res["osv-scanner"] = {"status": "failed", "seconds": secs, "error": (se or "no JSON output")[-300:]}
+        if not (so or "").strip():
+            # exit 128 "No package sources found": nothing was scanned — never report that as "0 vulnerable"
+            res["osv-scanner"] = {"status": "no-manifests" if "No package sources" in (se or "") else "failed",
+                                  "seconds": secs, "error": (se or "no output")[-300:].strip()}
+            nu = nuget_packages(target)
+            if nu:
+                nd = out / "nuget"
+                nd.mkdir(parents=True, exist_ok=True)
+                lock = nd / "packages.lock.json"
+                lock.write_text(json.dumps({"version": 1, "dependencies": {"any": {
+                    n: {"type": "Direct", "requested": f"[{v}, )", "resolved": v} for n, v in sorted(nu.items())}}}, indent=1))
+                rc2, so2, se2, secs2 = run([osv, "scan", "source", "--format", "json", "-L", str(lock)],
+                                           timeout=timeout, out_file=f)
+                try:
+                    r = osv_parse(so2, secs2, f) if so2.strip() else {"status": "failed", "error": (se2 or "")[-300:]}
+                except ValueError:
+                    r = {"status": "failed", "error": (se2 or "no JSON output")[-300:]}
+                r.update({"source": "NuGet packages read from .csproj / Directory.Packages.props (direct packages only; "
+                                    "transitive ones need a restore and packages.lock.json)",
+                          "packages_scanned": len(nu), "manifest": str(lock)})
+                res["osv-scanner"] = r
+        else:
+            try:
+                res["osv-scanner"] = osv_parse(so, secs, f)
+            except ValueError:
+                res["osv-scanner"] = {"status": "failed", "seconds": secs, "error": (se or "no JSON output")[-300:]}
     else:
         res["osv-scanner"] = {"status": "missing"}
     if (target / "package-lock.json").is_file() and shutil.which("npm") and res["osv-scanner"].get("status") != "ran":
@@ -165,6 +217,36 @@ def deps(target: Path, out: Path, lockfile, timeout) -> dict:
     return res
 
 
+CODE_KEYS = {"fragment", "lines", "Match", "Secret", "Line"}
+
+
+def scrub_code(f: Path) -> int:
+    """Drop copied source text from a scanner's JSON (jscpd clone fragments,
+    Semgrep matched lines, any unredacted gitleaks match). Reviewers read the
+    code at path:line; a copy in the evidence pack can carry a password into
+    the report folder. Returns how many fields were removed."""
+    try:
+        d = json.loads(f.read_text())
+    except (OSError, ValueError):
+        return 0
+    n = 0
+
+    def walk(x):
+        nonlocal n
+        if isinstance(x, dict):
+            for k in [k for k in x if k in CODE_KEYS and isinstance(x[k], str)]:
+                del x[k]
+                n += 1
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+    walk(d)
+    f.write_text(json.dumps(d, indent=1))
+    return n
+
+
 def semgrep(target: Path, out: Path, timeout) -> dict:
     sg = tool("semgrep")
     if not sg:
@@ -175,6 +257,7 @@ def semgrep(target: Path, out: Path, timeout) -> dict:
         excl += ["--exclude", d]
     rc, so, se, secs = run([sg, "scan", "--config", "p/default", "--config", "p/owasp-top-ten", "--metrics=off",
                             "--json", "--quiet", *excl, "-o", str(f), str(target)], timeout=timeout)
+    scrub_code(f)
     try:
         d = json.loads(f.read_text())
     except (OSError, ValueError):
@@ -185,7 +268,7 @@ def semgrep(target: Path, out: Path, timeout) -> dict:
     by_file = collections.Counter(x.get("path") for x in r)
     return {"status": "ran", "seconds": secs, "output": str(f), "findings": len(r), "parse_errors": len(d.get("errors", [])),
             "by_severity": dict(by_sev), "top_rules": by_rule.most_common(15), "top_files": by_file.most_common(10),
-            "note": "raw hits — triage each in code before it becomes a finding (measured ~40% precision)"}
+            "note": "raw hits — triage each in code before it becomes a finding (precision was 40% to over 90% in trials)"}
 
 
 def secrets(target: Path, out: Path, timeout) -> dict:
@@ -200,6 +283,7 @@ def secrets(target: Path, out: Path, timeout) -> dict:
         f = out / f"gitleaks-{mode}.json"
         rc, so, se, secs = run([gl, *args, "--redact", "--report-format", "json", "--report-path", str(f),
                                 "--no-banner", "--log-level", "error"], timeout=timeout)
+        scrub_code(f)          # --redact masks the secret; the copied source line goes too
         try:
             d = json.loads(f.read_text()) if f.is_file() else []
             res[mode] = {"status": "ran", "seconds": secs, "output": str(f), "hits": len(d),
@@ -246,6 +330,7 @@ def duplication(target: Path, out: Path, timeout) -> dict:
     ign = ",".join(f"**/{x}/**" for x in sorted(EXCLUDE_DIRS)) + ",**/*.min.js"
     rc, so, se, secs = run(["npx", "-y", "jscpd@4", "--min-tokens", "70", "--reporters", "json", "--output", str(d),
                             "--ignore", ign, "--silent", str(target)], timeout=timeout)
+    scrub_code(d / "jscpd-report.json")
     try:
         rep = json.loads((d / "jscpd-report.json").read_text())
         tot = rep["statistics"]["total"]
@@ -256,9 +341,95 @@ def duplication(target: Path, out: Path, timeout) -> dict:
         return {"status": "failed", "seconds": secs, "error": (se or "")[-300:]}
 
 
-def churn(target: Path, out: Path, since: str) -> dict:
+NPM_NAME = {"twitter-bootstrap": "bootstrap", "jquery-validate": "jquery-validation",
+            "jquery.validate": "jquery-validation", "jquery.validation.unobtrusive": "jquery-validation-unobtrusive",
+            "jquery-validation-unobtrusive": "jquery-validation-unobtrusive", "jquery.min": "jquery"}
+CDN = [
+    re.compile(r"cdnjs\.cloudflare\.com/ajax/libs/(?P<n>[\w.\-]+)/(?P<v>\d[\w.\-]*)/"),
+    re.compile(r"cdn\.jsdelivr\.net/npm/(?P<n>@?[\w.\-/]+?)@(?P<v>\d[\w.\-]*)"),
+    re.compile(r"unpkg\.com/(?P<n>@?[\w.\-/]+?)@(?P<v>\d[\w.\-]*)"),
+    re.compile(r"(?:stackpath|maxcdn|netdna)\.bootstrapcdn\.com/(?P<n>bootstrap|font-awesome)/(?P<v>\d[\w.\-]*)/"),
+    re.compile(r"ajax\.aspnetcdn\.com/ajax/(?P<n>[\w.\-]+?)/(?P<v>\d[\w.\-]*)/"),
+    re.compile(r"(?:ajax\.aspnetcdn\.com/ajax/jquery|code\.jquery\.com)/(?P<n>jquery)-(?P<v>\d[\w.\-]*?)(?:\.min|\.slim)*\.js"),
+]
+PAGE_EXT = {".html", ".htm", ".cshtml", ".razor", ".aspx", ".ascx", ".master", ".jsp", ".php", ".vue", ".erb", ".hbs",
+            ".ejs", ".twig", ".vbhtml"}
+
+
+def frontend(target: Path, out: Path, timeout) -> dict:
+    """Front-end libraries the dependency scanners do not see: libman.json and
+    CDN <script>/<link> tags. Each is looked up in OSV (npm); no network means
+    the list is kept and marked unchecked."""
+    libs = []
+    for p in walk(target):
+        rel = str(p.relative_to(target))
+        if p.name == "libman.json":
+            try:
+                text = p.read_text(errors="ignore")
+                for lib in json.loads(text).get("libraries", []):
+                    name, _, ver = str(lib.get("library", "")).rpartition("@")
+                    if name and ver:
+                        line = next((i for i, l in enumerate(text.splitlines(), 1) if lib["library"] in l), 1)
+                        libs.append({"name": NPM_NAME.get(name, name), "version": ver, "source": "libman",
+                                     "location": f"{rel}:{line}", "integrity": None})
+            except (OSError, ValueError, AttributeError):
+                pass
+        elif p.suffix.lower() in PAGE_EXT:
+            text = p.read_text(errors="ignore")
+            for tag in re.finditer(r"<(?:script|link)\b[^>]*>", text, re.IGNORECASE | re.DOTALL):
+                url = re.search(r"(?:src|href)\s*=\s*[\"']([^\"']+)", tag.group(0))
+                if not url:
+                    continue
+                for pat in CDN:
+                    m = pat.search(url.group(1))
+                    if m:
+                        n = m.group("n").lower()
+                        libs.append({"name": NPM_NAME.get(n, n), "version": m.group("v").rstrip("."), "source": "cdn",
+                                     "location": f"{rel}:{text.count(chr(10), 0, tag.start()) + 1}",
+                                     "integrity": "integrity=" in tag.group(0).lower()})
+                        break
+    if not libs:
+        return {"status": "none-found"}
+    uniq = sorted({(x["name"], x["version"]) for x in libs})
+    vulns, status = {}, "ran"
+    try:
+        import urllib.request
+        body = json.dumps({"queries": [{"package": {"name": n, "ecosystem": "npm"}, "version": v} for n, v in uniq]}).encode()
+        req = urllib.request.Request("https://api.osv.dev/v1/querybatch", data=body,
+                                     headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=min(timeout, 60)) as r:
+            res = json.loads(r.read().decode()).get("results", [])
+        for (n, v), r in zip(uniq, res):
+            vulns[f"{n}@{v}"] = [x.get("id") for x in r.get("vulns", [])]
+    except Exception as ex:  # offline, proxy, API change: keep the list
+        status, vulns = "listed-unchecked", {}
+        err = str(ex)[:200]
+    for x in libs:
+        x["advisories"] = vulns.get(f"{x['name']}@{x['version']}") if status == "ran" else None
+    f = out / "osv-frontend.json"
+    f.write_text(json.dumps({"checked_against": "OSV (npm)" if status == "ran" else None,
+                             "queried_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds") if status == "ran" else None,
+                             "libraries": libs}, indent=1))
+    vulnerable = sorted({f"{x['name']}@{x['version']}" for x in libs if x["advisories"]})
+    res = {"status": status, "output": str(f), "libraries": len(uniq), "from_cdn": sum(1 for x in libs if x["source"] == "cdn"),
+           "cdn_without_integrity": sum(1 for x in libs if x["source"] == "cdn" and x["integrity"] is False),
+           "vulnerable": vulnerable, "advisories": sum(len(v) for v in vulns.values())}
+    if status != "ran":
+        res["error"] = err
+    return res
+
+
+def churn(target: Path, out: Path, since: "str | None") -> dict:
     if not (target / ".git").exists() or not shutil.which("git"):
         return {"status": "skipped", "reason": "no git history"}
+    last = run(["git", "log", "-1", "--format=%cI"], cwd=target)[1].strip()
+    if not since:
+        # two years back from the LAST commit, not from today: an archived or frozen legacy system
+        # would otherwise show no activity and no hotspots (found in the eShopOnWeb run)
+        try:
+            since = (dt.datetime.fromisoformat(last).date() - dt.timedelta(days=730)).isoformat()
+        except ValueError:
+            since = (dt.date.today() - dt.timedelta(days=730)).isoformat()
     f = out / "churn.txt"
     rc, so, se, secs = run(["git", "log", f"--since={since}", "--numstat", "--format=--%h %aI %an"], cwd=target, out_file=f)
     changes, lines, commits, authors = collections.Counter(), collections.Counter(), 0, set()
@@ -273,7 +444,7 @@ def churn(target: Path, out: Path, since: str) -> dict:
         if len(p) == 3 and p[0].isdigit() and p[1].isdigit():
             changes[p[2]] += 1
             lines[p[2]] += int(p[0]) + int(p[1])
-    return {"status": "ran", "seconds": secs, "output": str(f), "since": since, "commits": commits,
+    return {"status": "ran", "seconds": secs, "output": str(f), "since": since, "last_commit": last[:10], "commits": commits,
             "authors": len(authors), "top_changed": changes.most_common(15), "_changes": changes, "_lines": lines}
 
 
@@ -283,7 +454,7 @@ def hotspots(cx: dict, ch: dict) -> list:
     out = []
     for f, v in by_file.items():
         c = changes.get(f, 0)
-        if c:
+        if c >= 2:       # changed once is not "changed often": the score would only measure file size
             out.append({"file": f, "score": c * v["ccn_total"], "changes": c, "ccn_total": v["ccn_total"],
                         "ccn_max": v["ccn_max"], "nloc": v["nloc"]})
     return sorted(out, key=lambda x: -x["score"])[:15]
@@ -303,7 +474,14 @@ def md(summary: dict) -> str:
     def row(name, d, res):
         L.append(f"| {name} | {d.get('status')} | {res} |")
     o = t["deps"].get("osv-scanner", {})
-    row("osv-scanner", o, f"{o.get('vulnerable_packages', '—')} vulnerable packages, {o.get('advisories', '—')} advisories {o.get('by_severity', '')}" if o.get("status") == "ran" else o.get("error", ""))
+    if o.get("status") == "ran":
+        res = (f"{o.get('vulnerable_packages', '—')} vulnerable packages, {o.get('advisories', '—')} advisories "
+               f"{o.get('by_severity', '')}" + (f" — {o['packages_scanned']} {o['source']}" if o.get("source") else ""))
+    elif o.get("status") == "no-manifests":
+        res = "found no dependency file it can read — dependencies NOT checked (add a lock file, or check them by hand)"
+    else:
+        res = o.get("error", "")
+    row("osv-scanner", o, res)
     if "npm-audit" in t["deps"]:
         row("npm audit", t["deps"]["npm-audit"], str(t["deps"]["npm-audit"].get("by_severity", "")))
     row("trivy", t["deps"].get("trivy", {}), t["deps"].get("trivy", {}).get("output", ""))
@@ -320,10 +498,28 @@ def md(summary: dict) -> str:
     d = t["duplication"]
     row("jscpd", d, f"{d.get('percentage')}% duplicated ({d.get('clones')} clones)" if d.get("status") == "ran" else d.get("error", ""))
     g = t["churn"]
-    row("git churn", g, f"{g.get('commits')} commits by {g.get('authors')} authors since {g.get('since')}" if g.get("status") == "ran" else g.get("reason", ""))
+    row("git churn", g, f"{g.get('commits')} commits by {g.get('authors')} authors from {g.get('since')} to the last commit "
+                         f"({g.get('last_commit')})" if g.get("status") == "ran" else g.get("reason", ""))
+    fe = t.get("frontend", {})
+    if fe.get("status") in ("ran", "listed-unchecked"):
+        row("front-end libraries (OSV npm)", fe,
+            f"{fe.get('libraries')} libraries ({fe.get('from_cdn')} loaded from a CDN, {fe.get('cdn_without_integrity')} "
+            f"without an integrity check); "
+            + (f"vulnerable: {', '.join(fe['vulnerable']) or 'none'}" if fe.get("status") == "ran"
+               else "NOT checked for advisories (no network) — check the versions by hand"))
+    elif fe.get("status") == "none-found":
+        row("front-end libraries", fe, "no libman.json or CDN script/style tags found")
     if summary["hotspots"]:
-        L += ["", "## Hotspots (changes × complexity)", "", "| File | Changes | Total complexity | Max | Score |", "|---|---|---|---|---|"]
+        L += ["", "## Hotspots (changes × complexity, files changed at least twice)", "", "| File | Changes | Total complexity | Max | Score |", "|---|---|---|---|---|"]
         L += [f"| `{h['file']}` | {h['changes']} | {h['ccn_total']} | {h['ccn_max']} | {h['score']} |" for h in summary["hotspots"]]
+    L += ["", "## What these scanners do not cover", "",
+          "Say this in the report's limits. Reviewers found each of these by reading the code, not from a scanner:", "",
+          "- secrets kept as constants in code (a hard-coded signing key or default password) — gitleaks matches "
+          "patterns and missed them in trials;",
+          "- authorisation and business-logic flaws (one customer reading another's order, a price the browser sets);",
+          "- infrastructure templates (Bicep, Terraform, CloudFormation) unless trivy ran;",
+          "- indirect (transitive) packages when there is no lock file;",
+          "- anything that only shows at run time: headers, cookies, configuration in the live environment."]
     missing = [n for n, v in summary["status"].items() if v == "missing"]
     if missing:
         L += ["", f"Not installed (not run): {', '.join(missing)}. Install them and re-run for a fuller picture."]
@@ -334,9 +530,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Run code-health and security scanners for an assessment.")
     ap.add_argument("--target", required=True, help="path to the system's source code")
     ap.add_argument("--out", default="docs/assess/evidence")
-    ap.add_argument("--since", default=(dt.date.today() - dt.timedelta(days=730)).isoformat())
+    ap.add_argument("--since", default=None, help="churn window start (default: two years before the last commit)")
     ap.add_argument("--lockfile", default=None)
-    ap.add_argument("--skip", default="", help="comma list: deps,semgrep,secrets,complexity,duplication,churn")
+    ap.add_argument("--skip", default="", help="comma list: deps,semgrep,secrets,complexity,duplication,churn,frontend")
     ap.add_argument("--timeout", type=int, default=600)
     args = ap.parse_args()
 
@@ -357,6 +553,7 @@ def main() -> int:
     tools["complexity"] = complexity(target, out, args.timeout) if "complexity" not in skip else {"status": "skipped"}
     tools["duplication"] = duplication(target, out, args.timeout) if "duplication" not in skip else {"status": "skipped"}
     tools["churn"] = churn(target, out, args.since) if "churn" not in skip else {"status": "skipped"}
+    tools["frontend"] = frontend(target, out, args.timeout) if "frontend" not in skip else {"status": "skipped"}
     hs = hotspots(tools["complexity"], tools["churn"])
     for k in ("complexity", "churn"):
         for priv in [x for x in tools[k] if x.startswith("_")]:
@@ -368,7 +565,7 @@ def main() -> int:
         "semgrep": tools["semgrep"].get("status"),
         "gitleaks": tools["secrets"].get("status") or tools["secrets"].get("code", {}).get("status"),
         "lizard": tools["complexity"].get("status"), "jscpd": tools["duplication"].get("status"),
-        "git": tools["churn"].get("status"),
+        "git": tools["churn"].get("status"), "osv-frontend": tools["frontend"].get("status"),
     }
     summary = {"schema": 1, "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
                "target": str(target), "inventory": inv, "tools": tools, "hotspots": hs, "status": status}

@@ -6,6 +6,16 @@ HTML + PDF, private, printable.
 Usage:
   python3 build_dashboard.py [--out docs/dashboard] [--inline FILE] [--fragment]
                              [--no-pdf] [--title "<Project>"]
+                             [--audience internal|client] [--brand brand.json]
+
+--audience client (v3.7) writes docs/dashboard/client/index.html and
+status-report.pdf: a branded status report for the client, built from the same
+facts with the same status rule (it can never look better than the private
+view). It leaves out agent activity, ASDR effort, git internals and local
+paths, questions not marked --client in log_question.py, environments marked
+"client": false or on localhost, links not marked "client": true, risks listed
+in dashboard.json → client.hide_risks, and process records (critiques,
+contracts, evaluation reports). Read it before sending it.
 
 Sections (each maps to something the user asked to see):
    1  Status and progress    status (fixed rule, reasons), phase, overall %
@@ -174,6 +184,7 @@ CANON = [
     ("Discovery", "Feature list", "docs/02c-features.md", "product-manager"),
     ("Discovery", "Process flows", "docs/02d-process-flows.md", "product-manager"),
     ("Discovery", "Test cases", "docs/02e-test-cases.md", "business-analyst"),
+    ("Discovery", "Parity list (existing systems)", "docs/02f-parity.md", "business-analyst"),
     ("Discovery", "Discovery critique", "docs/critique-discovery.md", "critic"),
     ("Discovery", "Discovery decision", "docs/decision-discovery.md", "judge"),
     ("Architecture", "Architecture", "docs/03-architecture.md", "solution-architect"),
@@ -189,6 +200,7 @@ CANON = [
     ("Planning", "Traceability matrix", "docs/traceability.md", "product-integrity-qa"),
     ("Planning", "Product map", "docs/product-map.md", "validate_product_map.py"),
     ("Final gates", "Product integrity", "docs/09-product-integrity.md", "product-integrity-qa"),
+    ("Final gates", "Parity with the old system", "docs/parity-report.md", "compare_parity.py"),
     ("Final gates", "Final security review", "docs/09-security-review-final.md", "security-compliance"),
     ("Final gates", "DevOps readiness", "docs/09-devops-readiness.md", "devops"),
     ("Final gates", "Risk review", "docs/09-risk-review.md", "risk-manager"),
@@ -199,7 +211,7 @@ CANON = [
     ("Release", "Manual spec", "docs/manuals/manual.json", "documentation"),
     ("Release", "Run metrics", "docs/run-metrics.md", "run_metrics.py"),
 ]
-OPTIONAL = {"docs/03b-design-system.md", "docs/04-agent-design.md"}
+OPTIONAL = {"docs/03b-design-system.md", "docs/04-agent-design.md", "docs/02f-parity.md", "docs/parity-report.md"}
 
 PHASES = [  # (key in progress.json, label, gate document, gate kind, weight for overall %)
     ("strategic", "Discovery & architecture", ["docs/decision-discovery.md", "docs/decision-architecture.md"], "judge verdicts", 30),
@@ -223,46 +235,73 @@ def verdict_of(path: Path):
 
 # ── status: a fixed rule, not an opinion ─────────────────────────────────────
 
-def classify(progress, pmap, facts, questions, open_risks, regressions):
-    blocked, at_risk = [], []
+def classify_full(progress, pmap, facts, questions, open_risks, regressions, parity=None):
+    """The fixed status rule. Returns (state, reasons, client_reasons): the
+    same rule and the same state for both views; only the wording differs —
+    the client view never names agents, attempts or internal files, and never
+    shows a better state than the private one."""
+    blocked, at_risk = [], []                    # (private wording, client wording)
     if progress.get("last_eval_result") == "teardown":
-        blocked.append("the last sprint evaluation ordered a teardown")
+        blocked.append(("the last sprint evaluation ordered a teardown",
+                        "a sprint failed its review and is being re-planned"))
     open_qs = [q for q in questions if q.get("status") == "open"]
     if open_qs:
-        blocked.append(f"{len(open_qs)} question(s) waiting on you")
+        ext = sum(1 for q in open_qs if q.get("client"))
+        blocked.append((f"{len(open_qs)} question(s) waiting on you",
+                        "; ".join(x for x in [f"{ext} decision(s) waiting on you" if ext else "",
+                                              "waiting on an internal decision" if len(open_qs) > ext else ""] if x)))
     if progress.get("attempt", 0) >= 4:
-        at_risk.append(f"{progress.get('sprint')} is on attempt {progress.get('attempt')}")
+        at_risk.append((f"{progress.get('sprint')} is on attempt {progress.get('attempt')}",
+                        "the current sprint has needed several rounds of fixes"))
     tr = (facts or {}).get("test_runs") or {}
     if tr:
         if tr.get("status") == "failed":
-            at_risk.append("the latest test run failed")
+            at_risk.append(("the latest test run failed", "the latest automated test run found failures, being fixed"))
         a = tr.get("a11y") or {}
         if a.get("critical", 0) or a.get("serious", 0):
-            at_risk.append("serious or critical accessibility violations")
+            at_risk.append(("serious or critical accessibility violations", "accessibility problems found, being fixed"))
         if tr.get("commit_matches_head") is False:
-            at_risk.append("the latest test run is not on the current commit")
+            at_risk.append(("the latest test run is not on the current commit",
+                            "the tests have not yet been re-run on the latest changes"))
         for name, m in (tr.get("metrics") or {}).items():
             if m.get("within_budget") is False:
-                at_risk.append(f"measurement '{name}' is over budget")
+                at_risk.append((f"measurement '{name}' is over budget", f"a performance target ({name}) is not met yet"))
     flows = (pmap or {}).get("flows") or {}
+    title = lambda k: flows.get(k, {}).get("title") or k
     failing_must = sorted(k for k, v in flows.items() if v.get("status") == "failing" and v.get("priority") == "must")
     failing_other = sorted(k for k, v in flows.items() if v.get("status") == "failing" and v.get("priority") != "must")
     if failing_must:
-        at_risk.append(f"must-have journey(s) failing: {', '.join(failing_must)}")
+        at_risk.append((f"must-have journey(s) failing: {', '.join(failing_must)}",
+                        f"must-have journey(s) failing their end-to-end test: {'; '.join(title(k) for k in failing_must)}"))
     if failing_other:
-        at_risk.append(f"journey(s) failing: {', '.join(failing_other)}")
+        at_risk.append((f"journey(s) failing: {', '.join(failing_other)}",
+                        f"journey(s) failing their end-to-end test: {'; '.join(title(k) for k in failing_other)}"))
     if regressions:
-        at_risk.append(f"regression: {', '.join(regressions)} worked before and does not now")
+        at_risk.append((f"regression: {', '.join(regressions)} worked before and does not now",
+                        f"something that worked before does not now: {'; '.join(title(k) for k in regressions)}"))
+    pc = (parity or {}).get("counts") or {}
+    if pc.get("differs"):
+        bad = sorted(k for k, v in (parity.get("items") or {}).items() if v.get("status") in ("differs", "unstable"))
+        at_risk.append((f"{pc['differs']} kept behaviour(s) differ from the old system: {', '.join(bad)}",
+                        f"{pc['differs']} behaviour(s) of your current system differ in the new build (see Quality)"))
     if (pmap or {}).get("errors"):
-        at_risk.append(f"{pmap['errors']} product-map error(s)")
+        at_risk.append((f"{pmap['errors']} product-map error(s)",
+                        "gaps between features, journeys and tests are being closed"))
     high = [r for r in open_risks if str(r.get("severity", "")).lower() in ("critical", "high")]
     if high:
-        at_risk.append(f"{len(high)} open high/critical risk(s)")
+        at_risk.append((f"{len(high)} open high/critical risk(s)", f"{len(high)} open high or critical risk(s) (see Risks)"))
     if blocked:
-        return "blocked", blocked + at_risk
-    if at_risk:
-        return "at risk", at_risk
-    return "on track", ["no blocking or risk rule triggered"]
+        state, rs = "blocked", blocked + at_risk
+    elif at_risk:
+        state, rs = "at risk", at_risk
+    else:
+        return "on track", ["no blocking or risk rule triggered"], ["no blocking or risk rule triggered"]
+    return state, [a for a, _ in rs], [b for _, b in rs]
+
+
+def classify(progress, pmap, facts, questions, open_risks, regressions, parity=None):
+    state, reasons, _ = classify_full(progress, pmap, facts, questions, open_risks, regressions, parity)
+    return state, reasons
 
 
 STATE_PILL = {"on track": "passed", "at risk": "skipped", "blocked": "failed"}
@@ -585,9 +624,12 @@ def regressions(pmap, snap_path: Path) -> list:
     prev = read_json(snap_path, {}).get("flows", {})
     regs = sorted(k for k, v in flows.items() if prev.get(k) == "proven" and v.get("status") not in ("proven",))
     try:
+        # a journey that was ever proven stays "proven" in the snapshot, so a regression keeps
+        # showing on every rebuild (private or client) until the journey is proven again
+        snap = {k: ("proven" if prev.get(k) == "proven" else v.get("status")) for k, v in flows.items()}
         snap_path.parent.mkdir(parents=True, exist_ok=True)
         snap_path.write_text(json.dumps({"ts": dt.datetime.now(UTC).isoformat(timespec="seconds"),
-                                         "flows": {k: v.get("status") for k, v in flows.items()}}, indent=1))
+                                         "flows": snap}, indent=1))
     except OSError:
         pass
     return regs
@@ -627,7 +669,8 @@ def dash_css() -> str:
             "</style>")
 
 
-def build(root: Path, now: dt.datetime) -> str:
+def gather(root: Path, now: dt.datetime) -> dict:
+    """Read every input once; both views render from this."""
     progress = read_json(H / "progress.json", {})
     sp = read_json(root / "sprints.json", [])
     sprints = [s for s in (sp.get("sprints", []) if isinstance(sp, dict) else sp) if isinstance(s, dict)]
@@ -648,7 +691,8 @@ def build(root: Path, now: dt.datetime) -> str:
     times = sprint_times(clock, traces)
     fc = forecast(sprints, times, now)
     fhist = record_forecast(fc, H / "forecast-history.jsonl")
-    state, reasons = classify(progress, pmap, facts, questions, risks, regs)
+    parity = read_json(H / "parity.json", {}) if (root / "docs" / "02f-parity.md").is_file() else {}
+    state, reasons, client_reasons = classify_full(progress, pmap, facts, questions, risks, regs, parity)
     tr = (facts or {}).get("test_runs") or {}
     flows = (pmap or {}).get("flows") or {}
     features = (pmap or {}).get("features") or {}
@@ -680,6 +724,41 @@ def build(root: Path, now: dt.datetime) -> str:
         elif i < ci:
             overall += w
     overall = min(round(overall), 100)
+    return dict(progress=progress, sprints=sprints, pmap=pmap, facts=facts, metrics=metrics, trace=trace, cfg=cfg,
+                traces=traces, clock=clock, history=history, questions=questions, risks=risks, regs=regs, times=times,
+                fc=fc, fhist=fhist, parity=parity, state=state, reasons=reasons, client_reasons=client_reasons, tr=tr,
+                flows=flows, features=features, counts=counts, project=project, cur=cur, ci=ci,
+                done_sprints=done_sprints, live_sprints=live_sprints, overall=overall)
+
+
+def feature_status(features, flows, sprints) -> dict:
+    """planned → in progress (its sprint is active) → delivered (sprint passed) → verified (journeys proven)."""
+    flow_sprint = {}
+    for s in sprints:
+        for f_ in s.get("flows") or []:
+            flow_sprint.setdefault(f_, []).append(s)
+    out = {}
+    for fid, f in features.items():
+        fl = f.get("flows") or []
+        sp_ = [s for x in fl for s in flow_sprint.get(x, [])]
+        if fl and all(flows.get(x, {}).get("status") == "proven" for x in fl):
+            out[fid] = ("verified", "passed", sp_)
+        elif any(s.get("status") == "done" for s in sp_):
+            out[fid] = ("delivered", "passed", sp_)
+        elif any(s.get("status") == "active" for s in sp_):
+            out[fid] = ("in progress", "skipped", sp_)
+        else:
+            out[fid] = ("planned", "neutral", sp_)
+    return out
+
+
+def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
+    c = ctx or gather(root, now)
+    (progress, sprints, pmap, facts, metrics, cfg, traces, history, questions, risks, regs, times, fc, fhist, parity,
+     state, reasons, tr, flows, features, counts, project, cur, ci, done_sprints, live_sprints, overall) = (
+        c[k] for k in ("progress", "sprints", "pmap", "facts", "metrics", "cfg", "traces", "history", "questions", "risks",
+                       "regs", "times", "fc", "fhist", "parity", "state", "reasons", "tr", "flows", "features", "counts",
+                       "project", "cur", "ci", "done_sprints", "live_sprints", "overall"))
 
     out = []
     # 1 status and progress
@@ -876,13 +955,25 @@ def build(root: Path, now: dt.datetime) -> str:
         (e(tr.get("status") or "—"), "latest run"),
         (f"{a.get('critical', 0) + a.get('serious', 0)}" if a else "—", "accessibility blockers"),
         (", ".join(regs) if regs else "none", "regressions"),
-    ])
+    ] + ([(f"{(parity.get('counts') or {}).get('same', 0)}/{(parity.get('counts') or {}).get('keep', 0)}",
+           "kept behaviours match the old system")] if parity else []))
+    par_icon = {"same": "passed", "differs": "failed", "unstable": "failed", "changed": "neutral",
+                "dropped": "neutral", "change not seen": "skipped", "no baseline": "skipped", "not captured": "skipped"}
+    par_rows = [[f'<span class="mono">{e(k)}</span>', e(v.get("behaviour")),
+                 e(v.get("decision")) + (f'<br><span class="muted">{e(v.get("approval"))}</span>' if v.get("approval") else ""),
+                 pill(v.get("status") or "—", par_icon.get(v.get("status"), "neutral"))]
+                for k, v in sorted((parity.get("items") or {}).items())]
+    par_html = ("<h3>Parity with the old system</h3>"
+                + f'<p class="muted">Old system run {e((parity.get("old") or {}).get("run_id") or "—")} · new build run '
+                  f'{e((parity.get("new") or {}).get("run_id") or "—")} · docs/parity-report.md</p>'
+                + table(["ID", "Behaviour kept", "Decision", "Result"], par_rows)) if parity else ""
     out.append(section("quality", "Quality",
                        qk + '<div class="two"><div class="stack"><h3>Journeys</h3>'
                        + table(["Flow", "Journey", "Priority", "Status", "Journey test"], fl_rows, "No process flows yet.")
                        + '</div><div class="stack"><h3>Coverage of every testable item</h3>'
                        + table(["Kind", "Items", "Named by a test", "Reached by a passing test"], cov_rows, "No coverage data yet.")
-                       + '</div></div>' + ("<h3>Measurements</h3>" + table(["Measure", "Value", "Budget", "Result"], meas) if meas else "")))
+                       + '</div></div>' + ("<h3>Measurements</h3>" + table(["Measure", "Value", "Budget", "Result"], meas) if meas else "")
+                       + par_html))
 
     # 9 risks and blockers
     rrows = [[f'<span class="mono">{e(r["id"])}</span>', e(r["risk"]), e(r["severity"]), e(r["owner"]), e(r["mitigation"]),
@@ -1056,12 +1147,273 @@ def build(root: Path, now: dt.datetime) -> str:
     return "\n".join(out)
 
 
+# ── client view: the same facts, for the client, in the consultant's brand ────
+
+CLIENT_DOCS = {  # canonical documents a client receives; process records (critiques, contracts, …) stay private
+    "docs/01-product-brief.md", "docs/01b-business-case.md", "docs/00b-roadmap.md", "docs/02-requirements.md",
+    "docs/02b-use-cases.md", "docs/02c-features.md", "docs/02d-process-flows.md", "docs/02e-test-cases.md",
+    "docs/02f-parity.md", "docs/03-architecture.md", "docs/03b-design-system.md", "docs/04-agent-design.md",
+    "docs/05-security.md", "docs/06-devops.md", "docs/08-e2e-testing.md", "docs/parity-report.md",
+    "docs/09-product-integrity.md", "docs/09-risk-review.md", "CHANGELOG.md", "docs/10-release-notes.md",
+    "docs/10-release-checklist.md", "docs/10-post-release-monitoring.md",
+}
+
+
+AGENT_ROLES = {"ai-architect", "business-analyst", "critic", "devops", "documentation", "evaluator", "generator", "judge",
+               "planner", "product-integrity-qa", "product-manager", "product-owner", "release-manager", "risk-manager",
+               "security-compliance", "solution-architect", "stage-planner", "stage-qa", "orchestrator"}
+
+
+def owner_for_client(owner) -> str:
+    """Risk owners are often ASDR roles; a client sees the delivery team, not the agent."""
+    o = str(owner or "").strip()
+    return "Delivery team" if not o or o.lower() in AGENT_ROLES else o
+
+
+def client_css(b) -> str:
+    from build_assess_report import css as brand_css
+    c, f = b["colors"], b["fonts"]
+    return (brand_css(b) + f"""
+:root {{ --accent:{c['blue']}; --pass:{c['deep']}; --fail:{c['ink']}; --skip:{c['graphite']}; --muted:{c['slate']};
+  --line:{c['hairline']}; --fg:{c['ink']}; --hl:{c['graphite']}; --mono:{f['meta']}; --surface:{c['tint']}; }}
+.kpis {{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); border-top:1px solid var(--hair); margin:12px 0; }}
+.kpis div {{ padding:10px 12px 10px 0; display:grid; gap:4px; min-width:0; border-bottom:1px solid var(--hair); }}
+.kpis b {{ font:600 13pt/1.2 var(--meta); overflow-wrap:anywhere; }}
+.kpis span {{ font:500 7.5pt/1.3 var(--meta); letter-spacing:.1em; text-transform:uppercase; color:var(--slate); }}
+.st {{ font:600 7.5pt/1 var(--meta); letter-spacing:.06em; text-transform:uppercase; padding:3px 6px; display:inline-block;
+  border:1px solid var(--hair); color:var(--graphite); white-space:nowrap; }}
+.st.passed {{ color:var(--blue); border-color:var(--blue); }}
+.st.failed {{ color:var(--paper); background:var(--ink); border-color:var(--ink); }}
+.st.skipped {{ color:var(--ink); border-color:var(--ink); }}
+.progress {{ height:8px; background:var(--hair); }} .progress span {{ display:block; height:100%; background:var(--blue); }}
+.legend {{ display:flex; flex-wrap:wrap; gap:6px 16px; font:8pt var(--meta); color:var(--slate); }}
+.legend i {{ display:inline-block; width:12px; height:10px; margin-right:5px; vertical-align:-1px; }}
+.q {{ border-top:1px solid var(--hair); padding:10px 0; display:grid; gap:3px; break-inside:avoid; }}
+.q.open {{ border-left:4px solid var(--blue); padding-left:12px; }}
+.q .meta {{ font:8pt var(--meta); color:var(--slate); }}
+svg {{ max-width:100%; height:auto; }}
+@media (max-width:640px) {{ .kpis {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
+@media print {{ .kpis div, svg, .legend {{ break-inside:avoid; }} }}
+""")
+
+
+def build_client(root: Path, now: dt.datetime, brand: dict, ctx: dict) -> str:
+    c = ctx
+    cfg, fc, flows, features, sprints, times = c["cfg"], c["fc"], c["flows"], c["features"], c["sprints"], c["times"]
+    tr, counts, parity, state = c["tr"], c["counts"], c["parity"], c["state"]
+    ccfg = cfg.get("client") or {}
+    client = ccfg.get("name") if ccfg.get("name") and "<" not in ccfg["name"] else "the client"
+    hidden = set(ccfg.get("hide_risks") or [])
+    est = '<span class="est">estimate</span>'
+    sec = [0]
+
+    def h2(title):
+        sec[0] += 1
+        return f'<h2><span class="no">{sec[0]:02d} ·</span>{e(title)}</h2>'
+
+    def st(text, cls):
+        return f'<span class="st {cls}">{e(text)}</span>'
+
+    def kp(items):
+        return '<div class="kpis">' + "".join(f"<div><b>{v}</b><span>{e(k)}</span></div>" for v, k in items) + "</div>"
+
+    from build_assess_report import tbl
+    state_cls = {"on track": "good", "at risk": "weak", "blocked": "crit"}[state]
+    ref = ccfg.get("reference") if ccfg.get("reference") and "<" not in str(ccfg.get("reference")) else "—"
+    contact = ccfg.get("contact") if ccfg.get("contact") and "<" not in str(ccfg.get("contact")) else (brand.get("email") or "—")
+    fields = [("Date", now.strftime("%d %b %Y")), ("Reference", ref), ("Status", state.upper()), ("Contact", contact)]
+    out = ['<article class="doc">',
+           '<section class="cover"><div class="lockup">'
+           f'<div class="mono-sq" aria-hidden="true">{e(brand.get("monogram"))}</div>'
+           f'<span class="name">{e(brand.get("lockup"))}</span></div>'
+           f'<div class="title"><span class="eyebrow">Project status report</span>'
+           f'<h1>{e(c["project"])}: where the project stands</h1>'
+           f'<span class="for">Prepared for {e(client)}</span></div>'
+           '<dl class="fields">' + "".join(f"<div><dt>{e(k)}</dt><dd>{e(v)}</dd></div>" for k, v in fields) + "</dl></section>"]
+
+    # 01 summary
+    fstat = feature_status(features, flows, sprints)
+    verified = sum(1 for v in fstat.values() if v[0] == "verified")
+    t = tr.get("totals") or {}
+    exp = (f'{e(day(fc["expected"]))} ± {e(fmt_span(fc["sd_h"]))}' if fc["available"] else "after two sprints")
+    out.append(h2("Summary"))
+    out.append(f'<p><span class="r {state_cls}">{e(state)}</span> &nbsp;{e("; ".join(c["client_reasons"]).capitalize())}.</p>')
+    out.append(f'<div class="progress" role="progressbar" aria-valuenow="{c["overall"]}" aria-valuemin="0" aria-valuemax="100">'
+               f'<span style="width:{c["overall"]}%"></span></div>')
+    out.append(kp([(f'{c["overall"]}%', "overall progress"), (exp, "expected delivery (estimate)"),
+                   (f'{c["done_sprints"]}/{len(c["live_sprints"])}', "sprints done"),
+                   (f"{verified}/{len(features)}" if features else "—", "features verified"),
+                   (f"{sum(1 for v in flows.values() if v.get('status') == 'proven')}/{len(flows)}" if flows else "—", "journeys proven"),
+                   (f"{t.get('passed', 0)}/{t.get('tests', 0)}" if t else "—", "automated tests passing"),
+                   (len([r for r in c["risks"] if r["id"] not in hidden]), "open risks"),
+                   (sum(1 for q in c["questions"] if q.get("client") and q.get("status") == "open"), "decisions waiting on you")]))
+    if fc["available"]:
+        out.append('<div class="callout"><span class="eyebrow">Expected delivery · estimate</span>'
+                   f'<p style="font-size:14pt"><b>{e(day(fc["expected"]))}</b> ± {e(fmt_span(fc["sd_h"]))}</p>'
+                   f'<p>95% range {e(span_fmt(*fc["r95"]))}. Forecast from the measured time of {fc["n"]} finished sprints; '
+                   'it narrows as each sprint finishes. Not a fixed date.</p></div>')
+    else:
+        out.append('<div class="callout"><span class="eyebrow">Expected delivery · estimate</span>'
+                   '<p>A delivery date is given once two sprints have finished: before then it would be a guess.</p></div>')
+
+    # 02 phases
+    prow = []
+    for i, (k, lbl, gates, gkind, w) in enumerate(PHASES):
+        s_ = "done" if i < c["ci"] or c["cur"] == "done" else ("current" if i == c["ci"] else "upcoming")
+        fin = None
+        if s_ == "done":
+            fin = (max((t_.get("done") for t_ in times.values() if t_.get("done")), default=None) if k == "execution"
+                   else max((mtime(root / g) for g in gates if (root / g).exists()), default=None))
+        prow.append([e(lbl), st(s_, {"done": "passed", "current": "skipped", "upcoming": ""}[s_]),
+                     f'<span class="mono">{e(day(fin)) if fin else "—"}</span>'])
+    out.append(h2("Phases") + tbl(["Phase", "State", "Finished"], prow))
+
+    # 03 delivery forecast
+    out.append(h2("Delivery forecast"))
+    if fc["available"]:
+        rows = [[f'<span class="mono">{e(s.get("id"))}</span>', e(s.get("goal") or ""), e(day(d)) + " " + est,
+                 f'<span class="mono">± {e(fmt_span(sdi))}</span>'] for s, d, sdi in fc["per_sprint"]]
+        out.append(kp([(e(span_fmt(*fc["r68"])), "68% range"), (e(span_fmt(*fc["r95"])), "95% range"),
+                       (f'{fc["pending"]}', "sprints to go"), (e(fc["confidence"]), "confidence")])
+                   + "<h3>When each remaining sprint should finish</h3>"
+                   + tbl(["Sprint", "What you will be able to do", "Expected finish", "± 1 SD"], rows)
+                   + drift_chart(c["fhist"])
+                   + f'<p class="muted">How this is worked out: the finished sprints took {fc["mean_h"]:.1f} hours each on '
+                     f'average from one finish to the next (so waiting time is included), varying by {fc["sd_sprint_h"]:.1f} hours. '
+                     'The ± allows for that variation and for how few sprints have been measured so far. It assumes the '
+                     'remaining sprints are similar in size and excludes the final checks and release.</p>')
+    else:
+        out.append(f'<p class="muted">No date yet: {fc["done"]} sprint(s) finished, {fc["pending"]} to go. A forecast with an '
+                   'honest margin needs at least two measured sprints.</p>')
+
+    # 04 roadmap
+    rm = read_roadmap(root)
+    srows = [[f'<span class="mono">{e(s.get("id"))}</span>', e(s.get("goal") or ""),
+              st(s.get("status") or "pending", {"done": "passed", "active": "skipped", "torn-down": "failed"}.get(s.get("status"), "")),
+              f'<span class="mono">{e(day(times.get(s.get("id"), {}).get("start")) if times.get(s.get("id"), {}).get("start") else "—")}</span>',
+              f'<span class="mono">{e(day(times.get(s.get("id"), {}).get("done")) if times.get(s.get("id"), {}).get("done") else "—")}</span>']
+             for s in sprints if s.get("status") != "torn-down"]
+    out.append(h2("Roadmap") + gantt([s for s in sprints if s.get("status") != "torn-down"], times, fc, now)
+               + ("<h3>Product roadmap</h3>" + tbl(["Horizon", "Milestone", "Outcomes", "Timeframe"],
+                  [[e(r["horizon"]), e(r["milestone"]), e(r["outcomes"]), e(r["timeframe"])] for r in rm]) if rm else "")
+               + "<h3>Sprints</h3>" + tbl(["Sprint", "What a user can do after it", "Status", "Started", "Finished"], srows))
+
+    # 05 features
+    frows = [[f'<span class="mono">{e(fid)}</span>', e(f.get("name")), e(f.get("personas") or ""),
+              e((f.get("priority") or "").title()), e(f.get("release") or ""), st(fstat[fid][0], fstat[fid][1])]
+             for fid, f in sorted(features.items())]
+    out.append(h2("Features") + tbl(["ID", "Feature", "Who uses it", "Priority", "Release", "Status"], frows)
+               + '<p class="muted">Planned → in progress → delivered (its sprint passed review) → verified (every journey it is '
+                 'part of passed its end-to-end test on the latest run).</p>')
+
+    # 06 quality
+    a = tr.get("a11y") or {}
+    jrows = [[e(v.get("title") or k), e((v.get("priority") or "").title()),
+              st(v.get("status") or "pending", {"proven": "passed", "failing": "failed"}.get(v.get("status"), ""))]
+             for k, v in sorted(flows.items())]
+    meas = [[e(n), f'<span class="mono">{e(m.get("value"))} {e(m.get("unit") or "")}</span>',
+             f'<span class="mono">{e(m.get("budget") if m.get("budget") is not None else "—")}</span>',
+             st("within target" if m.get("within_budget") else ("over target" if m.get("within_budget") is False else "no target"),
+                "passed" if m.get("within_budget") else ("failed" if m.get("within_budget") is False else ""))]
+            for n, m in (tr.get("metrics") or {}).items()]
+    qhtml = kp([(f"{t.get('passed', 0)}/{t.get('tests', 0)}" if t else "—", "automated tests passing"),
+                (f"{counts.get('items_executed', 0)}/{counts['items']}" if counts.get("items") else "—", "documented items tested"),
+                (f"{a.get('critical', 0) + a.get('serious', 0)}" if a else "—", "accessibility blockers"),
+                (len(c["regs"]), "things that worked before and do not now")])
+    qhtml += "<h3>End-to-end journeys</h3>" + tbl(["Journey", "Priority", "Result"], jrows)
+    if meas:
+        qhtml += "<h3>Measured targets</h3>" + tbl(["Measure", "Value", "Target", "Result"], meas)
+    if parity:
+        pc = parity.get("counts") or {}
+        prow2 = [[f'<span class="mono">{e(k)}</span>', e(v.get("behaviour")),
+                  e(v.get("decision")) + (f'<br><span class="muted">{e(v.get("approval"))}</span>' if v.get("approval") else ""),
+                  st(v.get("status") or "—", {"same": "passed", "differs": "failed", "unstable": "failed"}.get(v.get("status"), ""))]
+                 for k, v in sorted((parity.get("items") or {}).items())]
+        qhtml += (f"<h3>Your current system’s behaviour, kept</h3><p>{pc.get('same', 0)} of {pc.get('keep', 0)} behaviours you "
+                  "rely on today were compared with your current system and match. Changes are listed with who approved them.</p>"
+                  + tbl(["ID", "Behaviour", "Decision", "Result"], prow2))
+    out.append(h2("Quality") + qhtml)
+
+    # 07 risks
+    rrows = [[f'<span class="mono">{e(r["id"])}</span>', e(r["risk"]), e(r["severity"]), e(owner_for_client(r["owner"])),
+              e(r["mitigation"])] for r in c["risks"] if r["id"] not in hidden]
+    out.append(h2("Risks") + tbl(["ID", "Risk", "Severity", "Owner", "What is being done"], rrows))
+
+    # 08 decisions
+    cq = sorted([q for q in c["questions"] if q.get("client")], key=lambda q: q.get("ts") or "", reverse=True)
+    waiting = [q for q in cq if q.get("status") == "open"]
+    answered = [q for q in cq if q.get("status") != "open"]
+    dh = "<h3>Waiting on you</h3>" + ("".join(
+        f'<div class="q open"><div><b>{e(q.get("question"))}</b></div><div class="meta">{e(q.get("id"))} · asked {e(day(_ts(q.get("ts"))))}</div></div>'
+        for q in waiting) or '<p class="muted">Nothing is waiting on you.</p>')
+    dh += "<h3>Decisions you have made</h3>" + ("".join(
+        f'<div class="q"><div><b>{e(q.get("question"))}</b></div><div>{e(q.get("answer"))}</div>'
+        f'<div class="meta">{e(q.get("id"))} · {e(day(_ts(q.get("ts"))))}</div></div>' for q in answered)
+        or '<p class="muted">None recorded yet.</p>')
+    adrs = sorted((root / "docs/adr").glob("*.md")) if (root / "docs/adr").is_dir() else []
+    if adrs:
+        dh += "<h3>Architecture decisions</h3>" + tbl(["Decision", "Date"], [
+            [e(next((ln.lstrip("# ").strip() for ln in p_.read_text(errors="ignore").splitlines() if ln.startswith("#")), p_.stem)),
+             f'<span class="mono">{e(day(mtime(p_)))}</span>'] for p_ in adrs])
+    out.append(h2("Decisions and what we need from you") + dh)
+
+    # 09 deliverables
+    drows = []
+    for ph, name, path, _owner in CANON:
+        if path not in CLIENT_DOCS:
+            continue
+        p_ = root / path
+        if p_.exists():
+            s_, upd = st("ready", "passed"), day(mtime(p_))
+        elif path in OPTIONAL:
+            continue
+        else:
+            reached = [k for k, *_ in PHASES].index({"Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
+                                                       "Final gates": "final-gates", "Release": "done"}[ph]) < c["ci"]
+            s_, upd = (st("outstanding", "skipped") if reached else st("not yet", "")), "—"
+        drows.append([e(ph), e(name), s_, f'<span class="mono">{e(upd)}</span>'])
+    man = root / "docs/manuals"
+    vers = sorted(x.name for x in man.iterdir() if x.is_dir() and re.match(r"^\d", x.name)) if man.is_dir() else []
+    if vers:
+        drows.append([e("Release"), e("User manuals (HTML + PDF)"), st("ready", "passed"), f'<span class="mono">{e(", ".join(vers))}</span>'])
+    trd = root / "docs/test-reports"
+    labs = sorted(x.name for x in trd.iterdir() if x.is_dir()) if trd.is_dir() else []
+    if labs:
+        drows.append([e("Testing"), e(f"Test reports ({len(labs)})"), st("ready", "passed"), f'<span class="mono">{e(labs[-1])}</span>'])
+    out.append(h2("Deliverables") + tbl(["Phase", "Document", "Status", "Updated"], drows)
+               + '<p class="muted">“Outstanding” means its phase has finished and the document is still due.</p>')
+
+    # 10 environments and links
+    filled = lambda x: isinstance(x, dict) and x.get("url") and "<" not in str(x.get("url"))
+    local = lambda u: str(u).startswith(("http://localhost", "http://127.", "https://localhost"))
+    envs = [x for x in (cfg.get("environments") or []) if filled(x) and x.get("client", True) is not False and not local(x.get("url"))]
+    # no live check here: "unreachable from here" on a client's VPN-only environment would read as an outage
+    erows = [[e(x.get("name")), f'<a href="{e(x["url"])}">{e(x["url"])}</a>', e(x.get("purpose") or ""),
+              f'<span class="mono">{e(x.get("deployed") or "—")}</span>', e(", ".join(x.get("test_roles") or []) or "—")]
+             for x in envs]
+    links = [[e(l.get("label") or l["url"]), f'<a href="{e(l["url"])}">{e(l["url"])}</a>']
+             for l in (cfg.get("links") or []) if filled(l) and l.get("client") is True]
+    out.append(h2("Environments and links")
+               + tbl(["Environment", "Address", "Used for", "Version", "Test logins (roles)"], erows)
+               + ('<p class="muted">Logins are shared separately; no passwords appear in this report.</p>' if erows else "")
+               + ("<h3>Links</h3>" + tbl(["Resource", "Address"], links) if links else ""))
+
+    foot = " · ".join(x for x in [brand.get("footer"), brand.get("email"), brand.get("linkedin")] if x)
+    out.append(f'<footer class="docfoot">{e(foot)}<br>Prepared {e(now.strftime("%d %b %Y %H:%M UTC"))} from the project records. '
+               'Dates marked estimate are forecasts from measured sprint times, not commitments.</footer></article>')
+    return "\n".join(out)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build the ASDR project dashboard (HTML + PDF).")
     ap.add_argument("--out", default="docs/dashboard")
     ap.add_argument("--inline", metavar="FILE", default=None, help="also write a single-file (Artifact) copy here")
     ap.add_argument("--no-pdf", action="store_true")
     ap.add_argument("--title", default=None)
+    ap.add_argument("--audience", choices=["internal", "client"], default="internal",
+                    help="client: a branded status report for the client — no agent activity, effort, internal "
+                         "questions, local paths or internal links; same status rule")
+    ap.add_argument("--brand", default=None, help="client view: brand file (default .harness/brand.json, then ~/.asdr/brand.json)")
     args = ap.parse_args()
 
     root = Path.cwd()
@@ -1075,6 +1427,27 @@ def main() -> int:
             pass
     pub = read_json(H / "publish.json", {"repo": True})
     now = dt.datetime.now(UTC)
+    if args.audience == "client":
+        from build_assess_report import load_brand
+        brand, brand_src = load_brand(args.brand)
+        body = build_client(root, now, brand, gather(root, now))
+        title = f"{cfg.get('project') or 'Project'} Status Report"
+        out_dir = Path(args.out if args.out != "docs/dashboard" else "docs/dashboard/client")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        hf = out_dir / "index.html"
+        hf.write_text("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">"
+                      "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">"
+                      f"<title>{html.escape(title)}</title><style>{client_css(brand)}</style></head><body>{body}</body></html>\n")
+        outputs = {"html": str(hf)}
+        if not args.no_pdf:
+            pf = out_dir / "status-report.pdf"
+            outputs["pdf"] = str(pf) if to_pdf(hf, pf) else "no Chrome found — open index.html in a browser and print to PDF"
+        for k, v in outputs.items():
+            print(f"  {k}: {v}")
+        print(f"  brand: {brand_src}")
+        print("Client view: read it before you send it. Share the PDF; it is not published anywhere.")
+        print("DASHBOARD: " + json.dumps({"outputs": outputs, "audience": "client"}))
+        return 0
     body = build(root, now)
     title = f"{cfg.get('project') or 'Project'} Dashboard"
     outputs = {}

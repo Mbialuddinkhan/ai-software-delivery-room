@@ -92,6 +92,12 @@ Apply these before judgment; they are not overridable:
   exception test failed, a Must step or exception path was never reached by a
   passing test, or a test case's Covers item was never marked → **Not ready**
   (the product does not work end to end for that journey)
+- Existing systems (`docs/02f-parity.md` exists):
+  `python3 .harness/scripts/compare_parity.py --gate` exits 1 — a behaviour
+  the client keeps differs from the old system, was never compared, or the
+  comparison is stale (`facts:parity.all_kept_match` false) → **Not ready**.
+  List the approved changes (`decision: change`) in the classification so the
+  release notes carry them.
 - Testable items no passing test reached (`items_executed < items`) →
   cannot be Production-ready; list them as warnings for MVP
 - A measured NFR over budget (`facts:test_runs.metrics.<name>.within_budget`

@@ -5,6 +5,7 @@ Usage:
   python3 run_tests.py [--config .harness/test-config.json] [--suite NAME ...]
                        [--live] [--slowmo MS] [--tours] [--label TEXT]
                        [--no-server] [--collect-only RUN_DIR]
+                       [--base-url URL] [--parity old|new]
 
 What it does
 ------------
@@ -46,6 +47,16 @@ gets a "*" .gitignore and is never published.
 --tours runs only each suite's tours_cmd (the manual-tour specs). A full run
 (no --suite filter) clears the manual folder first so no screenshot from an
 older build survives; a filtered run replaces only the tours it re-runs.
+
+Parity with an old system (existing systems, v3.7)
+--------------------------------------------------
+Tests call parity('PAR-xx', value) where they observe a behaviour the client
+relies on (docs/02f-parity.md). `--parity old --base-url <old system test URL>`
+runs each suite's parity_cmd (else cmd) against the OLD system and records the
+run as .harness/test-results/parity-baseline.json — it never becomes "latest",
+uses its own saved-login folder and leaves the manual screenshots alone.
+compare_parity.py then compares the baseline with the new build's runs.
+--base-url tests any URL without starting the app.
 
 A suite that exits non-zero or produces no JUnit tests counts as failed — a
 silent suite can never pass the gate. Exit code: 0 all passed, 1 failures,
@@ -295,7 +306,7 @@ def coverage_summary(run_dir: Path) -> dict | None:
     files = sorted((run_dir / "coverage").glob("*.jsonl")) if (run_dir / "coverage").is_dir() else []
     if not files:
         return None
-    by_tc, metrics, untagged = {}, [], 0
+    by_tc, metrics, untagged, parity = {}, [], 0, []
     for f in files:
         for line in f.read_text(errors="ignore").splitlines():
             try:
@@ -303,7 +314,10 @@ def coverage_summary(run_dir: Path) -> dict | None:
             except ValueError:
                 continue
             tcs = rec.get("tc") or []
-            if rec.get("kind") in ("step", "covers"):
+            if rec.get("kind") == "parity":
+                parity.append({"id": rec.get("id"), "label": rec.get("label") or "", "value": rec.get("value"),
+                               "tc": tcs, "test": rec.get("test"), "framework": rec.get("framework")})
+            if rec.get("kind") in ("step", "covers", "parity"):
                 if not tcs:
                     untagged += 1
                 for t in tcs:
@@ -318,7 +332,7 @@ def coverage_summary(run_dir: Path) -> dict | None:
                                 "within_budget": (None if budget is None or rec.get("value") is None
                                                   else rec["value"] <= budget)})
     return {"by_tc": {k: sorted(v) for k, v in sorted(by_tc.items())}, "metrics": metrics,
-            "untagged_markers": untagged}
+            "untagged_markers": untagged, "parity": parity}
 
 
 def manual_inventory(manual_dir: Path, commit: str | None) -> dict:
@@ -347,6 +361,10 @@ def main() -> int:
     ap.add_argument("--label", default=None, help="label for the report (default: run id)")
     ap.add_argument("--no-server", action="store_true", help="do not start app.start_cmd")
     ap.add_argument("--collect-only", metavar="RUN_DIR", help="parse an existing run folder; run nothing")
+    ap.add_argument("--base-url", default=None, help="test this URL instead of app.url (implies the app is already running there)")
+    ap.add_argument("--parity", choices=["old", "new"], default=None,
+                    help="existing systems: run each suite's parity_cmd (else cmd); 'old' records the run as the "
+                         "baseline of the old system for compare_parity.py")
     args = ap.parse_args()
 
     root = Path.cwd()
@@ -389,6 +407,9 @@ def main() -> int:
     (run_dir / "logs").mkdir(parents=True, exist_ok=True)
 
     auth_dir = (root / cfg.get("auth_dir", DEFAULT_AUTH)).resolve()
+    if args.parity == "old":
+        # the old system has its own sessions; never mix them with the new build's saved logins
+        auth_dir = auth_dir.with_name(auth_dir.name + "-parity-old")
     env = dict(os.environ)
     unset = []
     for k, v in (cfg.get("env") or {}).items():
@@ -404,7 +425,12 @@ def main() -> int:
         "ASDR_AUTH_DIR": str(auth_dir),
         "ASDR_COMMIT": commit or "",
     })
-    app = cfg.get("app") or {}
+    app = dict(cfg.get("app") or {})
+    if args.base_url:
+        app["url"] = args.base_url
+        args.no_server = True
+    if args.parity:
+        env["ASDR_PARITY"] = args.parity
     if app.get("url"):
         env["BASE_URL"] = app["url"]
     if mode == "live":
@@ -417,8 +443,9 @@ def main() -> int:
     seed = None
     if not args.collect_only:
         if not args.suite:
-            for sub in ("screens", "tours"):
-                shutil.rmtree(manual_dir / sub, ignore_errors=True)
+            if not args.parity:                  # a parity run must not wipe the new build's manual screenshots
+                for sub in ("screens", "tours"):
+                    shutil.rmtree(manual_dir / sub, ignore_errors=True)
             shutil.rmtree(auth_dir, ignore_errors=True)
         auth_dir.mkdir(parents=True, exist_ok=True)
         (auth_dir / ".gitignore").write_text("*\n")
@@ -440,6 +467,8 @@ def main() -> int:
                     if not cmd:
                         print(f"[run_tests] {s['name']}: no tours_cmd, skipped")
                         continue
+                elif args.parity:
+                    cmd = s.get("parity_cmd") or s["cmd"]
                 elif mode == "live" and s.get("live_cmd"):
                     cmd = s["live_cmd"]
                 else:
@@ -491,6 +520,7 @@ def main() -> int:
         "label": args.label or run_id,
         "mode": mode,
         "tours_only": bool(args.tours),
+        "parity_role": args.parity,
         "status": status,
         "commit": commit,
         "dirty": dirty,
@@ -510,9 +540,15 @@ def main() -> int:
     }
     (run_dir / "summary.json").write_text(json.dumps(summary, indent=2))
     results_root.mkdir(parents=True, exist_ok=True)
-    (results_root / "latest.json").write_text(json.dumps(
-        {"run_id": run_id, "path": str(run_dir), "status": status, "commit": commit,
-         "finished_at": summary["finished_at"]}, indent=2))
+    pointer = {"run_id": run_id, "path": str(run_dir), "status": status, "commit": commit,
+               "finished_at": summary["finished_at"]}
+    if args.parity == "old":
+        # the old system's run is the parity baseline, never "latest": the gates read latest for the new build
+        (results_root / "parity-baseline.json").write_text(json.dumps(
+            {**pointer, "base_url": app.get("url"),
+             "captures": len((summary["coverage"] or {}).get("parity") or [])}, indent=2))
+    else:
+        (results_root / "latest.json").write_text(json.dumps(pointer, indent=2))
     hist = results_root / "history.jsonl"
     lines = hist.read_text().splitlines() if hist.exists() else []
     lines.append(json.dumps({"run_id": run_id, "status": status, "mode": mode, "commit": commit,
@@ -529,6 +565,10 @@ def main() -> int:
         print(f"  coverage markers: {len({x for v in cov['by_tc'].values() for x in v})} distinct items marked by "
               f"{len(cov['by_tc'])} test cases" + (f", {len(cov['metrics'])} measurements" if cov["metrics"] else "")
               + " (validate_product_map.py checks them against the documents)")
+    if cov and cov.get("parity"):
+        print(f"  parity captures: {len(cov['parity'])}" + (
+            f" — recorded as the old system's baseline ({results_root / 'parity-baseline.json'})"
+            if args.parity == "old" else " (compare_parity.py compares them with the old system)"))
     a = summary["a11y"]
     if a:
         print(f"  accessibility: {a['checks']} checks — " +
