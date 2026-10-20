@@ -187,7 +187,10 @@ CANON = [
     ("Discovery", "Parity list (existing systems)", "docs/02f-parity.md", "business-analyst"),
     ("Discovery", "Discovery critique", "docs/critique-discovery.md", "critic"),
     ("Discovery", "Discovery decision", "docs/decision-discovery.md", "judge"),
+    ("Architecture", "Architecture options and decision", "docs/03c-architecture-options.md", "solution-architect"),
     ("Architecture", "Architecture", "docs/03-architecture.md", "solution-architect"),
+    ("Architecture", "Services and contracts (microservices)", "docs/03e-services.md", "solution-architect"),
+    ("Architecture", "Portability and cloud decision", "docs/03d-portability.md", "devops"),
     ("Architecture", "Design system (UI)", "docs/03b-design-system.md", "solution-architect"),
     ("Architecture", "Agent design (AI)", "docs/04-agent-design.md", "ai-architect"),
     ("Architecture", "Security", "docs/05-security.md", "security-compliance"),
@@ -211,7 +214,8 @@ CANON = [
     ("Release", "Manual spec", "docs/manuals/manual.json", "documentation"),
     ("Release", "Run metrics", "docs/run-metrics.md", "run_metrics.py"),
 ]
-OPTIONAL = {"docs/03b-design-system.md", "docs/04-agent-design.md", "docs/02f-parity.md", "docs/parity-report.md"}
+OPTIONAL = {"docs/03b-design-system.md", "docs/04-agent-design.md", "docs/02f-parity.md", "docs/parity-report.md",
+            "docs/03e-services.md", "docs/03d-portability.md"}
 
 PHASES = [  # (key in progress.json, label, gate document, gate kind, weight for overall %)
     ("strategic", "Discovery & architecture", ["docs/decision-discovery.md", "docs/decision-architecture.md"], "judge verdicts", 30),
@@ -669,6 +673,42 @@ def dash_css() -> str:
             "</style>")
 
 
+def agent_cost(h: Path) -> dict:
+    """Tokens and time per agent run (log_agent_run.py) against the budget (estimate_run.py)."""
+    rows = jsonl(h / "agent-runs.jsonl")
+    by = {}
+    for r in rows:
+        b = by.setdefault(r.get("agent") or "?", [0, 0, 0.0])
+        b[0] += 1
+        b[1] += int(r.get("tokens") or 0)
+        b[2] += float(r.get("seconds") or 0)
+    out = {"runs": len(rows), "tokens": sum(v[1] for v in by.values()),
+           "hours": round(sum(v[2] for v in by.values()) / 3600, 1), "by_agent": by}
+    budget = read_json(h / "budget.json", {})
+    if budget.get("tokens"):
+        out["budget"] = budget
+        out["pct"] = round(100 * out["tokens"] / budget["tokens"], 1)
+    return out
+
+
+def cloud_state(h: Path, now: dt.datetime) -> dict:
+    """v3.8: architecture and portability decisions, test environments still running, cloud parity."""
+    envs = {}
+    for ev in jsonl(h / "cloud-envs.jsonl"):
+        if ev.get("event") == "create":
+            envs[ev.get("name")] = ev
+        elif ev.get("event") == "destroyed":
+            envs.pop(ev.get("name"), None)
+    running = []
+    for ev in envs.values():
+        t0 = _ts(ev.get("ts"))
+        exp = t0 + dt.timedelta(hours=float(ev.get("ttl_hours") or 8)) if t0 else None
+        running.append({**ev, "expires": exp, "overdue": bool(exp and now > exp)})
+    return {"arch": read_json(h / "architecture.json", {}), "port": read_json(h / "portability.json", {}),
+            "services": read_json(h / "services.json", {}), "cloud": read_json(h / "cloud.json", {}),
+            "parity": read_json(h / "cloud-parity.json", {}), "envs": running}
+
+
 def gather(root: Path, now: dt.datetime) -> dict:
     """Read every input once; both views render from this."""
     progress = read_json(H / "progress.json", {})
@@ -693,6 +733,24 @@ def gather(root: Path, now: dt.datetime) -> dict:
     fhist = record_forecast(fc, H / "forecast-history.jsonl")
     parity = read_json(H / "parity.json", {}) if (root / "docs" / "02f-parity.md").is_file() else {}
     state, reasons, client_reasons = classify_full(progress, pmap, facts, questions, risks, regs, parity)
+    cost = agent_cost(H)
+    cloud = cloud_state(H, now)
+    over = [x["name"] for x in cloud["envs"] if x["overdue"]]
+    if over:
+        reasons.append(f"test environment past its time-to-live, still costing money: {', '.join(over)}")
+        if state == "on track":
+            state = "at risk"
+    cp = cloud["parity"]
+    if cp and cp.get("ok") is False:
+        reasons.append(f"the cloud run differs from the local run ({cp.get('broken', 0)} failing, "
+                       f"{cp.get('missing', 0)} missing)")
+        client_reasons.append("the cloud test environment does not yet behave like the local build")
+        if state == "on track":
+            state = "at risk"
+    if cost.get("pct", 0) >= 100:          # internal only: the client view never shows ASDR's own cost
+        reasons.append(f"over the {cost['budget'].get('rigor') or ''} token budget: {cost['pct']}% used".replace("  ", " "))
+        if state == "on track":
+            state = "at risk"
     tr = (facts or {}).get("test_runs") or {}
     flows = (pmap or {}).get("flows") or {}
     features = (pmap or {}).get("features") or {}
@@ -728,7 +786,7 @@ def gather(root: Path, now: dt.datetime) -> dict:
                 traces=traces, clock=clock, history=history, questions=questions, risks=risks, regs=regs, times=times,
                 fc=fc, fhist=fhist, parity=parity, state=state, reasons=reasons, client_reasons=client_reasons, tr=tr,
                 flows=flows, features=features, counts=counts, project=project, cur=cur, ci=ci,
-                done_sprints=done_sprints, live_sprints=live_sprints, overall=overall)
+                done_sprints=done_sprints, live_sprints=live_sprints, overall=overall, cost=cost, cloud=cloud)
 
 
 def feature_status(features, flows, sprints) -> dict:
@@ -1086,10 +1144,33 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
         erows.append([e(x.get("name")), f'<a href="{e(x.get("url"))}">{e(x.get("url"))}</a>' if x.get("url") else "—",
                       e(x.get("purpose") or ""), f'<span class="mono">{e(x.get("deployed") or x.get("branch") or "—")}</span>',
                       e(roles or "—"), pill(status, cls)])
-    out.append(section("environments", "Environments", table(
+    cl = c.get("cloud") or {}
+    for x in cl.get("envs") or []:
+        left = "past its time-to-live" if x["overdue"] else (f"until {x['expires']:%d %b %H:%M} UTC" if x.get("expires") else "")
+        erows.append([e(f"{x.get('name')} (temporary test, {str(x.get('cloud', '')).upper()})"),
+                      f'<a href="{e(x.get("url"))}">{e(x.get("url"))}</a>' if x.get("url") else "—",
+                      e(f"approved by {x.get('approved_by')}; destroy: {x.get('stack') or 'see devops notes'}"),
+                      "—", "—", pill(left or "running", "failed" if x["overdue"] else "skipped")])
+    facts_line = []
+    ar, po, sv = cl.get("arch") or {}, cl.get("port") or {}, cl.get("services") or {}
+    if ar.get("style"):
+        facts_line.append(f"architecture: <b>{e(ar['style'])}</b>" + (f" ({len(sv.get('services') or [])} services, "
+                          f"{len(sv.get('contracts') or [])} contracts)" if sv.get("services") else ""))
+    if po.get("strategy"):
+        facts_line.append(f"portability: <b>{e(po['strategy'])} · {e(po.get('title') or '')}</b> on "
+                          f"{e(', '.join(po.get('production_clouds') or []) or '—')}")
+    tcl = (cl.get("cloud") or {}).get("test_cloud")
+    if tcl:
+        facts_line.append(f"test cloud: <b>{e(tcl)}</b>")
+    cp = cl.get("parity") or {}
+    if cp:
+        facts_line.append("cloud parity: " + pill("same as local" if cp.get("ok") else "differs", "passed" if cp.get("ok") else "failed"))
+    head = ('<p>' + " · ".join(facts_line) + '</p>') if facts_line else ""
+    out.append(section("environments", "Environments", head + table(
         ["Environment", "URL", "Used for", "Deployed version / branch", "Test logins (roles)", "Reachable now"], erows,
         "No environments listed. Add dev, test, staging, UAT and production to .harness/dashboard.json → environments."),
-        "Test logins show role names only — credentials stay in environment variables and are never written here."))
+        "Test logins show role names only — credentials stay in environment variables and are never written here. "
+        "Temporary test environments come from cloud_env.py; one past its time-to-live is still costing money."))
 
     # 12 repositories and resources
     remotes = git("remote", "-v")
@@ -1138,8 +1219,17 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
                 (metrics.get("sprint_attempts_total", "—"), "sprint evaluations"),
                 (metrics.get("negotiation_rounds_total", "—"), "negotiation rounds"),
                 (sum((metrics.get("stage_qa_rounds") or {}).values()) if metrics.get("stage_qa_rounds") else "—", "stage QA rounds")])
+    cost = c.get("cost") or {}
+    if cost.get("runs"):
+        b = cost.get("budget") or {}
+        eff += kpis([(f"{cost['tokens'] / 1e6:.1f}M", "tokens used"),
+                     (f"{cost['pct']}%" if "pct" in cost else "—", f"of the {b.get('rigor', '')} budget".strip()),
+                     (f"{cost['hours']}", "agent-hours"), (cost["runs"], "logged agent runs")])
+        eff += "<h3>Tokens by role</h3>" + bars(
+            [(k, round(v[1] / 1e6, 2)) for k, v in sorted(cost["by_agent"].items(), key=lambda kv: -kv[1][1])][:12], "M")
     out.append(section("effort", "ASDR effort", eff + "<h3>By role</h3>" + bars([(k, v) for k, v in list(inv.items())[:12]], "runs"),
-                       "From run_metrics.py. Where the time and tokens went, so the next run can change something."))
+                       "From run_metrics.py and the agent-run log. Where the time and tokens went, so the next run "
+                       "can change something."))
 
     out.append('<footer>Generated by build_dashboard.py from the project files. Single source of truth — do not hand-edit; '
                'rerun the script. Private working view. To print or save as PDF, use dashboard.pdf in the same folder, '
@@ -1152,7 +1242,8 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
 CLIENT_DOCS = {  # canonical documents a client receives; process records (critiques, contracts, …) stay private
     "docs/01-product-brief.md", "docs/01b-business-case.md", "docs/00b-roadmap.md", "docs/02-requirements.md",
     "docs/02b-use-cases.md", "docs/02c-features.md", "docs/02d-process-flows.md", "docs/02e-test-cases.md",
-    "docs/02f-parity.md", "docs/03-architecture.md", "docs/03b-design-system.md", "docs/04-agent-design.md",
+    "docs/02f-parity.md", "docs/03c-architecture-options.md", "docs/03-architecture.md", "docs/03d-portability.md",
+    "docs/03e-services.md", "docs/03b-design-system.md", "docs/04-agent-design.md",
     "docs/05-security.md", "docs/06-devops.md", "docs/08-e2e-testing.md", "docs/parity-report.md",
     "docs/09-product-integrity.md", "docs/09-risk-review.md", "CHANGELOG.md", "docs/10-release-notes.md",
     "docs/10-release-checklist.md", "docs/10-post-release-monitoring.md",

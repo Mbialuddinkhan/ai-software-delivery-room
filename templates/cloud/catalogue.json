@@ -1,0 +1,177 @@
+{
+  "_about": "Building blocks a product can need, each with a portable choice that runs anywhere, the native managed service on AWS, Azure and Google Cloud, and a local stand-in for running a service standalone. devops uses it for docs/03d-portability.md; validate_portability.py checks block names against it. Service names change: confirm current names and prices with the vendor's own tools (AWS MCP Server, Azure MCP Server / Azure Skills plugin, Google Cloud MCP servers) or pricing calculators before quoting a client. Reviewed Oct 2026.",
+  "reviewed": "2026-10",
+  "blocks": {
+    "containers": {
+      "need": "run services as containers without managing servers",
+      "portable": "OCI container images",
+      "aws": "Amazon ECS on AWS Fargate",
+      "azure": "Azure Container Apps",
+      "gcp": "Cloud Run",
+      "local": "Docker Compose"
+    },
+    "kubernetes": {
+      "need": "many services, fine-grained scheduling, an existing Kubernetes skill set",
+      "portable": "Kubernetes manifests / Helm",
+      "aws": "Amazon EKS",
+      "azure": "Azure Kubernetes Service (AKS)",
+      "gcp": "Google Kubernetes Engine (GKE)",
+      "local": "kind or k3d"
+    },
+    "functions": {
+      "need": "short event-driven jobs that scale to zero",
+      "portable": "the handler as a plain function behind an adapter (run as a normal process locally)",
+      "aws": "AWS Lambda",
+      "azure": "Azure Functions",
+      "gcp": "Cloud Run functions",
+      "local": "the same handler run as a process"
+    },
+    "relational-db": {
+      "need": "transactions, relational data",
+      "portable": "PostgreSQL",
+      "aws": "Amazon RDS for PostgreSQL or Amazon Aurora PostgreSQL",
+      "azure": "Azure Database for PostgreSQL – Flexible Server",
+      "gcp": "Cloud SQL for PostgreSQL (or AlloyDB)",
+      "local": "postgres container"
+    },
+    "document-db": {
+      "need": "flexible documents, very high key-value throughput",
+      "portable": "PostgreSQL JSONB (or MongoDB)",
+      "aws": "Amazon DynamoDB",
+      "azure": "Azure Cosmos DB",
+      "gcp": "Firestore",
+      "local": "postgres or mongo container"
+    },
+    "cache": {
+      "need": "fast reads, sessions, rate limits",
+      "portable": "Valkey / Redis protocol",
+      "aws": "Amazon ElastiCache (Valkey)",
+      "azure": "Azure Managed Redis",
+      "gcp": "Memorystore (Valkey or Redis)",
+      "local": "valkey container"
+    },
+    "queue": {
+      "need": "work handed from one service to another, retried until done",
+      "portable": "RabbitMQ or NATS JetStream",
+      "aws": "Amazon SQS",
+      "azure": "Azure Service Bus (queues)",
+      "gcp": "Pub/Sub (pull subscription) or Cloud Tasks",
+      "local": "rabbitmq or nats container"
+    },
+    "events": {
+      "need": "one service announces something, any number react",
+      "portable": "CloudEvents over NATS or Kafka",
+      "aws": "Amazon EventBridge (or SNS)",
+      "azure": "Azure Event Grid (or Service Bus topics)",
+      "gcp": "Pub/Sub",
+      "local": "nats container"
+    },
+    "streaming": {
+      "need": "ordered high-volume event streams, replay",
+      "portable": "Apache Kafka protocol",
+      "aws": "Amazon MSK (or Kinesis Data Streams)",
+      "azure": "Azure Event Hubs (Kafka endpoint)",
+      "gcp": "Google Cloud Managed Service for Apache Kafka (or Pub/Sub)",
+      "local": "redpanda or kafka container"
+    },
+    "object-storage": {
+      "need": "files, uploads, exports, backups",
+      "portable": "S3 API",
+      "aws": "Amazon S3",
+      "azure": "Azure Blob Storage",
+      "gcp": "Cloud Storage",
+      "local": "S3-compatible container (MinIO or SeaweedFS)"
+    },
+    "secrets": {
+      "need": "keys, passwords and connection strings outside the code",
+      "portable": "a secrets interface; values injected at deploy time",
+      "aws": "AWS Secrets Manager",
+      "azure": "Azure Key Vault",
+      "gcp": "Secret Manager",
+      "local": ".env file never committed (or OpenBao dev server)"
+    },
+    "identity": {
+      "need": "user sign-in, roles",
+      "portable": "OpenID Connect (Keycloak or a SaaS identity provider)",
+      "aws": "Amazon Cognito",
+      "azure": "Microsoft Entra External ID",
+      "gcp": "Identity Platform",
+      "local": "keycloak container"
+    },
+    "api-gateway": {
+      "need": "one public entry point, routing, rate limits, auth at the edge",
+      "portable": "Envoy, Traefik or Kong",
+      "aws": "Amazon API Gateway",
+      "azure": "Azure API Management",
+      "gcp": "API Gateway (or Apigee)",
+      "local": "traefik container"
+    },
+    "observability": {
+      "need": "logs, metrics, traces, alerts",
+      "portable": "OpenTelemetry",
+      "aws": "Amazon CloudWatch + AWS X-Ray (via the AWS Distro for OpenTelemetry)",
+      "azure": "Azure Monitor + Application Insights",
+      "gcp": "Cloud Logging, Cloud Monitoring, Cloud Trace",
+      "local": "OpenTelemetry Collector + Jaeger + Prometheus/Grafana"
+    },
+    "registry": {
+      "need": "store built images",
+      "portable": "OCI registry",
+      "aws": "Amazon ECR",
+      "azure": "Azure Container Registry",
+      "gcp": "Artifact Registry",
+      "local": "registry container"
+    },
+    "scheduler": {
+      "need": "jobs on a timetable",
+      "portable": "cron in a container",
+      "aws": "Amazon EventBridge Scheduler",
+      "azure": "Azure Container Apps jobs (or Functions timer trigger)",
+      "gcp": "Cloud Scheduler",
+      "local": "cron container"
+    },
+    "email": {
+      "need": "transactional email",
+      "portable": "SMTP behind an adapter",
+      "aws": "Amazon SES",
+      "azure": "Azure Communication Services Email",
+      "gcp": "no first-party service: a SendGrid/Mailgun account via an adapter",
+      "local": "mailpit container"
+    },
+    "search": {
+      "need": "full-text or vector search",
+      "portable": "OpenSearch",
+      "aws": "Amazon OpenSearch Service",
+      "azure": "Azure AI Search",
+      "gcp": "Vertex AI Search (or Elastic Cloud on Google Cloud)",
+      "local": "opensearch container"
+    },
+    "cdn-static": {
+      "need": "static front end and assets close to users",
+      "portable": "static files behind any CDN",
+      "aws": "Amazon CloudFront + S3",
+      "azure": "Azure Front Door + Blob Storage static website",
+      "gcp": "Cloud CDN + Cloud Storage",
+      "local": "static file server"
+    },
+    "iac": {
+      "need": "the infrastructure itself, reviewable and repeatable",
+      "portable": "Terraform or OpenTofu",
+      "aws": "Terraform AWS provider (CloudFormation/CDK if the client mandates)",
+      "azure": "Terraform azurerm provider (Bicep if the client mandates)",
+      "gcp": "Terraform google provider (Infrastructure Manager runs Terraform)",
+      "local": "docker-compose.yml"
+    }
+  },
+  "pricing_sources": {
+    "aws": "AWS Pricing Calculator, or the AWS MCP Server (AWS Price List API)",
+    "azure": "Azure Pricing Calculator, or the Azure MCP Server pricing tools",
+    "gcp": "Google Cloud Pricing Calculator, or the Cloud Billing Catalog API"
+  },
+  "vendor_agent_tools": {
+    "aws": "AWS MCP Server (managed; any AWS API through one tool; AWS agent skills; IAM, CloudTrail)",
+    "azure": "Azure Skills plugin (Azure skills + Azure MCP Server + Foundry MCP Server)",
+    "gcp": "Google Cloud MCP servers (managed, remote, IAM-controlled; per-product toolsets)",
+    "terraform": "HashiCorp Terraform MCP server (registry providers, modules, policies)"
+  }
+}

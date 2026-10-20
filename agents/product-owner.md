@@ -13,7 +13,7 @@ description: >
   </commentary>
   </example>
 
-model: inherit
+model: opus
 color: blue
 tools: ["Read", "Write", "Glob", "Grep"]
 ---

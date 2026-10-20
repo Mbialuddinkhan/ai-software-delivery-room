@@ -81,3 +81,11 @@ reason: <one sentence>
 `no-go` means: stop the workflow and surface the reasons to the human.
 
 When done, stop.
+
+## When you are invoked (v3.8)
+
+`decide.py` writes the phase decision itself when the critique has no
+Critical or High finding, so you rule only when there is something serious or
+disputed, and on every phase under `paranoid`. A second round is checked by
+`check_required_changes.py` and the orchestrator's spot checks. You are
+called again only when a spot check fails or an owner disputes a change.

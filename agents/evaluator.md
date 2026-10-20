@@ -210,3 +210,17 @@ your own work and independence is gone.
   revision-requested.
 - Be strict. A false PASS costs far more than a false FAIL: the next sprint
   builds on top of it.
+
+## Microservices and cloud (v3.8)
+
+When `.harness/architecture.json` says microservices:
+
+- run `validate_services.py --gate`;
+- start each service the sprint touched on its own (`docker compose --profile
+  <service> up`) and check `/health/ready`;
+- require the contract tests named by the sprint's `CT-xx` items to pass, on
+  both the provider and the consumer side.
+
+A service that only works with its real neighbours running fails the sprint.
+When the orchestrator ran a cloud test, a `cloud_parity.py` ERROR fails the
+sprint like a failing test.

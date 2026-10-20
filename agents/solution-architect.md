@@ -70,6 +70,46 @@ Example of the required concreteness in Conventions:
   middleware converts it to `{error: {code, message}}` JSON with the
   matching HTTP status. No other error shape leaves the API."
 
+## Architecture options — the user decides first (v3.8)
+
+Before any design, write `docs/03c-architecture-options.md` from
+`.harness/templates/architecture-options.md`:
+
+- Score C1–C8 from the documents (0, 1 or 2), quoting the evidence. No evidence, no points.
+- For each option — modular monolith with service-ready boundaries,
+  microservices, and serverless-first only when it fits — give the pros, the
+  cons, the business impact (time to first release, monthly running cost,
+  speed of change later, reliability, team needed, cost of moving cloud
+  later), the build cost and run cost per month as ranges labelled as
+  estimates, and when it wins.
+- Fill the side-by-side table and the assumptions (load, team rate, pricing
+  source and date).
+- Recommend one, tied to the scores. If you go against the criteria rule,
+  say why. Leave the Decision as `pending`: the user decides, not you.
+
+Default to a modular monolith with service-ready boundaries unless the scores
+say otherwise. Microservices multiply the build, the tests, the pipelines and
+the running cost; recommend them only for a reason the client has.
+
+## Microservices (when the user chose them, v3.8)
+
+In the same batch as `docs/03-architecture.md`, write `docs/03e-services.md`
+from `.harness/templates/services.md`, following
+`.harness/templates/microservices/README.md`:
+
+- one owner per table;
+- a `CT-xx` contract with a test case for every synchronous call and every
+  consumed event;
+- no cycle of synchronous calls;
+- a standalone run for every service;
+- one adapter per building block for local and for each production cloud
+  (after the portability decision);
+- a table showing how each Must journey crosses the services.
+
+`validate_services.py` checks all of it. Keep services few: split along
+business capabilities that change for different reasons, never by technical
+layer.
+
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 
 Review the system as built; do not redesign it yet. Inputs: the source path and

@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.7.0"
+  version: "3.8.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -82,9 +82,17 @@ Invoke **devops** with: input the codebase, output
 `docs/09-devops-readiness.md`, template `.harness/templates/devops.md`.
 Context: release gate — actually run `docker build`, validate compose,
 diff `.env.example` against the variables the code reads, confirm CI
-workflow and rollback plan exist. Paste command output as evidence. Run this
-stage via the Stage execution protocol (executor: devops, stage-id:
-devops-readiness, artifact: docs/09-devops-readiness.md).
+workflow and rollback plan exist. Paste command output as evidence. Since
+v3.8 it also runs:
+
+- `cloud_preflight.py`;
+- `validate_services.py --gate`, for microservices;
+- `cloud_env.py list --overdue`.
+
+Any temporary test environment still running blocks the release. Tell the
+user what is running and ask devops to destroy it first. Run this stage via
+the Stage execution protocol (executor: devops, stage-id: devops-readiness,
+artifact: docs/09-devops-readiness.md).
 
 ## Phase 2b — Product integrity
 

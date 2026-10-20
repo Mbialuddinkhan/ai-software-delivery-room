@@ -23,7 +23,7 @@ description: >
   </commentary>
   </example>
 
-model: inherit
+model: sonnet
 color: cyan
 tools: ["Read", "Write", "Glob"]
 ---
@@ -127,3 +127,11 @@ and the set would pass validate_sprints.py. Fix, then write.
 The orchestrator runs `python3 .harness/scripts/validate_sprints.py` on your
 output. If you are re-invoked with ERROR lines, fix exactly those problems
 and nothing else.
+
+## Microservices (v3.8)
+
+When `.harness/architecture.json` says microservices, sprint 1 is a walking
+skeleton: every service with its health checks, one contract each, the local
+Compose file, the pipeline and a first deploy to the test cloud. It still
+delivers one user-visible step. Later sprints still slice through whole
+journeys, even when a journey crosses several services.

@@ -14,7 +14,7 @@ description: >
   </commentary>
   </example>
 
-model: inherit
+model: opus
 color: green
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 ---
@@ -133,6 +133,45 @@ output path.
   value — it is the deployment contract for whoever runs this next.
 - The production checklist contains only verifiable items (commands, file
   existence), no judgment calls.
+
+## Portability, test cloud and temporary environments (v3.8)
+
+**Portability.** After the architecture decision, write `docs/03d-portability.md` from
+`.harness/templates/portability.md` and `.harness/templates/cloud/catalogue.json`:
+
+- the building blocks the product needs, each with its portable choice, its
+  native service on AWS, Azure and Google Cloud, and a local stand-in;
+- at least two strategies (portable core, native services behind adapters,
+  single-cloud native), each with pros, cons, business impact and monthly run
+  cost per cloud as ranges;
+- the cost comparison, its assumptions, and where the prices came from and
+  when;
+- a recommendation, leaving the Decision `pending`: the user decides.
+
+Prefer the cloud vendors' own agent tools when the session has them — AWS MCP
+Server, Azure MCP Server / Azure Skills plugin, Google Cloud MCP servers,
+Terraform MCP server — for current service names, prices and validated
+templates. Otherwise use the vendors' pricing calculators and say so. Never
+quote a price without its source and date.
+
+**Infrastructure.** Terraform or OpenTofu to
+`.harness/templates/microservices/infra-layout.md`: modules per block and
+cloud, an `envs/test-<cloud>` for the test cloud in `.harness/cloud.json`,
+every resource tagged (owner, purpose, project, expires) with a budget alert.
+staging and production are written and validated, never applied. The local
+`docker-compose.yml` runs every service, and each service alone with its own
+data store and mocks of what it calls (template `docker-compose.services.yml`).
+`cloud_preflight.py` must say READY.
+
+**Test environments.**
+1. Deploy only after the orchestrator relays the user's approval.
+2. Sign in with the cloud's own CLI and the least-privilege role in
+   `cloud.json`; never ask for or store keys.
+3. Record the environment: `cloud_env.py create --approved-by "<who, when>"
+   --ttl-hours <ttl> --url <url> --stack <folder>`.
+4. Destroy it as soon as the cloud test run and `cloud_parity.py` are done,
+   then record `cloud_env.py destroyed`.
+5. Never leave one running past its time-to-live, and never touch production.
 
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 

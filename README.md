@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.7.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.8.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -22,6 +22,23 @@ private claude.ai page; GitHub Pages only if you opt in). Every release builds
 persona, and Beginner / Everyday / Power user / Administrator — as HTML and
 PDF, stamped with the version and commit. A worked example lives in
 `examples/sample-app/`.
+
+**v3.8 — leaner runs, and microservices on any cloud by your decision.**
+Every agent run is logged with its tokens and time, and before a project starts
+`estimate_run.py` shows what each rigor level will cost so you choose knowing
+it. Checklist roles run on Sonnet; consecutive documents by the same specialist
+are written in one run and reviewed once; the judge runs only when the critic
+finds something serious. Architecture is a decision you make: the architect
+lays out modular monolith, microservices and serverless with pros, cons,
+business impact and costs, and recommends one. Portability is a decision too:
+20 building blocks mapped to AWS, Azure, Google Cloud and a local stand-in,
+strategies priced per cloud, your choice recorded. Microservices follow
+enforced rules (owned data, tested contracts, no call cycles, every service
+runnable alone), and ASDR tests on the cloud you picked at the start — with
+your approval, a time-to-live and a teardown — proving the cloud build passes
+the same tests as the local one. It uses the cloud vendors' own agent tools
+(AWS MCP Server, Azure Skills plugin, Google Cloud MCP servers, Terraform MCP)
+when you have them.
 
 **v3.7 — rebuild an old system without breaking it, report to the client,
 and an assessment you can trust.** When ASDR takes over an existing system,
@@ -321,9 +338,9 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.7.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.8.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → … → v3.7 change log
+CHANGELOG.md                 ← full v2.1 → v3 → … → v3.8 change log
 agents/                      ← 18 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa, product-manager)
 skills/                      ← 7 orchestrator skills (asdr, discover, architect,
@@ -361,6 +378,17 @@ scripts/
   validate_assessment.py     ← /assess: evidence gate + pasted-secret check (v3.6)
   build_assess_report.py     ← /assess: two-part report, HTML + branded PDF (v3.6)
   compare_parity.py          ← old system vs new build, behaviour by behaviour; release gate (v3.7)
+  log_agent_run.py           ← tokens, time and model per agent run; budget warnings (v3.8)
+  estimate_run.py            ← cost per rigor level before the run starts; sets the budget (v3.8)
+  decide.py                  ← phase decision without a judge when nothing is Critical/High (v3.8)
+  check_required_changes.py  ← scripted second round of required changes (v3.8)
+  assess_scope.py            ← /assess: a starting list of files per reviewer (v3.8)
+  validate_architecture_options.py ← the user's monolith / microservices decision, with costs (v3.8)
+  validate_portability.py    ← the user's portability strategy and clouds, with costs (v3.8)
+  validate_services.py       ← microservice rules: owned data, contracts, no cycles, standalone (v3.8)
+  cloud_preflight.py         ← read-only readiness on the test cloud (v3.8)
+  cloud_env.py               ← ledger of temporary test environments, time-to-live, teardown (v3.8)
+  cloud_parity.py            ← the cloud build passes the same tests as the local one (v3.8)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -368,7 +396,9 @@ templates/                   ← fill-in templates: contract, plan, qa-report,
                                design-system, agent-runtime.yaml, build-ladder (v3.3),
                                feature-list, process-flows, test-cases, publish.json,
                                ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4),
-                               dashboard.json, assess/ (v3.6), parity.md, assess/triage.json (v3.7)
+                               dashboard.json, assess/ (v3.6), parity.md, assess/triage.json (v3.7),
+                               architecture-options.md, portability.md, services.md, cloud.json,
+                               cloud/catalogue.json, microservices/ (v3.8)
 examples/sample-app/         ← TaskBoard: a small app with every v3.4 artifact —
                                product docs, [TC-xx] tests in all three frameworks,
                                tours, manual.json (v3.4), and a worked assessment
@@ -381,7 +411,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (171 tests)
+tests/                       ← python3 -m unittest discover -s tests (213 tests)
 ```
 
 ## The 18 agents at a glance

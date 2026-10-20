@@ -1,7 +1,7 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.7.0",
-  "description": "Multi-agent software delivery for Claude: discovery with features, end-to-end process flows and test cases; architecture; sprints sliced through whole user journeys with independent QA; Playwright, Cypress and Selenium tests you can watch live; private test reports and user-reviewed manuals; a project dashboard with a delivery forecast and a client status report; and assessments of existing systems, with a parity gate when you rebuild them.",
+  "version": "3.8.0",
+  "description": "Multi-agent software delivery for Claude: discovery with features, process flows and test cases; architecture where you choose monolith or microservices and how portable to be, with costs; sprints through whole user journeys with independent QA; live browser tests, also on the cloud you pick; private reports and manuals; a dashboard with delivery forecast and run cost; and assessments of existing systems.",
   "author": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com"

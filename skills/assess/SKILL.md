@@ -8,7 +8,7 @@ description: >
   system", "audit our existing app", "review this codebase", "legacy system", "take over this project",
   "what's wrong with our software", "modernise".
 metadata:
-  version: "3.7.0"
+  version: "3.8.0"
 ---
 
 # Assess — understand an existing system and say what to do with it
@@ -30,6 +30,13 @@ every ERROR back to that agent before moving on.
 only): about 2 hours end to end, 13 agent runs, about 3.5M subagent tokens;
 45 findings after challenge; Part A 9 pages, Part B about 50. Tell the user
 before starting on a larger system, and split it by module (Phase 3).
+
+**Cost (v3.8).** Before Phase 1, show the user `python3
+.harness/scripts/estimate_run.py --mode assess --kloc <thousands of lines>`
+and confirm the rigor (`lite` skips the revision round; `paranoid` adds a
+judge on every round), then `--set-budget`. After EVERY agent run, log it:
+`log_agent_run.py --agent <name> --phase assess --model <model> --usage
+"<the Agent result's usage block>"`; on OVER BUDGET stop and ask.
 
 **Ground rules (not overridable):**
 
@@ -104,6 +111,18 @@ map a shipped front-end bundle or compare old and new behaviour. Use it only if
 `authorization.rea_allowed` is true and the user agrees to install it; never
 install it silently.
 
+Then rank the files each reviewer should start from:
+
+    python3 .harness/scripts/assess_scope.py --target <source path>
+
+It writes `evidence/scope-<area>.txt` (process, architecture, security,
+operations): the shared core files (entry points, manifests, CI, Compose,
+infrastructure roots) plus the files most relevant to that area, using path
+and content signals, scanner hits and hotspots. Pass each reviewer its list as
+the place to START — a starting point, not a fence. On the eShopOnWeb run the
+lists covered 71% of the files the reviewers ended up citing, at about a third
+of the codebase each.
+
 ## Phase 3 — Recover the business processes
 
 Invoke **business-analyst** in ASSESS mode with: the source path, the test
@@ -173,11 +192,24 @@ severity disagreements between reviewers; options whose estimates leave out
 a register or contradict the findings; a commitment the plan cannot keep;
 scanner gaps the limits do not state.
 
-Then **judge** → `docs/decision-assessment.md`, with every required change
-numbered (RC-01 …) and assigned to one owner and file. Owners revise in
-parallel — product-owner last, because it takes the revised figures — and you
-run the gate after the round. The judge then appends "Round 2" with a
-verdict. Max 2 rounds. A merged finding keeps a "merged from O-12" note for
+Then the decision: `python3 .harness/scripts/decide.py
+docs/critique-assessment.md --out docs/decision-assessment.md --phase
+assessment --rigor <rigor>`. With no Critical or High finding it writes the
+decision itself and no judge runs. Exit 2 → **judge** →
+`docs/decision-assessment.md`, with every required change numbered (RC-01 …)
+and assigned to one owner and file. Owners revise in parallel —
+product-owner last, because it takes the revised figures — and you run the
+gate after the round.
+
+Round 2 is a script, not a judge run: `python3
+.harness/scripts/check_required_changes.py docs/decision-assessment.md --since
+<when the revision round started> --gate "python3
+.harness/scripts/validate_assessment.py --root <source path> --strict"`. Read
+the changed files for every change that came from a Critical or High finding,
+then re-run with `--write --spot-checked <ids>`. Invoke the judge again only
+if a spot check fails or an owner disputes a change (on the eShopOnWeb run the
+script reached the judge's round-2 verdict in seconds instead of 9 minutes).
+Max 2 rounds. A merged finding keeps a "merged from O-12" note for
 traceability; no live reference to a removed id may remain.
 
 ## Phase 7 — Evidence gate

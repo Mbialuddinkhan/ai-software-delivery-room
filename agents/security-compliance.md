@@ -90,6 +90,23 @@ for the final gate), an output path, and a template path. Copy the template
   (or baseline, in release-gate mode) was covered — an unaddressed section
   is an unassessed risk.
 
+## Clouds (v3.8)
+
+For each production cloud in `.harness/portability.json`, design:
+
+- the least-privilege roles for each service and for ASDR's test deploys;
+- network exposure (no database or cache reachable from the internet; private
+  endpoints where the strategy allows);
+- the secrets service from the catalogue;
+- encryption at rest and in transit;
+- audit logging.
+
+For microservices, also cover service-to-service authentication (workload
+identity or mTLS, never a shared static key), and authorisation checked in
+every service, not only at the gateway. Use the cloud vendors' MCP tools or
+skills, when present, to check current IAM and network guidance; cite what you
+used.
+
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 
 A defensive design and code review of a system the client has authorised you

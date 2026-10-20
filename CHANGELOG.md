@@ -3,6 +3,83 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.8.0] — leaner runs; microservices and cloud portability by the user's decision
+
+### Efficiency
+- **Every agent run is measured.** `scripts/log_agent_run.py` records tokens,
+  time and model after each run (the Agent result's usage block) in
+  `.harness/agent-runs.jsonl`; run metrics and the dashboard show cost by role
+  and phase; going over budget turns the internal status "at risk".
+- **Cost before choosing rigor.** `scripts/estimate_run.py` estimates agent
+  runs, tokens (Opus / Sonnet) and hours for lite, standard and paranoid —
+  and what 3.7 would have cost — for the project's shape (sprints, services,
+  UI, AI, cloud; or system size for /assess). Phase 0 shows it; the user
+  chooses; `--set-budget` writes the budget (+30%). Per-role figures come from
+  the first /assess run where measured, and recalibrate from each project's
+  own log.
+- **Model tiering.** Opus for judgement roles; Sonnet for stage-planner,
+  stage-qa, product-integrity-qa, planner, documentation and release-manager.
+  `paranoid` forces Opus.
+- **Batched stages.** Under lite and standard, consecutive stages with the
+  same executor run as one agent run (the product-owner writes brief, business
+  case and roadmap together) and one stage-qa run reviews the batch; standard
+  no longer runs a stage planner. Estimated: about 30% fewer agent runs and 18%
+  fewer tokens than 3.7's standard for a typical build (to be confirmed by the
+  agent-run log on real projects).
+- **The judge only when needed.** `scripts/decide.py` writes the phase
+  decision when the critique has no Critical or High finding (Medium → required
+  changes, Low → assumptions). `scripts/check_required_changes.py` replaces the
+  judge's second round with a scripted check plus the orchestrator's spot checks
+  — on the eShopOnWeb data it reached the judge's verdict in seconds.
+- **/assess reviewers get a starting list of files.** `scripts/assess_scope.py`
+  ranks files per area (shared core files, path and content signals, scanner
+  hits, hotspots); on eShopOnWeb the lists covered 71% of what the reviewers
+  cited at a third of the codebase each.
+
+### Microservices and cloud
+- **Architecture decision gate.** Before any design the solution-architect
+  writes `docs/03c-architecture-options.md`: eight criteria scored with evidence,
+  each option (modular monolith with service-ready boundaries, microservices,
+  serverless-first) with pros, cons, business impact, build and run cost
+  estimates and when it wins, a side-by-side table and a recommendation. The
+  user decides; `validate_architecture_options.py` blocks design until then.
+- **Portability decision with costs.** devops writes `docs/03d-portability.md`
+  from a catalogue of 20 building blocks (portable choice, AWS, Azure, Google
+  Cloud, local stand-in): strategies — portable core, native services behind
+  adapters, single-cloud native — with monthly cost per cloud, the source and
+  date of the prices, and a recommendation. The user picks the strategy and the
+  production clouds; `validate_portability.py`.
+- **Microservice rules.** `docs/03e-services.md` + `validate_services.py`: one
+  owner per table, a tested `CT-xx` contract for every call and every consumed
+  event, no synchronous cycles, every service runnable standalone with mocks of
+  its neighbours, an adapter per building block for local and each production
+  cloud. Contracts are testable items in `validate_product_map.py`. Standards
+  in `templates/microservices/` (ports and adapters, outbox, idempotent
+  consumers, health endpoints, OpenTelemetry, walking-skeleton first sprint),
+  a Compose template with per-service profiles, and an IaC layout.
+- **Test cloud chosen at the start.** Phase 0 asks which cloud ASDR deploys to
+  for testing (AWS, Azure, Google Cloud or none). `cloud_preflight.py` checks,
+  read-only, the CLI sign-in, Terraform/OpenTofu validation, Compose and
+  settings. Deploys need the user's approval, use a least-privilege role, are
+  tagged with a time-to-live and recorded by `cloud_env.py`; the dashboard flags
+  any past its time-to-live, and the release gate refuses while one runs.
+  `cloud_parity.py` proves every test that passes locally passes on the cloud,
+  from the same commit.
+- **The vendors' own agent tools.** `detect_companions.py` now reports the AWS
+  MCP Server, the Azure Skills plugin / Azure MCP Server, Google Cloud MCP
+  servers and the Terraform MCP server, plus the cloud CLIs; devops and
+  security use them for current service names, prices and IAM guidance.
+  ASDR never installs them.
+- Agents: solution-architect (options, services), devops (portability, IaC,
+  test environments), security-compliance (per-cloud IAM, network, service
+  identity), critic (architecture and cloud checks), evaluator (standalone
+  services, contract tests, cloud parity), generator (ports and adapters),
+  planner (walking skeleton), risk-manager (cloud release blockers), judge
+  (when it is invoked).
+
+### Not in 3.8
+- Exporting ASDR to Codex CLI and Gemini CLI: 3.9.
+
 ## [3.7.0] — parity with the old system, a client status report, and /assess hardened by a real run
 
 ### Added

@@ -1,0 +1,12 @@
+{
+  "_about": "Copied to .harness/cloud.json by init; filled in Phase 0 when the user chooses where ASDR deploys for TESTING. Never put keys, passwords or tokens here: ASDR uses the cloud CLI's own sign-in (aws sso login / az login / gcloud auth login). Every deploy still asks the user first, uses a least-privilege role, is tagged and gets a time-to-live; production is never touched.",
+  "test_cloud": "none",
+  "region": "<e.g. eu-central-1 | westeurope | europe-west3>",
+  "account_hint": "<AWS account alias, Azure subscription name or GCP project id — not a secret>",
+  "deploy_role": "<the least-privilege role or service account ASDR deploys with>",
+  "ttl_hours": 8,
+  "budget_usd_per_day": 20,
+  "approval": "every deploy",
+  "naming_prefix": "asdr-test",
+  "tags": {"owner": "<you>", "purpose": "asdr-test", "project": "<project>"}
+}

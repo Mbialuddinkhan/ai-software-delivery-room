@@ -10,6 +10,8 @@ Reads only what earlier steps left on disk, so it works mid-run or after:
   .harness/qa-reports/qa-<stage>-r<n>.md                       triad review rounds
   .harness/packs/*.md                   context-pack sizes (≈ tokens = chars / 4)
   .harness/test-results/history.jsonl   browser test runs (run_tests.py)
+  .harness/agent-runs.jsonl             tokens, time and model per agent run (log_agent_run.py, v3.8)
+  .harness/budget.json                  the budget set when the rigor was chosen (estimate_run.py)
   .harness/progress.json, sprints.json  where the run is now
 
 Use it to answer "where did the time go": a sprint with 3 attempts and 4
@@ -99,6 +101,22 @@ def main() -> int:
         "last": runs[-1] if runs else None,
     }
 
+    cost_rows = jsonl(H / "agent-runs.jsonl")
+    cost = {"runs": len(cost_rows), "tokens": sum(int(r.get("tokens") or 0) for r in cost_rows),
+            "hours": round(sum(float(r.get("seconds") or 0) for r in cost_rows) / 3600, 2),
+            "by_agent": {}, "by_phase": {}, "by_model": {}}
+    for r in cost_rows:
+        for key, name in (("by_agent", r.get("agent") or "?"), ("by_phase", r.get("phase") or "—"),
+                          ("by_model", r.get("model") or "default")):
+            b = cost[key].setdefault(name, {"runs": 0, "tokens": 0, "seconds": 0.0})
+            b["runs"] += 1
+            b["tokens"] += int(r.get("tokens") or 0)
+            b["seconds"] += float(r.get("seconds") or 0)
+    budget = read_json(H / "budget.json", {})
+    if budget.get("tokens"):
+        cost["budget"] = {"tokens": budget["tokens"], "hours": budget.get("hours"),
+                          "pct": round(100 * cost["tokens"] / budget["tokens"], 1), "rigor": budget.get("rigor")}
+
     metrics = {
         "schema": 1,
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
@@ -114,6 +132,7 @@ def main() -> int:
         "packs": packs,
         "pack_tokens_max": max((p["approx_tokens"] for p in packs), default=0),
         "tests": tests,
+        "cost": cost,
     }
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -129,6 +148,17 @@ def main() -> int:
              f"- Browser test runs: {tests['runs']} ({tests['passed_runs']} passed)"
              + (f"; last: {tests['last'].get('status')} {tests['last'].get('passed', 0)}/{tests['last'].get('tests', 0)} at {tests['last'].get('commit')}"
                 if tests["last"] else ""), ""]
+    if cost["runs"]:
+        b = cost.get("budget")
+        lines += ["## Cost", "",
+                  f"{cost['runs']} logged agent runs, {cost['tokens']:,} tokens, {cost['hours']} agent-hours"
+                  + (f" — {b['pct']}% of the {b['rigor']} budget ({b['tokens']:,} tokens)" if b else "") + ".", "",
+                  "| Agent | Runs | Tokens | Avg tokens/run | Hours |", "|---|---|---|---|---|"]
+        for name, v in sorted(cost["by_agent"].items(), key=lambda kv: -kv[1]["tokens"]):
+            lines.append(f"| {name} | {v['runs']} | {v['tokens']:,} | {v['tokens'] // max(1, v['runs']):,} | {v['seconds'] / 3600:.2f} |")
+        lines += ["", "| Phase | Runs | Tokens |", "|---|---|---|"]
+        lines += [f"| {k} | {v['runs']} | {v['tokens']:,} |" for k, v in cost["by_phase"].items()]
+        lines.append("")
     if sprints:
         lines += ["## Sprints", "", "| Sprint | Status | Evaluations | Verdicts | Negotiation rounds |",
                   "|---|---|---|---|---|"]

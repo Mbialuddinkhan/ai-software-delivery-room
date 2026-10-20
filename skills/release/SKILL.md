@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.7.0"
+  version: "3.8.0"
 ---
 
 # Release — Release Packaging Orchestrator
@@ -17,6 +17,11 @@ Read `docs/09-risk-review.md` and its fenced classification block. Proceed
 only if `classification` is `mvp-ready` or `production-ready`. Otherwise
 stop and direct the user to run the `riskgate` skill — packaging bypassing
 the gate would defeat the gate.
+
+Also run `python3 .harness/scripts/cloud_env.py list` (v3.8). If any
+temporary test environment is still running, stop: it is costing money, and a
+release must not leave one behind. Ask devops to destroy it and record the
+teardown, then continue.
 
 Subagents share none of your context: pass explicit paths in every
 invocation.

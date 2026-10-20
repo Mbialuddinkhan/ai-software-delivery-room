@@ -12,7 +12,7 @@
       "name": "ai-software-delivery-room",
       "displayName": "AI Software Delivery Room",
       "source": "./",
-      "description": "Idea → brief → flows → architecture → sprint loop with contract-first builds, live browser tests and evaluator-only sign-off; test reports, user manuals, a project dashboard and client status reports. Also assesses existing systems — business processes, code, security, a roadmap — and proves a rebuild still does what the old system did. Installs UI UX Pro Max for the design-system stage.",
+      "description": "Idea → brief → flows → architecture → sprint loop with contract-first builds, live browser tests and evaluator-only sign-off. Microservices or modular monolith by your decision, portable across AWS, Azure and GCP with cost analysis, tested on the cloud you choose. Dashboards, client reports, cost tracking; assesses existing systems. Installs UI UX Pro Max.",
       "category": "development",
       "tags": [
         "sdlc",

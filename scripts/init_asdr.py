@@ -103,6 +103,15 @@ def main() -> int:
     if not q.exists():
         q.write_text("")
 
+    # Test cloud (v3.8): where ASDR may deploy temporary test environments,
+    # chosen by the user in Phase 0. Starts as "none"; never holds credentials.
+    cloud = root / ".harness" / "cloud.json"
+    ctmpl = root / ".harness" / "templates" / "cloud.json"
+    if not cloud.exists() and ctmpl.exists():
+        c = json.loads(ctmpl.read_text())
+        c.setdefault("tags", {})["project"] = root.name
+        cloud.write_text(json.dumps(c, indent=2) + "\n")
+
     progress = root / ".harness" / "progress.json"
     if not progress.exists():
         progress.write_text(json.dumps(PROGRESS_SEED, indent=2) + "\n")
@@ -137,6 +146,10 @@ def main() -> int:
     print("  python3 .harness/scripts/make_context_pack.py --sprint <id> --role <role>")
     print("Browser tests (v3.4): copy .harness/templates/e2e/test-config.json to")
     print("  .harness/test-config.json, then: python3 .harness/scripts/run_tests.py [--live]")
+    print("Cost (v3.8): python3 .harness/scripts/estimate_run.py --sprints <n> [--ui] [--ai] [--services <n>] "
+          "--rigor <level> --set-budget; log every agent run with log_agent_run.py")
+    print("Test cloud (v3.8): set .harness/cloud.json → test_cloud (aws | azure | gcp | none), then "
+          "python3 .harness/scripts/cloud_preflight.py")
     print("Dashboard (v3.6): fill .harness/dashboard.json (environments, repos, links), then")
     print("  python3 .harness/scripts/build_dashboard.py   → docs/dashboard/ (HTML + PDF)")
     print("Next: python3 .harness/scripts/next_action.py")

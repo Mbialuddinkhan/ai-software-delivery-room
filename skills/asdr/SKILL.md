@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.7.0"
+  version: "3.8.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -62,6 +62,35 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    `.harness/dashboard.json` (`environments`, `repos`, `links`). List test
    login role names only; credentials stay in environment variables.
 
+5c. **Rigor and cost.** Estimate the run from the idea (sprints: small 2–3,
+   medium 4–6, large 7+; add `--ui` / `--ai` when the idea has them; services
+   stay 1 until the architecture decision):
+
+       python3 .harness/scripts/estimate_run.py --sprints <n> [--ui] [--ai] --rigor standard
+
+   Show the user the table (agent runs, tokens, hours per level, and the saving
+   against 3.7) and ask them to choose: `lite` for internal tools and
+   prototypes with no client data, `standard` (default), `paranoid` for
+   client-facing work with money, personal or regulated data. Write `rigor` to
+   `.harness/progress.json`, then run the same command with `--rigor <choice>
+   --set-budget`. Re-estimate after the architecture and portability decisions
+   (`--services <n> --cloud`) and tell the user if it moved by more than 20%.
+
+5d. **Test cloud.** Ask once: "Which cloud should ASDR deploy to for testing?"
+   — AWS, Azure, Google Cloud, or None (local only). Say what that means:
+   every deploy still asks first, uses a least-privilege role, is tagged with a
+   time-to-live and is torn down after the test; production is never touched;
+   sign-in uses the cloud's own CLI, never keys pasted into ASDR. Write the
+   answer and region to `.harness/cloud.json` (`test_cloud`, `region`), log the
+   question, then run `python3 .harness/scripts/cloud_preflight.py` and show
+   any NOT READY reasons. From `.harness/companions.json` → `cloud`, AND from
+   your own tool list (`mcp__aws*`, `mcp__azure*`, `mcp__google*` /
+   `mcp__gcloud*`, `mcp__terraform*`), tell the user which vendor agent tools
+   are present: AWS MCP Server, Azure Skills plugin / Azure MCP Server, Google
+   Cloud MCP servers, Terraform MCP server. When the chosen cloud's are
+   missing, say what they add (current service docs and prices, validated
+   deploys) and where to get them; never install them yourself.
+
 6. Read `references/file-map.md` (in this skill's base directory) now: the
    canonical paths, the stage table and the state fields. Rows cited below
    ("row 2c") are rows of that file map. Browser testing, live runs,
@@ -77,6 +106,11 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
   open`; log it again under the same `--id` once it is answered. Add
   `--client` when the question is for the client (a business decision, an
   approval, access): only those appear in the client status report.
+- **Cost log, after EVERY agent run** (v3.8): `python3
+  .harness/scripts/log_agent_run.py --agent <name> --phase <phase> [--stage
+  <id>] --model <opus|sonnet> --usage "<the usage block at the end of the
+  Agent result>"`. On `WARN` tell the user how much of the budget is used; on
+  `OVER BUDGET` stop and ask whether to continue, lower the rigor or cut scope.
 - **Sprint clock**: `python3 .harness/scripts/sprint_clock.py start <sprint>`
   when a sprint is activated, and `torn-down <sprint>` on a teardown (the evaluator stamps `done` itself). The
   delivery date is computed from these.
@@ -148,6 +182,20 @@ that produced the file.
   (`run_tests.py --parity old`) and on the new build; a kept behaviour that
   differs fails the sprint and blocks the release. `validate_product_map.py
   --gate` requires a fresh, passing comparison.
+- `estimate_run.py`, `log_agent_run.py`, `decide.py`,
+  `check_required_changes.py` (v3.8) — the cost estimate per rigor level, the
+  per-agent cost log with budget warnings, the scripted decision when a
+  critique has nothing Critical or High, and the scripted second round.
+- `validate_architecture_options.py`, `validate_portability.py`,
+  `validate_services.py` (v3.8) — the user's architecture decision (monolith /
+  microservices / serverless, with pros, cons, business impact and costs), the
+  portability decision (strategy and clouds, with a cost comparison), and the
+  microservices rules (owned data, tested contracts `CT-xx`, no synchronous
+  cycles, standalone run, adapters per cloud).
+- `cloud_preflight.py`, `cloud_env.py`, `cloud_parity.py` (v3.8) — read-only
+  readiness on the test cloud, the ledger of temporary test environments with
+  their time-to-live, and the proof that the cloud build passes the same tests
+  as the local one.
 - `validate_contract.py` and `validate_sprints.py` (which also requires each
   sprint's `flows` and every Must flow delivered) run in later phases.
 
@@ -194,10 +242,46 @@ sets the bar, the specialist executor does the work, and a SEPARATE stage-qa
 grades it, so no agent signs off its own work. Honor the dial in
 `.harness/progress.json` -> `rigor`:
 
-- `lite` — invoke the executor once (it self-checks); skip the planner and QA.
-- `standard` (default) — high-stakes stages run the full triad; low-stakes
-  stages skip the planner (light execute -> QA).
-- `paranoid` — every stage runs the full triad.
+- `lite` — each executor runs once per batch (below) and self-checks; no
+  stage planner, no stage QA.
+- `standard` (default) — batches; no stage planner (always pass `--no-plan`:
+  the QA grades against the template and the standard); one stage-qa run per
+  batch that holds a high-tier stage; other batches are executor-only.
+- `paranoid` — every stage runs the full triad on its own; pass `model:
+  "opus"` on every agent invocation (it overrides the Sonnet roles).
+
+**Batches (lite and standard, v3.8).** Consecutive stages with the same
+executor run as ONE invocation that writes all their artifacts, so the inputs
+are read once: product-owner → product-brief, business-case, roadmap;
+business-analyst → requirements, use-cases; product-manager → features,
+process-flows; business-analyst → test-cases; solution-architect →
+architecture (+ services, design-system). Run `stage_status.py` for each stage
+of the batch with `--no-plan`; when all say EXECUTE, invoke the executor once
+with every artifact path; when they say QA, invoke stage-qa once with every
+artifact and ask for one report per stage id
+(`.harness/qa-reports/qa-<stage>-r<n>.md`). Re-run only the stages marked
+`revise`. By the estimator (an estimate, not yet a measurement): about 30%
+fewer agent runs and 18% fewer tokens than 3.7's standard for a typical build;
+the agent-run log measures the real figure on each project.
+
+**Models (v3.8).** Opus for the judgement roles; stage-planner, stage-qa,
+product-integrity-qa, planner, documentation and release-manager run on
+Sonnet (their frontmatter `model`). Under `paranoid` pass `model: "opus"`.
+
+**Phase review (v3.8).** When a phase critique passes
+`validate_critique.py`, run
+
+    python3 .harness/scripts/decide.py docs/critique-<phase>.md --out docs/decision-<phase>.md --phase <phase> --rigor <rigor>
+
+With no Critical or High finding it writes the decision itself — verdict go;
+Medium findings become required changes for their owners, applied before the
+next phase without another review; Low findings are recorded as assumptions —
+and no judge runs. Exit 2 (`JUDGE: required`) → invoke the judge as before.
+After a judge's no-go and the owners' fixes, run
+`check_required_changes.py docs/decision-<phase>.md --gate "<the phase's
+validator>"`, read a sample of the changed files yourself (every change from a
+Critical or High finding), then re-run it with `--write --spot-checked <ids>`;
+re-invoke the judge only if a spot check fails or an owner disputes a change.
 
 To run one triad stage, drive it with the script until it prints DONE:
 
@@ -213,7 +297,8 @@ so a stage cannot stall.
 
 Gate/reviewer roles (critic, judge, risk-manager) are NOT wrapped in a triad —
 they ARE the independent review, terminated by their mechanical validators.
-The critic and judge still run at the end of each phase in every rigor mode.
+The critic runs at the end of each phase in every rigor mode; the judge when
+`decide.py` says it is needed, and always under `paranoid`.
 
 The stage ids, executors, artifact paths and tiers are in the stage table in
 `references/file-map.md`.
@@ -252,7 +337,10 @@ first two agents.
 3. **critic** — pass rows 1–2e as inputs + row 3 paths. Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-discovery.md`;
    if it errors, re-invoke the critic with those lines (max 2 rounds).
-4. **judge** — pass rows 1–3 (including 2c–2e and `docs/product-map.md`) as inputs + row 4 paths.
+4. **Decision** — run `decide.py` on `docs/critique-discovery.md` (Stage
+   execution → Phase review). If it writes the decision, give each required
+   change to its owner and continue at 4b. Exit 2 → **judge** — pass rows 1–3
+   (including 2c–2e and `docs/product-map.md`) as inputs + row 4 paths.
    Run `python3 .harness/scripts/validate_verdict.py docs/decision-discovery.md
    --type decision`; if it errors, re-invoke the judge to fix the block.
    Then read the fenced verdict block at the end of the decision doc:
@@ -263,9 +351,23 @@ first two agents.
 4b. Show the user the flow table from `docs/product-map.md` and the PF-00
    lifecycle diagram: it is the whole product on one page, and the cheapest
    place to say "that is not how my users work".
-5. **solution-architect** — inputs rows 1–2 + row 5 paths. Run this stage via
-   the Stage execution protocol (executor: solution-architect, stage-id:
-   architecture, artifact: docs/03-architecture.md).
+4c. **solution-architect (architecture options, v3.8)** — inputs rows 1, 1b,
+   2, 2d + row 5a path (`docs/03c-architecture-options.md`, template
+   architecture-options.md). Stage-id `architecture-options`. Then run
+   `python3 .harness/scripts/validate_architecture_options.py`: ERROR → back to
+   the architect; exit 2 → show the user the side-by-side table (section 03)
+   and the recommendation, and ask them to choose (AskUserQuestion: one option
+   per architecture, the recommended one first, each description giving its
+   business impact and its build and run cost estimates). Write the answer into
+   section 05 (Decision, Decided by), log it with `log_question.py --client`,
+   and re-run until exit 0. No design starts before the user has decided.
+5. **solution-architect** — inputs rows 1–2, 5a + `.harness/architecture.json`
+   + row 5 paths. Run this stage via the Stage execution protocol (executor:
+   solution-architect, stage-id: architecture, artifact:
+   docs/03-architecture.md). When the decided style is `microservices` it also
+   writes `docs/03e-services.md` (row 5e, template services.md) to
+   `.harness/templates/microservices/README.md`, in the same batch; then run
+   `python3 .harness/scripts/validate_services.py` and send ERROR lines back.
 5b. **solution-architect (design-system)** — invoke only if
    `docs/02-requirements.md` or `docs/02b-use-cases.md` describes a user
    interface (web, mobile, desktop, embedded screen), judged by meaning.
@@ -291,23 +393,43 @@ first two agents.
    extra input when it exists. Tell the executor that §13 (runtime and
    deployment: tier per agent + Task/Workspace/Gateway/Model blocks) is
    mandatory and is what devops and security-compliance build from.
-7. **security-compliance** — inputs rows 5–6 + row 7 paths; point it at
+6b. **devops (portability, v3.8)** — unless the user said the product runs
+   only on their own machines. Inputs rows 5, 5e +
+   `.harness/templates/cloud/catalogue.json` + `.harness/cloud.json`; output
+   `docs/03d-portability.md` (row 5d, template portability.md). Tell it to
+   price each strategy with the vendor tools present in this session (AWS MCP
+   Server, Azure MCP Server, Google Cloud) or the vendors' calculators, and to
+   state source and date. Then `python3
+   .harness/scripts/validate_portability.py`: ERROR → back to devops; exit 2 →
+   show the user the cost comparison and the recommendation and ask them to
+   choose the strategy and the production cloud(s); write the decision, log it
+   with `--client`, re-run until exit 0. Then re-run `validate_services.py`
+   (adapters per production cloud) and re-estimate the run.
+7. **security-compliance** — inputs rows 5–6, 5d + row 7 paths; for each
+   production cloud in `.harness/portability.json` it designs least-privilege
+   roles, network exposure and the secrets service; point it at
    the §13.2 Gateway blocks in row 6 (default-deny egress per agent). Run this stage via
    the Stage execution protocol (executor: security-compliance, stage-id:
    security-design, artifact: docs/05-security.md).
-8. **devops** — inputs rows 5, 6 and 7 + row 8 paths; it also sets up the
+8. **devops** — inputs rows 5, 5d, 5e, 6 and 7 + row 8 paths; it also sets up the
    browser suites and writes row 12 (`.harness/test-config.json`). For every T3 agent
    in row 6 §13.1 it also writes `deploy/agents/<agent>.yaml` from
-   `.harness/templates/agent-runtime.yaml` (row 6b). Run this stage via the
-   Stage execution protocol (executor: devops, stage-id: devops-design,
-   artifact: docs/06-devops.md).
-9. **critic** — inputs rows 5, 5b, 6, 7, 8 + row 9 paths. Its mandatory
+   `.harness/templates/agent-runtime.yaml` (row 6b). It writes the
+   infrastructure as code to `.harness/templates/microservices/infra-layout.md`
+   for the production clouds and the test cloud, and the local Compose file
+   (template `docker-compose.services.yml` for microservices: every service
+   runs standalone with its own data store and mocks of what it calls). Run
+   this stage via the Stage execution protocol (executor: devops, stage-id:
+   devops-design, artifact: docs/06-devops.md). Then `cloud_preflight.py`
+   must say READY (or the test cloud is `none`).
+9. **critic** — inputs rows 5, 5a, 5b, 5d, 5e, 6, 7, 8 + row 9 paths. Its mandatory
    checks on row 6 §13 (tier justified, no untrusted code at T1, allowlist
    per agent, no secret values) and on row 5b (fit vs brief, contrast) are
    in the critic's own instructions. Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-architecture.md`;
    if it errors, re-invoke the critic (max 2 rounds).
-10. **judge** — inputs rows 5–9 + row 10 paths. Run
+10. **Decision** — `decide.py` on `docs/critique-architecture.md`; exit 2 →
+    **judge** — inputs rows 5–9 (with 5a, 5d, 5e) + row 10 paths. Run
     `python3 .harness/scripts/validate_verdict.py docs/decision-architecture.md
     --type decision` first; then same verdict handling as step 4.
 
@@ -373,6 +495,22 @@ Drive the loop with the script — after every agent invocation:
    use cases) consistently, then have **product-integrity-qa** re-baseline the
    matrix before the loop continues.
 
+6. **Cloud test run (v3.8)** — when `.harness/cloud.json` → `test_cloud` is
+   not `none`: after the first sprint (for microservices, the walking
+   skeleton), after the last sprint, and whenever the user asks.
+   a. devops runs `cloud_preflight.py`; show the user the Terraform plan
+      summary and the time-to-live, and ask to approve the deploy. No answer,
+      no deploy.
+   b. On yes, devops applies `infra/envs/test-<cloud>` and records it:
+      `cloud_env.py create --name <name> --cloud <cloud> --approved-by
+      "<user>, <date>" --ttl-hours <cloud.json ttl> --url <url> --stack <folder>`.
+   c. `run_tests.py --label cloud-<cloud> --base-url <url> --no-server`, then
+      `cloud_parity.py --local <the latest local label> --cloud cloud-<cloud>`.
+      A parity ERROR fails the sprint like a failing test.
+   d. devops destroys it at once and records `cloud_env.py destroyed --name
+      <name>`. The dashboard shows anything still running; past its
+      time-to-live it turns the status "at risk".
+
 Companion rules for UI sprints, the build ladder, Ponytail, Graphify and RTK
 are in `references/companions.md`; apply them every sprint.
 
@@ -397,7 +535,10 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    security-final, artifact: docs/09-security-review-final.md).
 2. **devops** — output `docs/09-devops-readiness.md`; template devops.md;
    release-gate context: run the builds, validate every
-   `deploy/agents/*.yaml` against docs/04 §13.2, paste evidence. Run this stage via
+   `deploy/agents/*.yaml` against docs/04 §13.2, paste evidence. It also runs
+   `cloud_preflight.py`, `validate_services.py --gate` (microservices) and
+   `cloud_env.py list --overdue`: a test environment still running blocks
+   the release. Run this stage via
    the Stage execution protocol (executor: devops, stage-id: devops-readiness,
    artifact: docs/09-devops-readiness.md).
 3. **documentation** — the developer docs plus, for any UI,
@@ -413,7 +554,9 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    fix the block. A `broken` or `drifted` integrity verdict is a release
    blocker.
 5. **risk-manager** — inputs: both 09-docs, `docs/09-product-integrity.md`,
-   `docs/product-map.md`, eval reports, sprints.json; output
+   `docs/product-map.md`, eval reports, sprints.json, and (v3.8)
+   `.harness/cloud-parity.json`, `.harness/services.json`,
+   `.harness/cloud-envs.jsonl`; output
    `docs/09-risk-review.md`. Then run
    `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
    --type risk`; if it errors, re-invoke the risk-manager to fix the block.

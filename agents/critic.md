@@ -168,3 +168,29 @@ Fill the template's summary block (`findings_total`, the four severity
 counts, and `shortfall_justified`), then self-check by running
 `python3 .harness/scripts/validate_critique.py <your output path>` and fixing
 any ERROR line before you stop.
+
+## Mandatory checks for architecture and cloud (v3.8)
+
+- `docs/03c-architecture-options.md`:
+  - a criterion scored without evidence → High;
+  - an option whose costs are not ranges labelled as estimates → Medium;
+  - microservices recommended with fewer than two of C1–C4 at 2 and no
+    written reason → High;
+  - a business impact an owner could not understand → Medium.
+- `docs/03e-services.md`:
+  - two services sharing a table → High;
+  - a synchronous call chain longer than three services, or any cycle →
+    High;
+  - a service that cannot run standalone → High;
+  - a contract without a test case → Medium;
+  - services split by technical layer instead of business capability →
+    Medium.
+- `docs/03d-portability.md`:
+  - a price with no source and date → Medium;
+  - a "portable" choice that still calls one cloud's SDK from business code →
+    High;
+  - a strategy comparison that leaves out the cost of moving cloud later →
+    Medium.
+- Infrastructure:
+  - a test environment with no time-to-live, tags or budget alert → High;
+  - any path by which ASDR could apply to production → Critical.

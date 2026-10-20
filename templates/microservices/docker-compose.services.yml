@@ -1,0 +1,64 @@
+# Template — local run of every service, alone or together (ASDR 3.8).
+# Copy to the project root as docker-compose.yml and replace the <placeholders>.
+#   docker compose --profile all up          every service and the shared stand-ins
+#   docker compose --profile orders up       ONE service standalone: itself, its own database,
+#                                            and a mock of every service it calls (from the contracts)
+# Never put real credentials here: values below are for local throwaway containers only and are read
+# from .env (not committed) when present.
+
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+  OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-unset}
+
+services:
+  # ── one block per service ────────────────────────────────────────────────
+  orders:
+    profiles: ["all", "orders"]
+    build: ./services/orders
+    ports: ["8081:8080"]
+    environment:
+      <<: *otel
+      OTEL_SERVICE_NAME: orders
+      DB_URL: postgres://orders:${ORDERS_DB_PASSWORD:-local-only}@orders-db:5432/orders
+      EVENTS_ADAPTER: nats
+      EVENTS_URL: nats://nats:4222
+      CATALOG_URL: http://catalog-mock:4010        # standalone: the mock; in "all" point it at catalog:8080
+    depends_on: [orders-db, nats]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health/ready"]
+      interval: 10s
+      retries: 5
+
+  orders-db:
+    profiles: ["all", "orders"]
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orders
+      POSTGRES_USER: orders
+      POSTGRES_PASSWORD: ${ORDERS_DB_PASSWORD:-local-only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders"]
+      interval: 5s
+      retries: 10
+
+  catalog-mock:                                    # mock generated from the provider's contract
+    profiles: ["orders"]
+    image: stoplight/prism:5
+    command: mock -h 0.0.0.0 /contracts/catalog.openapi.yaml
+    volumes: ["./contracts:/contracts:ro"]
+
+  # ── shared local stand-ins (see .harness/templates/cloud/catalogue.json) ──
+  nats:
+    profiles: ["all", "orders"]
+    image: nats:2
+    command: ["-js"]
+
+  otel-collector:
+    profiles: ["all"]
+    image: otel/opentelemetry-collector-contrib:0.111.0   # pinned: update to the current release
+    volumes: ["./infra/local/otel-collector.yaml:/etc/otelcol-contrib/config.yaml:ro"]
+
+  jaeger:
+    profiles: ["all"]
+    image: jaegertracing/all-in-one:1.62.0   # pinned: update to the current release
+    ports: ["16686:16686"]

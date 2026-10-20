@@ -21,6 +21,8 @@ It reads the discovery documents and follows every link in the chain
   docs/02f-parity.md        existing systems only: PAR items, behaviour kept from the
                             old system (keep / change / drop); with --gate a fresh,
                             passing compare_parity.py result is required too
+  docs/03e-services.md      microservices only (v3.8): CT items, the contracts
+                            between services; each needs a test case that covers it
 
 and reports every broken link as an "ERROR:" line (exit 1) — a feature no
 journey uses, a use case on no flow, a flow nothing leads to, a flow without a
@@ -65,13 +67,14 @@ NONE_WORDS = {"", "none", "—", "-", "n/a", "na"}
 
 
 ITEM_RE = re.compile(r"\b(PF-\d+\.E\d+|PF-\d+\.\d+|UC-\d+\.[AE]\d+|UC-\d+|AC-\d+\.\d+|"
-                     r"NFR-\d+|FR-\d+|BR-\d+|EC-\d+|PAR-\d+|F-\d+)\b")
-KIND_ORDER = ["FR", "NFR", "AC", "BR", "EC", "UC", "UC-ALT", "F", "STEP", "EXC", "PAR"]
+                     r"NFR-\d+|FR-\d+|BR-\d+|EC-\d+|PAR-\d+|CT-\d+|F-\d+)\b")
+KIND_ORDER = ["FR", "NFR", "AC", "BR", "EC", "UC", "UC-ALT", "F", "STEP", "EXC", "PAR", "CT"]
 KIND_LABEL = {"FR": "Functional requirements", "NFR": "Non-functional requirements",
               "AC": "Acceptance criteria", "BR": "Business rules", "EC": "Edge cases",
               "UC": "Use cases (main flow)", "UC-ALT": "Use case alternate and exception flows",
               "F": "Features", "STEP": "Process flow steps", "EXC": "Process flow exception paths",
-              "PAR": "Parity items (behaviour kept from the old system)"}
+              "PAR": "Parity items (behaviour kept from the old system)",
+              "CT": "Service contracts (microservices)"}
 
 
 def kind_of(item: str) -> str:
@@ -217,6 +220,13 @@ def main() -> int:
         if m:
             dec = (re.match(r"(keep|change|drop)", m.group(3).strip(), re.IGNORECASE) or [None, "keep"])[1].lower()
             parity[m.group(1)] = (m.group(2).strip()[:160], dec)
+
+    svc_md = read(d / "03e-services.md", errors, required=False)  # microservices only (v3.8)
+    contracts = {}                                                  # CT id -> "provider → consumer (kind)"
+    for line in svc_md.splitlines():
+        m = re.match(r"^\s*\|\s*(CT-\d+)\s*\|\s*([^|]*)\|\s*([^|]*)\|\s*([^|]*)\|", line)
+        if m:
+            contracts[m.group(1)] = f"{m.group(2).strip()} → {m.group(3).strip()} ({m.group(4).strip()})"[:160]
 
     # ── requirements & use cases ──
     frs = []
@@ -523,6 +533,8 @@ def main() -> int:
     for x, (behaviour, dec) in parity.items():
         if dec != "drop":                            # a retired behaviour has nothing left to test
             testable[x] = ("PAR", behaviour)
+    for x, desc in contracts.items():
+        testable[x] = ("CT", desc)
 
     declared_by = defaultdict(set)                  # item -> test cases that name it
     for tid, t in tcs.items():

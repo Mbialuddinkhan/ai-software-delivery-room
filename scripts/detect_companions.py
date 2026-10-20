@@ -18,6 +18,14 @@ Companions:
   rtk       enixCode/rtk-plugin — lossy shell-output compression. Detected
             so the orchestrator can warn: it rewrites the evaluator's
             evidence commands (pytest, jest, playwright, git, grep, cat).
+  cloud     (v3.8) the cloud vendors' own agent tooling and CLIs, used by
+            devops and security instead of ASDR re-implementing cloud
+            knowledge: AWS MCP Server, Azure Skills plugin / Azure MCP
+            Server, Google Cloud MCP servers, HashiCorp Terraform MCP, and
+            the aws / az / gcloud / terraform / tofu / docker / kubectl CLIs.
+            Found by name in MCP and plugin configuration; the orchestrator
+            also checks its own tool list (mcp__* names). Never installed by
+            ASDR — the user adds them.
 """
 import argparse
 import json
@@ -94,6 +102,48 @@ def detect_rtk():
     return {"installed": bool(bin_hit), "path": str(bin_hit) if bin_hit else None}
 
 
+CLOUD_TOOLS = {
+    "aws": r"aws-mcp|awslabs|\.api\.aws|aws-api-mcp|aws-knowledge|aws-skills|agent-toolkit-for-aws",
+    "azure": r"@azure/mcp|azure-mcp|azure-skills|azure/mcp|foundry-mcp",
+    "gcp": r"googleapis\.com/mcp|gcloud-mcp|google-cloud-mcp|cloud\.google\.com/mcp|mcp\.googleapis",
+    "terraform": r"terraform-mcp|hashicorp/terraform|terraform_mcp",
+}
+CLOUD_CLIS = {"aws": "aws", "azure": "az", "gcp": "gcloud", "terraform": "terraform"}
+
+
+def detect_cloud():
+    import re as _re
+    sources = [CWD / ".mcp.json", HOME / ".claude.json", CLAUDE / "settings.json", CWD / ".claude" / "settings.json",
+               CWD / ".vscode" / "mcp.json"]
+    texts = []
+    for f in sources:
+        try:
+            if f.is_file() and f.stat().st_size < 5_000_000:
+                texts.append((str(f), f.read_text(errors="ignore")))
+        except OSError:
+            continue
+    names = []
+    for root in (PLUGINS, CLAUDE / "skills", CWD / ".claude" / "skills", CWD / ".github" / "plugins"):
+        if root.is_dir():
+            try:
+                for d in root.rglob("*"):
+                    if d.is_dir() and len(d.relative_to(root).parts) <= 4:
+                        names.append(str(d))
+            except (PermissionError, OSError):
+                continue
+    out = {}
+    for vendor, pat in CLOUD_TOOLS.items():
+        rx = _re.compile(pat, _re.IGNORECASE)
+        found = sorted({src for src, t in texts if rx.search(t)} | {n for n in names if rx.search(n)})[:5]
+        out[vendor] = {"cli": shutil.which(CLOUD_CLIS[vendor]), "agent_tools": found}
+    out["terraform"]["tofu"] = shutil.which("tofu")
+    out["docker"] = shutil.which("docker")
+    out["kubectl"] = shutil.which("kubectl")
+    out["note"] = ("Also look for mcp__aws*, mcp__azure*, mcp__google*/gcloud*, mcp__terraform* in your own tool "
+                   "list: hosted MCP servers may not appear in local configuration.")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", default=".harness/companions.json")
@@ -104,6 +154,7 @@ def main() -> int:
         "ponytail": detect_ponytail(),
         "graphify": detect_graphify(),
         "rtk": detect_rtk(),
+        "cloud": detect_cloud(),
         "warnings": [],
     }
 

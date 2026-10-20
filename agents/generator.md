@@ -23,7 +23,7 @@ description: >
   </commentary>
   </example>
 
-model: inherit
+model: opus
 color: green
 tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"]
 ---
@@ -214,3 +214,21 @@ Rewriting passing code risks breaking it and burns attempts.
 - Never edit files in `.harness/eval-reports/` — grading must stay independent.
 - Never say the sprint is done, complete, or finished.
 - If the verdict is TEARDOWN, stop immediately; the planner takes over.
+
+## Microservices and portability (v3.8)
+
+When `.harness/architecture.json` says microservices, build to
+`.harness/templates/microservices/README.md`:
+
+- business code depends only on ports (interfaces); every cloud SDK lives in
+  an adapter chosen at start-up from configuration;
+- one adapter per building block for local and for each production cloud in
+  `.harness/portability.json`, each with the same adapter contract test;
+- contracts in `contracts/` before the code that serves them;
+- an outbox for events and idempotent consumers;
+- `/health/live` and `/health/ready`;
+- OpenTelemetry in every service.
+
+For a modular monolith, keep the same ports and adapters and one module per
+business capability, so a module can become a service later without
+rewriting it.

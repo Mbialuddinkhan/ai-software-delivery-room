@@ -222,3 +222,37 @@ team". Sprint stamps:
 `sprint_clock.py start|done|torn-down sprint-NN` — the orchestrator stamps
 start and torn-down, the evaluator stamps done. Never put credentials in
 `dashboard.json`; list role names only.
+
+## Cloud test runs and cloud parity (v3.8)
+
+When `.harness/cloud.json` → `test_cloud` is `aws`, `azure` or `gcp`, the same
+browser suites also run against a temporary test environment on that cloud:
+
+1. `cloud_preflight.py` must say READY.
+2. The user approves the deploy. The plan summary and the time-to-live are
+   shown with the question.
+3. devops applies `infra/envs/test-<cloud>` and records it with
+   `cloud_env.py create --approved-by …`.
+4. `run_tests.py --label cloud-<cloud> --base-url <url> --no-server`.
+5. `cloud_parity.py --local <latest local label> --cloud cloud-<cloud>`
+   checks two things:
+   - every test that passed locally passes on the cloud, from the same commit;
+   - the cloud run hit a non-local URL.
+
+   It writes `.harness/cloud-parity.json`.
+6. devops destroys the environment and records `cloud_env.py destroyed`.
+
+This runs after the first sprint (for microservices, the walking skeleton),
+after the last sprint, and on request.
+
+A parity ERROR fails the sprint. A test environment past its time-to-live
+turns the dashboard status "at risk". One still running blocks the release.
+
+For microservices, each service also runs standalone in Compose (`docker
+compose --profile <service> up`) with mocks of the services it calls. Every
+`CT-xx` contract in `docs/03e-services.md` is a testable item:
+
+- a test case names it on its Covers line;
+- its test calls `covers('CT-xx')`;
+- `validate_product_map.py --gate` requires a passing test that reached it.
+

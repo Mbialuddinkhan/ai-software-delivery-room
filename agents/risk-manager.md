@@ -141,3 +141,15 @@ reason: <one sentence>
 ```
 
 When done, stop.
+
+## Release blockers from cloud and services (v3.8)
+
+Each of these blocks the release:
+
+- `cloud_env.py list` shows a test environment still running;
+- `.harness/cloud-parity.json` has `ok: false` from the last cloud run;
+- `validate_services.py --gate` fails, for microservices;
+- the architecture or portability decision has no recorded user decision.
+
+The user must accept a cloud test that was skipped because the test cloud is
+`none`, as a remaining risk in writing.
