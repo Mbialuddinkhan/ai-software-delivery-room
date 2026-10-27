@@ -152,6 +152,11 @@ def main() -> int:
           "python3 .harness/scripts/cloud_preflight.py")
     print("Dashboard (v3.6): fill .harness/dashboard.json (environments, repos, links), then")
     print("  python3 .harness/scripts/build_dashboard.py   → docs/dashboard/ (HTML + PDF)")
+    print("Where to start (v4.0): python3 .harness/scripts/entry_point.py recommend --prompt \"<request>\"; "
+          "then entry_point.py choose <start>")
+    print("Model plan (v4.0): python3 .harness/scripts/model_plan.py set --plan economy|balanced|maximum "
+          "[--top fable]; pass model_plan.py get <role> on every agent call")
+    print("Settings (v4.0): docs/03f-configuration.md, checked by validate_configurability.py")
     print("Next: python3 .harness/scripts/next_action.py")
     return 0
 

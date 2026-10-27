@@ -224,3 +224,12 @@ When `.harness/architecture.json` says microservices:
 A service that only works with its real neighbours running fails the sprint.
 When the orchestrator ran a cloud test, a `cloud_parity.py` ERROR fails the
 sprint like a failing test.
+
+## Settings (v4.0)
+
+For every setting a sprint touches (`docs/03f-configuration.md`): run the
+test cases for each allowed value from the side of the user it affects, check
+the default behaves as documented, check a role without permission cannot
+change it (server-side, not only a hidden button), and check the change is
+logged. Settings that interact are tested pairwise (section 05). A value with
+no passing test is a FAIL for the sprint.

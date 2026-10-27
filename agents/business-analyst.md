@@ -217,3 +217,32 @@ non-dropped PAR item is named on a test case's Covers line in
 
 
 When done, stop. The critic challenges your work next.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after this stage (asdr Phase 0 step 5a)
+and the documents you normally write are missing. You receive the user's own
+documents and their request. Write the same canonical document(s) from the
+same template, but convert rather than invent:
+
+- Keep the meaning of everything you take from the user's documents and say
+  where it came from (file and heading).
+- Mark anything you had to infer `[inferred]`; never present an inference as
+  the client's requirement or decision.
+- End with a "Gaps for the user" section: plain questions for what is
+  missing. Do not fill a gap with something plausible.
+- The template's IDs, tables and required fields still apply — the validators
+  and every later gate read them.
+- Acceptance criteria must still be measurable. Where the user's documents give none, write them `[inferred]` and ask the user to confirm them in the gaps.
+- Test cases come from the product-manager's converted flows, exactly as in a normal run.
+
+## Test cases for settings (v4.0)
+
+After the user has decided `docs/03f-configuration.md`, add to
+`docs/02e-test-cases.md` one test case per allowed value of every setting (a
+range: its minimum, its maximum and the default), written from the side of the
+user the setting affects, plus one that a role without permission cannot
+change it. For settings that interact (section 05), cover every pair of values
+(pairwise), not every combination. Put the TC ids in the setting's Tests
+column. A setting without a test for each value fails
+`validate_configurability.py`.

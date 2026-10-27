@@ -195,3 +195,29 @@ credentials.
 
 
 When done, stop.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after this stage (asdr Phase 0 step 5a)
+and the documents you normally write are missing. You receive the user's own
+documents and their request. Write the same canonical document(s) from the
+same template, but convert rather than invent:
+
+- Keep the meaning of everything you take from the user's documents and say
+  where it came from (file and heading).
+- Mark anything you had to infer `[inferred]`; never present an inference as
+  the client's requirement or decision.
+- End with a "Gaps for the user" section: plain questions for what is
+  missing. Do not fill a gap with something plausible.
+- The template's IDs, tables and required fields still apply — the validators
+  and every later gate read them.
+- Commands, environments and pipelines you cannot find in the user's documents or the repository are gaps; do not write a pipeline nobody asked for.
+
+## Settings per environment (v4.0)
+
+Settings from `docs/03f-configuration.md` are configuration, not code: each
+environment gets its values from the deployment configuration (never from a
+developer's machine), changes are logged, and secrets stay in the secrets
+service — never in a setting. At the release gate, run
+`validate_configurability.py --gate` and paste its result into the readiness
+report.

@@ -51,3 +51,14 @@ Priority is MoSCoW: Must | Should | Could | Won't. Release is MVP or a version. 
 - Success measure: <…>
 - Dependencies: <…>
 - Open questions: <…>
+
+## Decisions with options
+
+Business decisions where more than one answer is sensible (who approves what,
+pricing plans, limits and thresholds, workflow steps, notifications, a feature
+on or off per customer). Options only: the solution-architect types and costs
+them in docs/03f-configuration.md and the user decides.
+
+| ID | Decision | Options | Features | Who would want to change it later |
+|---|---|---|---|---|
+| DEC-01 | <who approves a refund> | <fixed limit; per-customer limit> | F-02 | <admin persona> |

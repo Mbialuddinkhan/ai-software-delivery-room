@@ -66,13 +66,20 @@ Planner → Generator negotiates → Evaluator ratifies → Generator builds →
 ## How to use
 
 1. Install package into repo.
-2. Open Claude Code.
-3. Run `/asdr "<software idea>"`.
-4. Review strategic docs.
-5. Let harness create sprints.
-6. Let generator/evaluator execute sprint loop.
-7. Review final risk classification.
-8. Deploy only after gates pass.
+2. Open Claude Code or Cowork (a Sonnet conversation is the cheapest; each role
+   runs on its own model from the model plan).
+3. Run `/asdr "<software idea>"`. ASDR recommends where to start (Validate,
+   Discovery, Design, Build, Release gate, Assess, or Resume) from your request
+   and what is already in the folder; you choose. A late start converts your
+   own documents first (v4.0).
+4. Choose the thoroughness and the model plan (economy / balanced / maximum)
+   from the cost estimate.
+5. Review strategic docs, and decide the architecture, the cloud and which
+   decisions become settings (configure / prepare / decide-once).
+6. Let harness create sprints.
+7. Let generator/evaluator execute sprint loop.
+8. Review final risk classification.
+9. Deploy only after gates pass.
 
 ## Production release requirements
 
@@ -84,4 +91,5 @@ Planner → Generator negotiates → Evaluator ratifies → Generator builds →
 - Deployment guide exists.
 - Rollback plan exists.
 - Documentation exists.
+- Every setting has a passing test for each allowed value and is not past its review date (v4.0).
 - Risk Manager says MVP-ready or Production-ready.

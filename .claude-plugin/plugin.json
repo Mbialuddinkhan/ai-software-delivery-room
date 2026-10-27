@@ -1,7 +1,7 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "3.9.0",
-  "description": "Multi-agent software delivery for Claude: idea validation (desk evidence, a synthetic persona panel, optional MiroFish); discovery with features, flows and test cases; architecture where you choose monolith or microservices and how portable to be, with costs; sprints through whole user journeys with independent QA; live browser tests, also on your cloud; reports and manuals; a dashboard with forecast and run cost; and assessments of existing systems.",
+  "version": "4.0.0",
+  "description": "Multi-agent software delivery for Claude. Starts where you choose (it recommends the best start point and converts your own documents); idea validation with a synthetic persona panel; discovery with flows and test cases; architecture, cloud and configurable decisions you make, with costs; sprints with independent QA and live browser tests; a per-role model plan to cut cost; reports, manuals, a dashboard; assessments of existing systems.",
   "author": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com"

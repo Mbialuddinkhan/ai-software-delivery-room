@@ -153,3 +153,10 @@ Each of these blocks the release:
 
 The user must accept a cloud test that was skipped because the test cloud is
 `none`, as a remaining risk in writing.
+
+## Release blockers from settings (v4.0)
+
+Read `.harness/configuration.json` and the devops readiness report's
+`validate_configurability.py --gate` result. Block the release when a setting
+is past its review date or any allowed value of a setting has no passing test
+case. List each blocker by its CFG id.

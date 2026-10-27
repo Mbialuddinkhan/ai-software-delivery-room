@@ -110,3 +110,31 @@ From `.harness/templates/process-flows.md`.
   the requirements change, so the three never disagree.
 
 When done, stop. The business-analyst writes the test cases from your flows next.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after this stage (asdr Phase 0 step 5a)
+and the documents you normally write are missing. You receive the user's own
+documents and their request. Write the same canonical document(s) from the
+same template, but convert rather than invent:
+
+- Keep the meaning of everything you take from the user's documents and say
+  where it came from (file and heading).
+- Mark anything you had to infer `[inferred]`; never present an inference as
+  the client's requirement or decision.
+- End with a "Gaps for the user" section: plain questions for what is
+  missing. Do not fill a gap with something plausible.
+- The template's IDs, tables and required fields still apply — the validators
+  and every later gate read them.
+- Every converted feature must sit on a flow; a feature in the user's documents that no journey reaches is listed as a gap, not dropped.
+
+## Decisions with options (v4.0)
+
+While writing the feature list, collect every business decision where more
+than one answer is sensible — who approves what, pricing plans, limits and
+thresholds, workflow steps, notification channels, a feature on or off per
+customer — into the "Decisions with options" table at the end of
+`docs/02c-features.md` (DEC-xx, the options, the features it touches, who
+would want to change it later). List the options only. The
+solution-architect types and costs them in `docs/03f-configuration.md` and
+the user decides; do not decide them in the feature list.

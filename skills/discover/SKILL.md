@@ -6,7 +6,7 @@ description: >
   before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -15,6 +15,15 @@ Ask the user for their software idea if not provided.
 
 Subagents share none of your context: every invocation prompt must contain
 the input paths to read, the output path, and the template path.
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Stage execution (universal triad)
 

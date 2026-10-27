@@ -305,7 +305,7 @@ class TestEfficiencyWiring(unittest.TestCase):
     def test_skills_use_the_new_tools(self):
         asdr = (REPO / "skills/asdr/SKILL.md").read_text()
         for needle in ("estimate_run.py", "log_agent_run.py", "decide.py", "check_required_changes.py",
-                       "Batches (lite and standard", 'model: "opus"', "--set-budget"):
+                       "Batches (lite and standard", "model_plan.py get", "--set-budget"):  # v4.0: the model plan replaced 'model: "opus"'
             self.assertIn(needle, asdr)
         assess = (REPO / "skills/assess/SKILL.md").read_text()
         for needle in ("assess_scope.py", "decide.py", "check_required_changes.py", "estimate_run.py --mode assess"):

@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -57,24 +57,70 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    This step is the only place the check runs — ASDR makes no network
    call at session start — and the only place the user decides.
 
+5a. **Where to start (v4.0).** Run
+
+       python3 .harness/scripts/entry_point.py recommend --prompt "<the user's request, verbatim>"
+
+   It reads the request and looks at the folder (an earlier run, ASDR's own
+   documents, the user's own PRDs, specs or architecture notes, existing code)
+   and prints every start point — Validate, Discovery, Design, Build, Release
+   gate, Assess an existing system, Resume — with what each skips, the risk of
+   skipping it, and what must be caught up first, and marks one as
+   recommended with its reasons. Show the user the recommendation and its
+   reasons in plain words, then ask with AskUserQuestion: the recommended start
+   first (label ending "(Recommended)"), then the two or three next most
+   sensible ones, each description saying what it skips and the catch-up it
+   needs; leave out options marked `not advised` unless the user asked for
+   them. Never choose for the user — except when they said to run end-to-end
+   without stopping: then take the recommendation and say so. Record it:
+
+       python3 .harness/scripts/entry_point.py choose <start> --by "<user>" --prompt "<request>"
+
+   and log the question with `log_question.py`. A start other than Discovery
+   or Validate runs the catch-up below once the rest of Phase 0 (steps 5b–6)
+   is done; Resume follows the Resume protocol; Assess hands over to the
+   assess skill. A run whose progress.json is still in the strategic phase is
+   not a resume: the recommendation comes from its documents and decisions.
+
 5b. Ask the user once for the project's environments, repositories and links
    (test, staging, production URLs; repository URLs; CI) and write them to
    `.harness/dashboard.json` (`environments`, `repos`, `links`). List test
    login role names only; credentials stay in environment variables.
 
-5c. **Rigor and cost.** Estimate the run from the idea (sprints: small 2–3,
-   medium 4–6, large 7+; add `--ui` / `--ai` when the idea has them; services
-   stay 1 until the architecture decision):
+5c. **Rigor, model plan and cost.** Estimate the run from the idea (sprints:
+   small 2–3, medium 4–6, large 7+; add `--ui` / `--ai` when the idea has
+   them; services stay 1 until the architecture decision):
 
-       python3 .harness/scripts/estimate_run.py --sprints <n> [--ui] [--ai] --rigor standard
+       python3 .harness/scripts/estimate_run.py --sprints <n> [--ui] [--ai] --rigor standard [--start <start>] --compare-plans
 
-   Show the user the table (agent runs, tokens, hours per level, and the saving
-   against 3.7) and ask them to choose: `lite` for internal tools and
-   prototypes with no client data, `standard` (default), `paranoid` for
-   client-facing work with money, personal or regulated data. Write `rigor` to
-   `.harness/progress.json`, then run the same command with `--rigor <choice>
-   --set-budget`. Re-estimate after the architecture and portability decisions
-   (`--services <n> --cloud`) and tell the user if it moved by more than 20%.
+   (`--start` for Discovery, Design, Build or Release gate; for Validate add a
+   second estimate with `--mode validate`; Assess has its own estimate in the
+   assess skill; for Resume leave it out.)
+
+   Add `--price-opus/--price-sonnet/--price-haiku/--price-fable` (USD per
+   million tokens, blended) when the user wants money figures; prices are not
+   built in. Show the user the tables and ask two questions in ONE
+   AskUserQuestion round:
+   - **Thoroughness:** `lite` for internal tools and prototypes with no client
+     data, `standard` (default), `paranoid` for client-facing work with money,
+     personal or regulated data.
+   - **Model plan (v4.0):** `balanced` (default: judgement and authoring roles
+     on the strongest model, checklist roles and the panel on Sonnet),
+     `economy` (only the roles that can stop a bad release stay on the
+     strongest model; authors on Sonnet; the panel and release notes on
+     Haiku), `maximum` (every role on the strongest model; the default under
+     `paranoid`). If the main conversation runs on Fable, ask whether the top
+     roles should use Fable too (`--top fable`). Say plainly: each role runs
+     on its own model, but this conversation stays on the model the user
+     selected — the cheapest setup is a Sonnet conversation with this plan; on
+     a Pro or Max subscription the saving shows as usage limits lasting
+     longer, not a smaller bill.
+   If they choose `paranoid` and did not pick a plan, use `maximum`. Write
+   `rigor` to `.harness/progress.json`, run `python3
+   .harness/scripts/model_plan.py set --plan <plan> [--top fable]`, then run
+   the estimate again with `--rigor <choice> --set-budget`. Re-estimate after
+   the architecture and portability decisions (`--services <n> --cloud`) and
+   tell the user if it moved by more than 20%.
 
 5d. **Test cloud.** Ask once: "Which cloud should ASDR deploy to for testing?"
    — AWS, Azure, Google Cloud, or None (local only). Say what that means:
@@ -106,9 +152,14 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
   open`; log it again under the same `--id` once it is answered. Add
   `--client` when the question is for the client (a business decision, an
   approval, access): only those appear in the client status report.
+- **Model, on EVERY agent invocation** (v4.0): pass `model: <the output of
+  python3 .harness/scripts/model_plan.py get <agent>>`. If the call fails
+  because the account or organisation does not allow that model, run
+  `model_plan.py unavailable <model>`, tell the user in one line, and retry
+  with the model `get` now returns.
 - **Cost log, after EVERY agent run** (v3.8): `python3
   .harness/scripts/log_agent_run.py --agent <name> --phase <phase> [--stage
-  <id>] --model <opus|sonnet> --usage "<the usage block at the end of the
+  <id>] --model <the model you passed> --usage "<the usage block at the end of the
   Agent result>"`. On `WARN` tell the user how much of the budget is used; on
   `OVER BUDGET` stop and ask whether to continue, lower the rigor or cut scope.
 - **Sprint clock**: `python3 .harness/scripts/sprint_clock.py start <sprint>`
@@ -141,6 +192,43 @@ If `.harness/progress.json` already exists with phase ≠ `strategic` or a
 non-null sprint, this is a resumed run: tell the user where the project
 stands (phase, sprint, attempt), run `next_action.py`, and continue from
 there. Never restart phases that already produced approved documents.
+
+### Starting late: the catch-up (v4.0)
+
+A late start skips stages, never the evidence the later gates check. When
+`.harness/entry.json` lists `catch_up` items:
+
+1. Work through them in the order listed, one invocation per run of
+   consecutive items by the same owner, in **INTAKE mode** — product-owner
+   (brief), business-analyst (requirements, use cases), product-manager
+   (features, process flows), business-analyst (test cases),
+   solution-architect (architecture options; then, after the user's
+   decision, the architecture, services, design system), ai-architect (AI
+   design), devops (portability), solution-architect (configurable
+   decisions; then the business-analyst adds a test case per allowed value),
+   security-compliance (security design), devops (deployment plan). Pass each
+   owner: the user's documents
+   (`user_docs` in entry.json, plus anything they attached), the request
+   verbatim, the output paths and the templates. INTAKE means convert, not
+   invent: everything taken from the user's documents keeps its meaning; what
+   the owner had to infer is marked `[inferred]`; what is missing goes under
+   "Gaps for the user". Ask the user about the gaps in one round.
+2. Decisions still need the user: when the catch-up writes the architecture
+   options, the portability decision or the configurable decisions, the
+   validator exits 2 and you ask exactly as in Phase 1 (4c, 6b, 6c) — a
+   decision already made in the user's documents is shown to them to
+   confirm, not assumed.
+3. Run the stage validators listed in entry.json (`validators`); send ERROR
+   lines back to the owner (max 2 rounds).
+4. One **critic** pass over the whole catch-up set, in every rigor mode
+   (`docs/critique-intake.md`, validated with `validate_critique.py`), then
+   `decide.py docs/critique-intake.md --out docs/decision-intake.md --phase
+   intake --rigor <rigor>`; the judge only when it says so. Documents that
+   already existed but were never reviewed (no phase decision) are part of
+   this set: `entry_point.py` lists the review as a catch-up item.
+5. `python3 .harness/scripts/entry_point.py catchup` must exit 0. Then continue
+   where entry.json says (`continue_at`); for Build, set progress phase to
+   `planning` after steps 11–13; for Release gate, set it to `final-gates`.
 
 ## Canonical file map
 
@@ -196,6 +284,13 @@ that produced the file.
   readiness on the test cloud, the ledger of temporary test environments with
   their time-to-live, and the proof that the cloud build passes the same tests
   as the local one.
+- `entry_point.py`, `model_plan.py`, `validate_configurability.py` (v4.0) — the
+  recommended start point and the user's choice with its catch-up list; the
+  model each role runs on, with fallbacks when a model is not allowed; and the
+  configurable decisions (configure / prepare / decide-once, each decided by
+  the user) with their settings, a test case per allowed value
+  (`--require-tests` once the business-analyst has added them) and a review
+  date (`--gate` at release).
 - `validate_contract.py` and `validate_sprints.py` (which also requires each
   sprint's `flows` and every Must flow delivered) run in later phases.
 
@@ -247,8 +342,8 @@ grades it, so no agent signs off its own work. Honor the dial in
 - `standard` (default) — batches; no stage planner (always pass `--no-plan`:
   the QA grades against the template and the standard); one stage-qa run per
   batch that holds a high-tier stage; other batches are executor-only.
-- `paranoid` — every stage runs the full triad on its own; pass `model:
-  "opus"` on every agent invocation (it overrides the Sonnet roles).
+- `paranoid` — every stage runs the full triad on its own; the model plan
+  defaults to `maximum` (every role on the strongest model).
 
 **Batches (lite and standard, v3.8).** Consecutive stages with the same
 executor run as ONE invocation that writes all their artifacts, so the inputs
@@ -264,9 +359,11 @@ artifact and ask for one report per stage id
 fewer agent runs and 18% fewer tokens than 3.7's standard for a typical build;
 the agent-run log measures the real figure on each project.
 
-**Models (v3.8).** Opus for the judgement roles; stage-planner, stage-qa,
-product-integrity-qa, planner, documentation and release-manager run on
-Sonnet (their frontmatter `model`). Under `paranoid` pass `model: "opus"`.
+**Models (v4.0).** Each role's model comes from the model plan
+(`model_plan.py get <role>`), passed on every invocation. The `balanced` plan
+equals the agents' frontmatter: Opus for the judgement and authoring roles;
+stage-planner, stage-qa, product-integrity-qa, planner, documentation,
+release-manager and panelist on Sonnet.
 
 **Phase review (v3.8).** When a phase critique passes
 `validate_critique.py`, run
@@ -310,7 +407,9 @@ invocation prompt must contain: (a) the input file paths to read, (b) the
 output path, (c) the template path, (d) the user's idea verbatim for the
 first two agents.
 
-0. **Idea validation (optional).** If `docs/00a-idea-validation.md` does not
+0. **Idea validation (optional).** When the start point (Phase 0 step 5a) is
+   Validate, run it without asking; when it is Discovery, the user already
+   declined — skip this step. Otherwise, if `docs/00a-idea-validation.md` does not
    exist, ask the user once whether to validate the idea before scoping it
    (say whether MiroFish simulation is available, from
    `.harness/companions.json` → `mirofish.installed`; desk-only otherwise).
@@ -424,6 +523,27 @@ first two agents.
    choose the strategy and the production cloud(s); write the decision, log it
    with `--client`, re-run until exit 0. Then re-run `validate_services.py`
    (adapters per production cloud) and re-estimate the run.
+6c. **solution-architect (configurable decisions, v4.0)** — inputs rows 2c
+   (its "Decisions with options" section), 5, 5a, 5d + row 5f path
+   (`docs/03f-configuration.md`, template configuration.md). Stage-id
+   `configuration`. Every decision with more than one sensible answer is typed
+   configure (cheap, reversible, business-level: built as a setting), prepare
+   (expensive technical choice: one option built behind a connection point)
+   or decide-once (hard to reverse), with the extra cost of building every
+   option. Then `python3 .harness/scripts/validate_configurability.py`: ERROR
+   → back to the architect; exit 2 → show the user the decision register (one
+   line per decision: the options, the recommended type, the extra cost and
+   why) and ask them to decide each one (AskUserQuestion, recommended type
+   first; a decision against the 15% rule is allowed and recorded). Write the
+   answers into the register (Decision, Decided by), log them with
+   `--client`, and re-run until nothing is pending (it may still exit 2 with
+   `WAITING:` lines — the settings' test cases, which come next). Then the
+   **business-analyst** adds a test case for every allowed value of every
+   setting to `docs/02e-test-cases.md` (tested from the side of the user the
+   setting affects; pairwise for settings that interact, section 05) and the
+   TC ids to the Tests column; then `validate_configurability.py
+   --require-tests` must exit 0, and `validate_product_map.py
+   --require-coverage` still passes.
 7. **security-compliance** — inputs rows 5–6, 5d + row 7 paths; for each
    production cloud in `.harness/portability.json` it designs least-privilege
    roles, network exposure and the secrets service; point it at
@@ -444,11 +564,12 @@ first two agents.
 9. **critic** — inputs rows 5, 5a, 5b, 5d, 5e, 6, 7, 8 + row 9 paths. Its mandatory
    checks on row 6 §13 (tier justified, no untrusted code at T1, allowlist
    per agent, no secret values) and on row 5b (fit vs brief, contrast) are
-   in the critic's own instructions. Then run
+   in the critic's own instructions; pass row 5f too (over-configuration is
+   one of its checks). Then run
    `python3 .harness/scripts/validate_critique.py docs/critique-architecture.md`;
    if it errors, re-invoke the critic (max 2 rounds).
 10. **Decision** — `decide.py` on `docs/critique-architecture.md`; exit 2 →
-    **judge** — inputs rows 5–9 (with 5a, 5d, 5e) + row 10 paths. Run
+    **judge** — inputs rows 5–9 (with 5a, 5d, 5e, 5f) + row 10 paths. Run
     `python3 .harness/scripts/validate_verdict.py docs/decision-architecture.md
     --type decision` first; then same verdict handling as step 4.
 
@@ -456,8 +577,9 @@ After the blueprint is approved:
 
 11. **You** write `docs/00-blueprint-summary.md` from the template — one
     page max. Include the agent tier table from row 6 §13.1 (one line per
-    agent) and the path to row 5b when it exists — the generator reads
-    both every UI or agent sprint. This digest is what the generator and evaluator read every
+    agent), the path to row 5b when it exists, and the settings from row 5f
+    (key, default, who may change it) — the generator reads them every
+    sprint. This digest is what the generator and evaluator read every
     sprint; the full docs stay available for lookups.
 12. Update the "Project facts" section of `CLAUDE.md` (stack, run/test/lint
     commands, conventions) from the approved architecture.
@@ -498,7 +620,11 @@ Drive the loop with the script — after every agent invocation:
    then rerun the script. The evaluator stamps `done` itself when it passes a
    sprint; on a teardown, run `sprint_clock.py torn-down <sprint>`. Rebuild the
    dashboard after every sprint.
-4. When invoking generator/evaluator, pass: sprint id, mode, and attempt.
+4. When invoking generator/evaluator, pass: sprint id, mode, and attempt;
+   when the sprint's features have settings (row 5f), pass
+   `docs/03f-configuration.md` too: the generator builds each setting through
+   the one settings layer, and the evaluator tests every allowed value from
+   the affected user's side.
 4b. Before the evaluator's EVALUATE run, tell it whether the user wants to
    watch (`run_tests.py --live`). After it reports, publish the test report it
    produced as the private Artifact (see `references/testing-and-manuals.md`)
@@ -557,7 +683,9 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
    `deploy/agents/*.yaml` against docs/04 §13.2, paste evidence. It also runs
    `cloud_preflight.py`, `validate_services.py --gate` (microservices) and
    `cloud_env.py list --overdue`: a test environment still running blocks
-   the release. Run this stage via
+   the release. It also runs `validate_configurability.py --gate` (v4.0): a
+   setting past its review date, or a setting value whose test cases do not
+   pass, blocks the release. Run this stage via
    the Stage execution protocol (executor: devops, stage-id: devops-readiness,
    artifact: docs/09-devops-readiness.md).
 3. **documentation** — the developer docs plus, for any UI,
@@ -575,7 +703,7 @@ When `next_action.py` says `final-gates`, set phase to `final-gates`, then:
 5. **risk-manager** — inputs: both 09-docs, `docs/09-product-integrity.md`,
    `docs/product-map.md`, eval reports, sprints.json, and (v3.8)
    `.harness/cloud-parity.json`, `.harness/services.json`,
-   `.harness/cloud-envs.jsonl`; output
+   `.harness/cloud-envs.jsonl`, and (v4.0) `.harness/configuration.json`; output
    `docs/09-risk-review.md`. Then run
    `python3 .harness/scripts/validate_verdict.py docs/09-risk-review.md
    --type risk`; if it errors, re-invoke the risk-manager to fix the block.

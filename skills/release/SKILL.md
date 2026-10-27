@@ -6,10 +6,19 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Release — Release Packaging Orchestrator
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Prerequisite (mechanical)
 

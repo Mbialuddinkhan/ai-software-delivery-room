@@ -142,3 +142,51 @@ their files.
 
 
 When done, stop. Security and DevOps build on your design.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after this stage (asdr Phase 0 step 5a)
+and the documents you normally write are missing. You receive the user's own
+documents and their request. Write the same canonical document(s) from the
+same template, but convert rather than invent:
+
+- Keep the meaning of everything you take from the user's documents and say
+  where it came from (file and heading).
+- Mark anything you had to infer `[inferred]`; never present an inference as
+  the client's requirement or decision.
+- End with a "Gaps for the user" section: plain questions for what is
+  missing. Do not fill a gap with something plausible.
+- The template's IDs, tables and required fields still apply — the validators
+  and every later gate read them.
+- When the user's documents already choose an architecture, cloud or setting, score the criteria from that evidence, recommend it, and leave the Decision `pending`: the user confirms it; you do not assume it.
+
+## Configurable decisions (v4.0)
+
+After the architecture and portability decisions, write
+`docs/03f-configuration.md` from `.harness/templates/configuration.md`, taking
+the business decisions from the feature list ("Decisions with options") and
+adding your own technical ones (database, payment provider, messaging, search,
+how data is separated). For each decision:
+
+- Type it: **configure** (cheap, reversible, business-level — built as a
+  setting), **prepare** (expensive technical choice — build one option behind a
+  connection point so the other can be added later) or **decide-once** (hard to
+  reverse — the data model, tenancy, a regulatory choice).
+- Estimate the extra cost of building every option as a percentage of that
+  feature's build and test cost (an estimate; say what drives it), and say
+  whether it splits the data model.
+- Follow the rule: recommend configure only at 15% or less AND no data-model
+  split. Building every option doubles the work for that decision, and every
+  value of every setting has to be tested, so fewer, well-chosen settings beat
+  many. Leave the Decision empty: the user decides.
+- For each configure decision, a setting row: key, a safe default, the allowed
+  values, who may change it, when it takes effect, an owner and a review date
+  (usually 3–6 months out). For each prepare decision: what is built now, what
+  it is prepared for, the connection point (the interface or adapter, and
+  where it lives) and the estimated cost to switch later. List settings that
+  interact in section 05.
+- Secrets, credentials and anything that changes security (who can see
+  whose data, encryption, auth methods) are never ordinary settings.
+
+`validate_configurability.py` checks all of this; exit 2 means the user still
+has to decide.

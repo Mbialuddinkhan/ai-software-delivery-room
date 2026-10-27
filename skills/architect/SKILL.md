@@ -6,7 +6,7 @@ description: >
   discovery docs to already exist. Trigger phrases: "architect", "design the architecture",
   "system design", "technical blueprint", "design the system", "create architecture docs".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Architect — Architecture Orchestrator
@@ -21,6 +21,15 @@ this skill's base directory) and run
 
 Subagents share none of your context: every invocation prompt must contain
 the input paths, the output path, and the template path.
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Stage execution (universal triad)
 
@@ -64,6 +73,17 @@ Invoke **solution-architect** with: inputs `docs/01-product-brief.md` and
 `.harness/templates/architecture.md`. Run this stage via the Stage execution
 protocol (executor: solution-architect, stage-id: architecture, artifact:
 docs/03-architecture.md).
+
+## Phase 1b — Decisions the user makes (v3.8, v4.0)
+
+The decision gates of the full workflow apply here too; run them as the asdr
+skill describes (`PLUGIN_ROOT/skills/asdr/SKILL.md`, Phase 1): the
+architecture options BEFORE Phase 1 (step 4c, `validate_architecture_options.py`),
+portability after Phase 4 when the product runs on a cloud (step 6b,
+`validate_portability.py`), and the configurable decisions after them (step
+6c, `docs/03f-configuration.md`, `validate_configurability.py`: configure /
+prepare / decide-once, each decided by the user, a test case per allowed value
+added by the business-analyst). Never decide for the user.
 
 ## Phase 2 — AI / agent architecture (conditional)
 

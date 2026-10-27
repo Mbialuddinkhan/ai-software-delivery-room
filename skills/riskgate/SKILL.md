@@ -6,10 +6,19 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Prerequisites check (mechanical — verify each, print what's missing)
 
@@ -87,7 +96,9 @@ v3.8 it also runs:
 
 - `cloud_preflight.py`;
 - `validate_services.py --gate`, for microservices;
-- `cloud_env.py list --overdue`.
+- `cloud_env.py list --overdue`;
+- `validate_configurability.py --gate` (v4.0): a setting past its review date, or a
+  setting value whose test cases do not pass, blocks the release.
 
 Any temporary test environment still running blocks the release. Tell the
 user what is running and ask devops to destroy it first. Run this stage via

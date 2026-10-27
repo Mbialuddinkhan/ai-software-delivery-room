@@ -3,6 +3,123 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [4.0.0] — start where you are, a model plan per role, and configurable decisions you choose
+
+- **Choose where the run starts.** `/asdr` recommends a start point from your
+  request and the folder — Validate, Discovery, Design, Build, Release gate,
+  Assess, or Resume — with what each skips, the risk and the cost; you choose.
+  Late starts convert your own documents instead of skipping the evidence.
+- **Pay only for the model each role needs.** Economy / balanced / maximum
+  model plans, Fable as the top model if you want it, automatic fallback when
+  a model is not allowed; the estimate prices each plan.
+- **Decide which decisions stay changeable.** Configure (a tested setting),
+  prepare (built once behind a connection point) or decide-once, each with the
+  extra cost of building every option; the release gate checks every setting.
+
+### Added
+- `scripts/entry_point.py` (`recommend`, `choose`, `catchup`): reads the
+  request and scans the folder (an earlier run in `.harness/progress.json`,
+  ASDR's canonical documents, the user's own PRD / spec / architecture
+  documents by name, existing code by source files and manifests — code under
+  `docs/` is ignored, symbolic links are not followed, the scan is
+  breadth-first and capped); recommends one start with reasons, lists every
+  start with the stages it skips (and their risk), the documents to catch up
+  first (owner per document; design system, AI design and services only when
+  the product has a UI, AI or microservices; portability unless `--local-only`)
+  and the validators to run; marks Release `not advised` until every sprint
+  is done and Assess when there is no code. A stage counts as done only when
+  its phase decision says go — or the catch-up's decision says go and was
+  written after every document it covers; documents nobody reviewed get one
+  review item, always last, in the catch-up. A no-go decision sends the run
+  back to that phase's required changes. A run still in the strategic phase is not a "resume" (that
+  would send next_action.py straight to the planner); it continues from its
+  documents and decisions. `choose` writes `.harness/entry.json`; `catchup`
+  re-reads what the product needs from the documents written since and exits
+  2 until nothing is missing.
+- **INTAKE mode** on product-owner, business-analyst, product-manager,
+  solution-architect, security-compliance and devops: convert the user's
+  documents into the canonical templates, mark inferences `[inferred]`, list
+  "Gaps for the user"; decisions found in the user's documents are shown to
+  the user to confirm, never assumed. ai-architect has it too. The catch-up
+  ends with the stage validators and one critic pass in every rigor mode
+  (`docs/critique-intake.md`, `decide.py --phase intake`).
+- `scripts/model_plan.py` (`set`, `get`, `unavailable`, `show`) and
+  `.harness/models.json`: plans `balanced` (identical to the agents'
+  frontmatter — a test enforces it), `economy` (critic, judge, evaluator,
+  risk-manager, security-compliance on top; authors and checklist roles on
+  Sonnet; panelist and release-manager on Haiku) and `maximum` (every role on
+  top; the default under `paranoid`, also when no plan file exists);
+  `--top fable`; fallbacks fable → opus → sonnet, haiku → sonnet, opus →
+  sonnet, sonnet → opus, then any other model still available — never one
+  marked unavailable while another exists; kept across plan changes; a
+  hand-edited file with wrong types or unknown models is tolerated; `set`
+  without `--plan` follows the rigor (maximum under paranoid).
+- `estimate_run.py`: roles priced on their plan's model (`--plan`, or
+  `.harness/models.json`); tokens per model (Opus/Fable, Sonnet, Haiku);
+  `--price-haiku`, `--price-fable`; `--compare-plans`; `--start
+  discover|design|build|release` counts only the work from there plus the
+  catch-up (INTAKE at 60% of writing, an assumption, and one critic pass);
+  `--compare-starts`; the budget records the start; the configurable-decision
+  step and its per-value test cases are counted (about one more agent run on a
+  typical build). Fixed: the USD column was appended without its separator.
+- `templates/configuration.md` → `docs/03f-configuration.md` (row 5f, stage
+  `configuration`, asdr Phase 1 step 6c): decision register (DEC-xx: options,
+  recommended type, extra cost to build all options, data-model split, the
+  user's decision), settings (CFG-xx: key, default, allowed values or range,
+  who may change it, when it takes effect, owner, review date, test cases),
+  prepared options (connection point, cost to switch later), interacting
+  settings (pairwise), and how settings are removed. The feature list gains a
+  "Decisions with options" table the product-manager fills.
+- `scripts/validate_configurability.py`: types and the 15% / no-split rule
+  for a configure recommendation (the user may override; recorded as a
+  warning); every configure decision has a setting, every prepare decision a
+  connection point; defaults are allowed values; one test case per allowed
+  value (a range: minimum, maximum, default) and every TC exists — WAITING
+  (exit 2) until the business-analyst has added them, an error with
+  `--require-tests`; `pending` is a pending decision; duplicates and
+  documents without a register fail; warnings above 12 settings or 64
+  combinations without a pairwise plan; `--gate` fails a pending decision, a
+  setting past its review date or a test case not passing in the latest
+  results, and SKIPs only a project designed before 4.0 (no
+  `.harness/entry.json` or `models.json`) that has no document. Escaped pipes
+  (`\|`) stay inside their cell.
+  Writes `.harness/configuration.json`; exit 0 / 2 / 1.
+- Agents: generator builds settings through one settings layer (server-side
+  permission, change log, safe default, no dead switches) and only the chosen
+  option of a prepare decision; evaluator tests every value from the affected
+  user's side; business-analyst writes the per-value test cases; critic
+  checks over-configuration, wrong types, missing pieces, secrets exposed as
+  settings; risk-manager and devops block on `--gate`; documentation adds a
+  Settings page to the administrator manual.
+- Dashboard: "Run set-up and settings" (start point and whether it followed
+  the recommendation, model plan with the models actually used after
+  fallbacks, decisions by type, every setting with its review date); a
+  setting past its review date turns the status at risk, with a reason in the
+  client report too; malformed new files never stop the dashboard.
+
+### Changed
+- asdr Phase 0: step 5a "Where to start"; step 5c now asks thoroughness and
+  model plan together; every agent invocation passes `model: <model_plan.py
+  get <agent>>` in every skill; `log_agent_run.py --model` records the model
+  actually passed. `paranoid` no longer means "pass opus everywhere"; it
+  defaults to the `maximum` plan. Phase 1 step 0 does not ask about
+  validation again when the start point already decided it.
+- architect skill: points to the architecture-options, portability and
+  configurable-decision gates of the full workflow (Phase 1b); longhorizon
+  points users with non-ASDR documents to `/asdr`'s Build start.
+- `test_efficiency.py`: the wiring check looks for `model_plan.py get` instead
+  of `model: "opus"`.
+- 337 tests (62 new), passing on Python 3.9, 3.11 and 3.13. Two independent
+  review rounds before release found 16 defects and then one regression in
+  the fixes (among them: a mid-Phase-1 resume that skipped design, step 6c
+  unable to pass in the documented order, a catch-up that went stale when the
+  documents revealed a UI or AI, one review decision standing in for two
+  phases); all are fixed and each has a test.
+
+### Not changed
+- The product keeps its name, ASDR; `/asdr` and the plugin id are unchanged,
+  so existing installs update in place.
+
 ## [3.9.0] — a native synthetic panel learned from MiroFish, and a MiroFish launcher
 
 ### Added

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "asdr",
-  "description": "AI Software Delivery Room — 19-agent SDLC harness with independent QA, end-to-end journey checks, live browser tests and user manuals, plus the companion plugins it uses (UI UX Pro Max, Ponytail).",
+  "description": "AI Software Delivery Room \u2014 19-agent SDLC harness with independent QA, end-to-end journey checks, live browser tests and user manuals, plus the companion plugins it uses (UI UX Pro Max, Ponytail).",
   "owner": {
     "name": "Bilal Khan",
     "email": "mbilaluddinkhan@gmail.com",
@@ -12,7 +12,7 @@
       "name": "ai-software-delivery-room",
       "displayName": "AI Software Delivery Room",
       "source": "./",
-      "description": "Idea → validation (desk evidence, a synthetic persona panel, optional MiroFish) → brief → flows → architecture → sprint loop with contract-first builds, live browser tests and evaluator-only sign-off. Microservices or modular monolith by your decision, portable across AWS, Azure and GCP with cost analysis, tested on the cloud you choose. Dashboards, client reports, cost tracking; assesses existing systems. Installs UI UX Pro Max.",
+      "description": "Start where you choose: ASDR recommends the start point and converts your own documents. Idea validation \u2192 brief \u2192 flows \u2192 architecture \u2192 sprints with contract-first builds, live browser tests and evaluator-only sign-off. Architecture, cloud and which decisions become settings are yours to decide, with costs. A per-role model plan (economy / balanced / maximum). Dashboards, client reports; assesses existing systems. Installs UI UX Pro Max.",
       "category": "development",
       "tags": [
         "sdlc",

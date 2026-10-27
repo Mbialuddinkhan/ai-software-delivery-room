@@ -87,3 +87,14 @@ section.
   least one allowlist row and no wildcard host without an accepted-risk note.
 
 When done, stop.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after design (asdr Phase 0 step 5a) and
+`docs/04-agent-design.md` is missing for a product with AI features. Write it
+from the same template, converting the user's documents rather than
+inventing: keep their meaning and say where it came from (file and heading),
+mark what you inferred `[inferred]`, and end with "Gaps for the user". §13
+(where each agent runs, Task / Workspace / Gateway / Model blocks) is still
+mandatory; a guardrail, tool permission or egress rule the documents do not
+state is a gap, never assumed.

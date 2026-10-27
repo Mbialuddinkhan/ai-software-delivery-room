@@ -8,7 +8,7 @@ description: >
   "validate my idea", "idea validation", "will people want this", "simulate the market reaction",
   "test this idea before we build", "is this worth building", "what would customers say".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Validate — Idea Validation Orchestrator
@@ -18,6 +18,15 @@ Ask the user for the idea if not provided. One sentence is enough.
 You are the orchestrator: you invoke agents with precise inputs and run the
 scripts. Subagents share none of your context, so every invocation prompt
 contains the input paths, the output path and the template path.
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## What this can and cannot show — say it once, before Phase 2
 
@@ -72,13 +81,16 @@ batch with one report per stage id.
 them; the panelists themselves are not a stage (they are the data). The
 critic always reviews; the judge only when `decide.py` says so (Phase 5).
 
-**Models.** Panelists run on Sonnet (their frontmatter): many calls, no
-judgement. The first sample run used the session's model, so the Sonnet
-panel is not yet measured against it — `log_agent_run.py` records which.
+**Models.** Panelists run on the model plan's choice: Sonnet in `balanced`
+(their frontmatter), Haiku in `economy` — many calls, no judgement, and the
+panel's own flags (implausible positivity, herding, homogeneity) are what
+would show a weaker model's personas getting worse. The first sample run used
+the session's model, so neither is yet measured against it —
+`log_agent_run.py` records which.
 
 **Cost log, after EVERY agent run, panelists included:**
 `python3 .harness/scripts/log_agent_run.py --agent <name> --phase validation
-[--stage <id>] --model <opus|sonnet> --usage "<usage block>"`. On `WARN` say
+[--stage <id>] --model <the model you passed> --usage "<usage block>"`. On `WARN` say
 how much of the budget is used; on `OVER BUDGET` stop and ask.
 
 ## Phase 0 — Initialize and choose lanes

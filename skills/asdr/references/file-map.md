@@ -31,6 +31,7 @@ Templates live in `.harness/templates/`.
 | 5 | Architecture | `docs/03-architecture.md` | solution-architect | architecture.md |
 | 5e | Services, contracts, adapters (microservices only, v3.8) | `docs/03e-services.md`, `contracts/` (+ `.harness/services.json`) | solution-architect; `validate_services.py` | services.md, microservices/README.md |
 | 5d | Portability + cloud decision with costs (v3.8) | `docs/03d-portability.md` (+ `.harness/portability.json`) | devops; `validate_portability.py` | portability.md, cloud/catalogue.json |
+| 5f | Configurable decisions and settings (v4.0) | `docs/03f-configuration.md` (+ `.harness/configuration.json`) | solution-architect; business-analyst adds a test case per allowed value; `validate_configurability.py` | configuration.md |
 | 5b | Design system (UI only) | `docs/03b-design-system.md` | solution-architect | design-system.md |
 | 6 | Agent design (AI only), incl. §13 runtime/deployment | `docs/04-agent-design.md` | ai-architect | agent-design.md |
 | 6b | Agent runtime manifests (T3 agents only) | `deploy/agents/<agent>.yaml` | devops | agent-runtime.yaml |
@@ -50,6 +51,8 @@ Templates live in `.harness/templates/`.
 | 19 | Project dashboard (generated) | `docs/dashboard/index.html`, `dashboard.pdf` | `build_dashboard.py` | dashboard.json |
 | 20 | Cost of the run (v3.8) | `.harness/agent-runs.jsonl`, `.harness/budget.json` | `log_agent_run.py` (orchestrator, after every agent run), `estimate_run.py` | — |
 | 21 | Test cloud (v3.8) | `.harness/cloud.json`, `.harness/cloud-preflight.json`, `.harness/cloud-envs.jsonl`, `.harness/cloud-parity.json`, `infra/`, `docker-compose.yml` | orchestrator (Phase 0), devops; `cloud_preflight.py`, `cloud_env.py`, `cloud_parity.py` | cloud.json, microservices/infra-layout.md, microservices/docker-compose.services.yml |
+| 22 | Start point and catch-up (v4.0) | `.harness/entry.json`; catch-up critique `docs/critique-intake.md`, `docs/decision-intake.md` | orchestrator (Phase 0 step 5a); owners in INTAKE mode; `entry_point.py` | critique.md, decision.md |
+| 23 | Model plan (v4.0) | `.harness/models.json` | orchestrator (Phase 0 step 5c); `model_plan.py` | — |
 | 19b | Dashboard inputs | `.harness/dashboard.json` (environments, repos, links), `.harness/questions.jsonl`, `.harness/sprint-clock.jsonl`, `.harness/forecast-history.jsonl`, `.harness/dashboard-snapshot.json` | orchestrator, devops, evaluator, `log_question.py`, `sprint_clock.py` | dashboard.json |
 | A1 | Assessment intake (assess only) | `docs/assess/intake.json` | assess skill | assess/intake.json |
 | A2 | Scanner evidence (assess only) | `docs/assess/evidence/scan-summary.{json,md}`, `osv-frontend.json` + raw outputs (locations only, no copied code); `triage.json` (a verdict per hit, security-compliance) | `assess_scan.py`, security-compliance | assess/triage.json |
@@ -83,6 +86,7 @@ Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
 | `architecture` | solution-architect | docs/03-architecture.md | high (batched with `services` and `design-system`) |
 | `services` | solution-architect | docs/03e-services.md | high (microservices only) |
 | `portability` | devops | docs/03d-portability.md | high (the user decides; `validate_portability.py`) |
+| `configuration` | solution-architect | docs/03f-configuration.md | high (the user decides each row; `validate_configurability.py`) |
 | `design-system` | solution-architect | docs/03b-design-system.md | med (UI only; `--no-plan` under standard) |
 | `agent-design` | ai-architect | docs/04-agent-design.md | high (AI only) |
 | `security-design` | security-compliance | docs/05-security.md | high |

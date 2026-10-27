@@ -8,7 +8,7 @@ description: >
   system", "audit our existing app", "review this codebase", "legacy system", "take over this project",
   "what's wrong with our software", "modernise".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Assess — understand an existing system and say what to do with it
@@ -56,6 +56,15 @@ judge on every round), then `--set-budget`. After EVERY agent run, log it:
 - **Confidentiality.** The client's code is read by the model. Confirm the NDA
   and the client's consent at intake; for strict clients, suggest running
   Claude through their own cloud (Bedrock or Vertex).
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Phase 0 — Initialise
 

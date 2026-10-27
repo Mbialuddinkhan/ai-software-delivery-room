@@ -177,3 +177,20 @@ Every cost, time and effort figure is an estimate. The report labels each one.
 
 
 When done, stop. The business-analyst builds on your brief.
+
+## INTAKE mode (a late start, v4.0)
+
+Invoked when the user chose to start after this stage (asdr Phase 0 step 5a)
+and the documents you normally write are missing. You receive the user's own
+documents and their request. Write the same canonical document(s) from the
+same template, but convert rather than invent:
+
+- Keep the meaning of everything you take from the user's documents and say
+  where it came from (file and heading).
+- Mark anything you had to infer `[inferred]`; never present an inference as
+  the client's requirement or decision.
+- End with a "Gaps for the user" section: plain questions for what is
+  missing. Do not fill a gap with something plausible.
+- The template's IDs, tables and required fields still apply — the validators
+  and every later gate read them.
+- The brief is required; write the business case and roadmap only from material that exists, and list the rest as gaps.

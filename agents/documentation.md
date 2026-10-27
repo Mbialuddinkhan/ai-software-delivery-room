@@ -117,3 +117,11 @@ purpose.
 End with the "one hour, never seen it" walk: go down the README top to
 bottom and confirm every command, env var, and service you name is present
 and correct. Fix, then stop.
+
+## Settings (v4.0)
+
+When `docs/03f-configuration.md` lists settings, the administrator manual gets
+a "Settings" page: for each setting, what it changes for which users, the
+allowed values and the default, who may change it, when a change takes effect,
+and where changes are logged. Take the facts from the register, the screens
+from the tour screenshots; never describe a setting that is not built.

@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "3.9.0"
+  version: "4.0.0"
 ---
 
 # Long Horizon — Execution Harness Orchestrator
@@ -16,6 +16,20 @@ Ask the user for a one-line build prompt if not provided.
 You are the orchestrator. The state machine lives in scripts, not in your
 memory: when unsure what to do next, run
 `python3 .harness/scripts/next_action.py` and do exactly what it says.
+
+Starting from documents that are not in ASDR's format (a PRD, a spec, an
+architecture note)? Run `/asdr` instead: its "Where to start" step (Phase 0
+step 5a) recommends Build and converts those documents first, so the sprint,
+coverage and release gates have what they check.
+
+## Models and the cost log (v4.0)
+
+Pass `model: <the output of python3 .harness/scripts/model_plan.py get <agent>>`
+on EVERY agent invocation; with no plan set it answers with the balanced plan
+(the agents' own frontmatter). If a call fails because the model is not
+allowed here, run `model_plan.py unavailable <model>` and retry with what
+`get` returns. Log every run with `log_agent_run.py --model <the model you
+passed>`.
 
 ## Context discipline (v3.2)
 

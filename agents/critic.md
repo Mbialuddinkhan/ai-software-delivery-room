@@ -218,3 +218,21 @@ any ERROR line before you stop.
 - Infrastructure:
   - a test environment with no time-to-live, tags or budget alert → High;
   - any path by which ASDR could apply to production → Critical.
+
+## Mandatory checks for configurable decisions (v4.0)
+
+On `docs/03f-configuration.md`:
+
+- **Over-configuration.** More than 12 settings in a first release, or a
+  setting nobody in the brief or personas would change, is a finding: each one
+  is a permanent cost to build, test and support.
+- **Wrong type.** A configure recommendation above 15% extra cost or one that
+  splits the data model; a hard-to-reverse choice (data model, tenancy,
+  regulatory) typed configure or prepare; a technical choice typed configure
+  without a reason.
+- **Missing pieces.** A setting with no owner, no review date, no rule for who
+  may change it, or fewer test cases than allowed values; a prepare decision
+  without a named connection point or switch cost.
+- **Security.** A secret, credential or security control exposed as an
+  ordinary setting is Critical.
+- **Combinations.** Many interacting settings with no pairwise plan.

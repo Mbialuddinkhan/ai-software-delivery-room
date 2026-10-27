@@ -232,3 +232,20 @@ When `.harness/architecture.json` says microservices, build to
 For a modular monolith, keep the same ports and adapters and one module per
 business capability, so a module can become a service later without
 rewriting it.
+
+## Settings (v4.0)
+
+When a sprint's features have settings in `docs/03f-configuration.md`:
+
+- Build every setting through ONE settings layer (typed configuration, or a
+  feature-flag library behind an interface — OpenFeature-compatible where the
+  stack has an SDK), never scattered `if` checks on raw environment values.
+- The default in the code equals the documented default; an unknown or
+  missing value falls back to it.
+- Only the roles in "Who can change it" can change a setting, enforced on the
+  server; every change is logged (who, when, old value, new value).
+- "Takes effect" is honoured (immediately, next login, next billing period).
+- For a **prepare** decision, build only the chosen option, behind the
+  documented connection point; do not build the other option "while you are
+  there" — that is the cost the user chose not to pay.
+- Leave no dead switch: a setting the register removed is deleted with its code.

@@ -1,12 +1,45 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.9.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.0.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
 
-**What's new in v3.9 — ASDR's own simulated market, learned from MiroFish.**
+**What's new in v4.0 — start where you are, pay for the models you need, and
+choose which decisions stay changeable.**
+
+- **Where to start.** `/asdr` now opens by recommending a start point —
+  Validate, Discovery, Design, Build, Release gate, Assess an existing system,
+  or Resume — from your request and what is already in the folder (an earlier
+  run, ASDR's documents, your own PRD or architecture notes, existing code).
+  It shows what each start skips, the risk, and the cost; you choose
+  (`entry_point.py`). A late start skips stages, never the evidence: the
+  missing documents are converted from yours by their owners in a new INTAKE
+  mode (inferences marked, gaps asked), checked by the stage validators and one
+  critic pass, before the chosen stage begins. Documents that exist but were
+  never reviewed are reviewed, not trusted.
+- **A model plan per role.** Every role runs on its own model, whatever the
+  conversation uses: `economy` keeps only the roles that can stop a bad release
+  (critic, judge, tester, risk manager, security) on the strongest model, moves
+  authors to Sonnet and the panel and release notes to Haiku; `balanced` is
+  3.9's setup; `maximum` puts every role on the strongest model, and `--top
+  fable` makes that Fable (`model_plan.py`). If your account does not allow a
+  model, ASDR falls back and records it. `estimate_run.py --compare-plans`
+  prices each plan (an estimate: about 30% cheaper for economy than balanced on
+  a typical build at list prices).
+- **Configurable decisions.** Every decision with more than one sensible
+  answer is typed **configure** (cheap and reversible: built as a setting with a
+  default, who may change it, a change log, a review date and a test for every
+  allowed value), **prepare** (expensive: one option built behind a connection
+  point, the other priced for later) or **decide-once** (hard to reverse), with
+  the extra cost of building every option — and you decide each one
+  (`docs/03f-configuration.md`, `validate_configurability.py`). Configure is
+  recommended only at 15% extra cost or less and when the data model does not
+  split. The release gate fails on a setting past its review date or a value
+  without a passing test.
+
+**v3.9 — ASDR's own simulated market, learned from MiroFish.**
 `validate` now runs a **synthetic panel** natively, with no install and no
 extra accounts, so it works in Cowork too. Personas are built from the desk
 evidence (each cites the rows it comes from; any quote must be real). They
@@ -289,7 +322,10 @@ Set the rigor dial any time by editing `.harness/progress.json`:
 ## The workflow
 
 ```
-USER IDEA
+USER IDEA (+ whatever is already in the folder)
+  ↓
+where to start (v4.0) → recommended start point; you choose; a late start
+                        converts your documents first (INTAKE + validators + critic)
   ↓
 discover  →  [product-brief]→[requirements]→[use cases]
              →[features]→[process flows]→[test cases]  (each: plan → execute → QA)
@@ -374,9 +410,9 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.9.0)
+.claude-plugin/plugin.json   ← plugin manifest (v4.0.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → … → v3.9 change log
+CHANGELOG.md                 ← full v2.1 → v3 → … → v4.0 change log
 agents/                      ← 19 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa, product-manager)
 skills/                      ← 8 orchestrator skills (asdr, validate, discover,
@@ -429,6 +465,9 @@ scripts/
   cloud_preflight.py         ← read-only readiness on the test cloud (v3.8)
   cloud_env.py               ← ledger of temporary test environments, time-to-live, teardown (v3.8)
   cloud_parity.py            ← the cloud build passes the same tests as the local one (v3.8)
+  entry_point.py             ← recommends where a run starts; records the choice and its catch-up (v4.0)
+  model_plan.py              ← economy / balanced / maximum: the model per role, with fallbacks (v4.0)
+  validate_configurability.py ← configure / prepare / decide-once decisions, settings tested per value (v4.0)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -438,7 +477,7 @@ templates/                   ← fill-in templates: contract, plan, qa-report,
                                ci-asdr.yml, e2e/{playwright,cypress,selenium} (v3.4),
                                dashboard.json, assess/ (v3.6), parity.md, assess/triage.json (v3.7),
                                architecture-options.md, portability.md, services.md, cloud.json,
-                               cloud/catalogue.json, microservices/ (v3.8)
+                               cloud/catalogue.json, microservices/ (v3.8), configuration.md (v4.0)
 examples/sample-app/         ← TaskBoard: a small app with every v3.4 artifact —
                                product docs, [TC-xx] tests in all three frameworks,
                                tours, manual.json (v3.4), and a worked assessment
@@ -451,7 +490,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (275 tests)
+tests/                       ← python3 -m unittest discover -s tests (337 tests)
 ```
 
 ## The 19 agents at a glance

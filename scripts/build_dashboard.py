@@ -198,6 +198,7 @@ CANON = [
     ("Architecture", "Services and contracts (microservices)", "docs/03e-services.md", "solution-architect"),
     ("Architecture", "Portability and cloud decision", "docs/03d-portability.md", "devops"),
     ("Architecture", "Design system (UI)", "docs/03b-design-system.md", "solution-architect"),
+    ("Architecture", "Configurable decisions and settings", "docs/03f-configuration.md", "solution-architect"),
     ("Architecture", "Agent design (AI)", "docs/04-agent-design.md", "ai-architect"),
     ("Architecture", "Security", "docs/05-security.md", "security-compliance"),
     ("Architecture", "DevOps", "docs/06-devops.md", "devops"),
@@ -715,6 +716,28 @@ def cloud_state(h: Path, now: dt.datetime) -> dict:
             "parity": read_json(h / "cloud-parity.json", {}), "envs": running}
 
 
+def run_setup(h: Path, now: dt.datetime) -> dict:
+    """v4.0: where the run started, the model plan, and the configurable decisions (tolerates bad files)."""
+    def obj(x):
+        return x if isinstance(x, dict) else {}
+    entry, models, conf = (obj(read_json(h / n, {})) for n in ("entry.json", "models.json", "configuration.json"))
+    settings = [x for x in (conf.get("setting_list") or []) if isinstance(x, dict)] \
+        if isinstance(conf.get("setting_list"), list) else []
+    conf = {**conf, "setting_list": settings}
+    today = now.date().isoformat()
+    overdue = [x for x in settings if isinstance(x.get("review_by"), str) and x["review_by"] < today]
+    by_model = {}
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import model_plan as _mp
+        resolved = {r: _mp.role_model(r, models) for r in _mp.ROLES} if models.get("plan") else {}
+    except Exception:          # the dashboard never fails because of this table
+        resolved = {r: m for r, m in obj(models.get("map")).items() if isinstance(m, str)}
+    for _role, m in resolved.items():
+        by_model[m] = by_model.get(m, 0) + 1
+    return {"entry": entry, "models": models, "by_model": by_model, "conf": conf, "overdue": overdue}
+
+
 def gather(root: Path, now: dt.datetime) -> dict:
     """Read every input once; both views render from this."""
     progress = read_json(H / "progress.json", {})
@@ -741,6 +764,12 @@ def gather(root: Path, now: dt.datetime) -> dict:
     state, reasons, client_reasons = classify_full(progress, pmap, facts, questions, risks, regs, parity)
     cost = agent_cost(H)
     cloud = cloud_state(H, now)
+    setup = run_setup(H, now)
+    if setup["overdue"]:
+        reasons.append("setting(s) past their review date: " + ", ".join(str(x.get("id", "?")) for x in setup["overdue"]))
+        client_reasons.append("a product setting is past its agreed review date")
+        if state == "on track":
+            state = "at risk"
     over = [x["name"] for x in cloud["envs"] if x["overdue"]]
     if over:
         reasons.append(f"test environment past its time-to-live, still costing money: {', '.join(over)}")
@@ -757,6 +786,11 @@ def gather(root: Path, now: dt.datetime) -> dict:
         reasons.append(f"over the {cost['budget'].get('rigor') or ''} token budget: {cost['pct']}% used".replace("  ", " "))
         if state == "on track":
             state = "at risk"
+    default_reason = "no blocking or risk rule triggered"
+    if len(reasons) > 1:
+        reasons = [x for x in reasons if x != default_reason]
+    if len(client_reasons) > 1:
+        client_reasons = [x for x in client_reasons if x != default_reason]
     tr = (facts or {}).get("test_runs") or {}
     flows = (pmap or {}).get("flows") or {}
     features = (pmap or {}).get("features") or {}
@@ -792,7 +826,7 @@ def gather(root: Path, now: dt.datetime) -> dict:
                 traces=traces, clock=clock, history=history, questions=questions, risks=risks, regs=regs, times=times,
                 fc=fc, fhist=fhist, parity=parity, state=state, reasons=reasons, client_reasons=client_reasons, tr=tr,
                 flows=flows, features=features, counts=counts, project=project, cur=cur, ci=ci,
-                done_sprints=done_sprints, live_sprints=live_sprints, overall=overall, cost=cost, cloud=cloud)
+                done_sprints=done_sprints, live_sprints=live_sprints, overall=overall, cost=cost, cloud=cloud, setup=setup)
 
 
 def feature_status(features, flows, sprints) -> dict:
@@ -833,7 +867,9 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
         f'<span class="pill state {STATE_PILL[state]}">{e(state.upper())}</span></div>'
         f'<p>Phase <b>{e(dict((p[0], p[1]) for p in PHASES).get(cur, cur))}</b>'
         f'{" · active sprint <b>" + e(progress.get("sprint")) + "</b>" if progress.get("sprint") else ""}'
-        f'{" · waiting on: <b>" + e(nxt) + "</b>" if nxt else ""} · rigor {e(progress.get("rigor") or "standard")}</p>'
+        f'{" · waiting on: <b>" + e(nxt) + "</b>" if nxt else ""} · rigor {e(progress.get("rigor") or "standard")}'
+        f'{" · started at " + e(((c.get("setup") or {}).get("entry") or {}).get("label") or "") if ((c.get("setup") or {}).get("entry") or {}).get("label") else ""}'
+        f'{" · model plan " + e(((c.get("setup") or {}).get("models") or {}).get("plan") or "") if ((c.get("setup") or {}).get("models") or {}).get("plan") else ""}</p>'
         f'<div class="stack" style="gap:6px"><div class="row" style="justify-content:space-between">'
         f'<span class="eyebrow">Overall progress</span><span class="mono">{overall}%</span></div>'
         f'<div class="progress" role="progressbar" aria-valuenow="{overall}" aria-valuemin="0" aria-valuemax="100"><span style="width:{overall}%"></span></div>'
@@ -841,7 +877,7 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
         f'<p class="muted">Why {e(state)}: {e("; ".join(reasons))}.</p>'
         f'<p class="muted" style="font-size:.8rem">Generated {e(when(now))} from the project files — refreshed at the end of every phase and sprint, and on request.</p>'
         '<ul class="toc">' + "".join(f'<li><a href="#{a}">{e(b)}</a></li>' for a, b in [
-            ("glance", "At a glance"), ("phases", "Phases"), ("forecast", "Delivery"), ("roadmap", "Roadmap"),
+            ("glance", "At a glance"), ("phases", "Phases"), ("setup", "Set-up & settings"), ("forecast", "Delivery"), ("roadmap", "Roadmap"),
             ("features", "Features"), ("speed", "Speed"), ("quality", "Quality"), ("risks", "Risks"),
             ("decisions", "Questions & decisions"), ("documents", "Documents"), ("environments", "Environments"), ("repos", "Repos & resources"),
             ("activity", "Activity"), ("effort", "ASDR effort")]) + '</ul></header>')
@@ -878,6 +914,34 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
         prow.append([e(lbl), pill(st, {"done": "passed", "current": "skipped", "upcoming": "neutral"}[st]),
                      e(gkind), e(gate), f'<span class="mono">{e(when(fin)) if fin else "—"}</span>'])
     out.append(section("phases", "Phases and gates", table(["Phase", "State", "Gate", "Gate result", "Finished"], prow)))
+
+    # 3b run set-up and settings (v4.0)
+    su = c.get("setup") or {}
+    en, md, cf = su.get("entry") or {}, su.get("models") or {}, su.get("conf") or {}
+    srows = []
+    if en.get("start"):
+        srows.append(["Start point", e(en.get("label")) + ("" if en.get("followed_recommendation")
+                      else f' <span class="muted">(ASDR recommended {e(en.get("recommended"))})</span>'),
+                      e(f"chosen by {en.get('chosen_by') or 'user'}; skipped: {', '.join(en.get('skipped') or []) or 'nothing'}")])
+    if md.get("plan"):
+        srows.append(["Model plan", e(f"{md['plan']} (top = {md.get('top', 'opus')})"),
+                      e(", ".join(f"{k}: {v} roles" for k, v in sorted((su.get("by_model") or {}).items())))])
+    if cf:
+        bt = cf.get("by_type") or {}
+        srows.append(["Configurable decisions", e(f"{cf.get('decisions', 0)} decided"),
+                      e(f"{bt.get('configure', 0)} configure, {bt.get('prepare', 0)} prepare, {bt.get('decide-once', 0)} decide-once; "
+                        f"{cf.get('settings', 0)} settings")])
+    crow = [[f'<span class="mono">{e(x.get("id"))}</span>', f'<span class="mono">{e(x.get("key"))}</span>', e(x.get("default")),
+             e(x.get("who")), e(x.get("owner")),
+             pill(x.get("review_by") or "—", "failed" if x in (su.get("overdue") or []) else "neutral"),
+             e(", ".join(x.get("tests") or []))] for x in (cf.get("setting_list") or [])]
+    out.append(section("setup", "Run set-up and settings",
+                       table(["Item", "Value", "Detail"], srows, "Set at Phase 0: entry_point.py and model_plan.py.")
+                       + "<h3>Settings built as configurable</h3>"
+                       + table(["Setting", "Key", "Default", "Who can change it", "Owner", "Review by", "Tests"], crow,
+                               "No configurable settings (docs/03f-configuration.md)."),
+                       "A setting past its review date turns the status at risk and fails the release gate: keep it with "
+                       "a new date, make the value permanent, or remove it."))
 
     # 4 delivery forecast
     if fc["available"]:
