@@ -116,6 +116,30 @@ Example:
   a documented judgement rather than a silent gap.
 - Cover at least: contradictions, missing requirements, over/underengineering,
   security, UX, testing gaps, business-model weaknesses.
+- Mandatory checks when `docs/00a-idea-validation.md` is in the input set
+  (validation critique). Each failure is a finding at High unless noted:
+  - Synthetic evidence (panel, MiroFish) written as demand, willingness to
+    pay or market size; or a hypothesis marked "supported" with no desk
+    citation.
+  - Panel and MiroFish counted as two independent sources that "agree".
+  - An absolute panel share quoted as a finding (the roster quotas shape
+    it); scenario conclusions not drawn from `validation:panel.deltas`.
+  - An objection counted as panel evidence when its persona is listed in
+    `validation:panel.echo.personas` (it restates the persona's own card),
+    or when the card itself states that attitude.
+  - A scenario difference claimed from a delta marked `within_noise: true`
+    (it can only be reported as "no detectable difference").
+  - A raised flag in `validation:panel.flags` not answered in §7.
+  - Seed bias: does the seed, stimulus or roster argue for the product?
+    Check `docs/validation/panel/inputs/` for anything a persona should not
+    have been told.
+  - A persona not traceable to the desk evidence, or a segment the desk
+    evidence shows but the panel lacks (Medium).
+  - Desk sources that contradict the synthesis and are not mentioned.
+  - §6 tests that cannot fail (no threshold, or a threshold the idea passes
+    by definition).
+  - A MiroFish result cited while `validation:mirofish.status` is
+    `incomplete`.
 - Mandatory checks when `docs/02d-process-flows.md` is in the input set
   (discovery critique). Run `python3 .harness/scripts/validate_product_map.py
   --no-write --require-coverage` first; every ERROR line it prints is a finding at High (Must

@@ -176,6 +176,12 @@ def section(sid, title, inner, note="") -> str:
 # ── canonical documents (skills/asdr/references/file-map.md) ─────────────────
 
 CANON = [
+    ("Validation", "Idea validation", "docs/00a-idea-validation.md", "product-owner"),
+    ("Validation", "Desk evidence", "docs/validation/desk-evidence.md", "product-owner"),
+    ("Validation", "Panel roster", "docs/validation/panel/roster.json", "business-analyst"),
+    ("Validation", "Persona walkthrough", "docs/validation/panel/walkthrough-summary.md", "panelist"),
+    ("Validation", "Validation critique", "docs/critique-validation.md", "critic"),
+    ("Validation", "Validation decision", "docs/decision-validation.md", "judge"),
     ("Discovery", "Product brief", "docs/01-product-brief.md", "product-owner"),
     ("Discovery", "Business case", "docs/01b-business-case.md", "product-owner"),
     ("Discovery", "Roadmap", "docs/00b-roadmap.md", "product-owner"),
@@ -1089,7 +1095,7 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
         elif path in OPTIONAL:
             st, upd = pill("only if needed", "neutral"), "—"
         else:
-            reached = [k for k, *_ in PHASES].index({"Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
+            reached = [k for k, *_ in PHASES].index({"Validation": "strategic", "Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
                                                        "Final gates": "final-gates", "Release": "done"}[ph]) < ci
             st, upd = (pill("missing", "failed") if reached else pill("not yet", "neutral")), "—"
         drows.append([e(ph), e(name), f'<span class="mono">{e(path)}</span>', e(owner), st, f'<span class="mono">{e(upd)}</span>'])
@@ -1459,7 +1465,7 @@ def build_client(root: Path, now: dt.datetime, brand: dict, ctx: dict) -> str:
         elif path in OPTIONAL:
             continue
         else:
-            reached = [k for k, *_ in PHASES].index({"Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
+            reached = [k for k, *_ in PHASES].index({"Validation": "strategic", "Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
                                                        "Final gates": "final-gates", "Release": "done"}[ph]) < c["ci"]
             s_, upd = (st("outstanding", "skipped") if reached else st("not yet", "")), "—"
         drows.append([e(ph), e(name), s_, f'<span class="mono">{e(upd)}</span>'])

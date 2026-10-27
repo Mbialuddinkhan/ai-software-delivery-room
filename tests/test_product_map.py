@@ -209,7 +209,7 @@ class TestAgentsAndSkills(unittest.TestCase):
         self.assertIn("name: product-manager", fm)
         self.assertIn("02c-features.md", text)
         self.assertIn("02d-process-flows.md", text)
-        self.assertEqual(len(list((REPO / "agents").glob("*.md"))), 18)
+        self.assertEqual(len(list((REPO / "agents").glob("*.md"))), 19)  # + panelist (v3.9)
 
     def test_skill_references_exist(self):
         skill = (REPO / "skills/asdr/SKILL.md").read_text()

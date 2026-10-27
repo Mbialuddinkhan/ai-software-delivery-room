@@ -1,10 +1,44 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.8.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v3.9.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
+
+**What's new in v3.9 — ASDR's own simulated market, learned from MiroFish.**
+`validate` now runs a **synthetic panel** natively, with no install and no
+extra accounts, so it works in Cowork too. Personas are built from the desk
+evidence (each cites the rows it comes from; any quote must be real). They
+react independently, then once more after an anonymous digest of everyone's
+objections, and `panel.py` measures who changed their mind. **"What if"
+scenarios** (another price, another pitch, a competitor's move) run on the
+same personas, so the comparison is within-persona — the most trustworthy
+number a synthetic panel produces. The personas with the strongest
+objections get **follow-up interviews**. Results report spread and **flags**
+(implausible positivity, herding, homogeneity, thin segments, objections
+that only echo the persona's own card, a second round where nobody moved)
+that the synthesis must answer; a scenario shift too small to tell from
+noise is marked as such. The same personas can later **walk the process
+flows** in discovery to find friction. What it did not copy from MiroFish:
+thousands of agents and simulated social networks — research on
+language-model respondents shows a bigger crowd of one model is not more
+evidence. MiroFish stays as an optional heavy lane, now with a **launcher**
+(`mirofish_stack.py`) that installs a pinned version locally (cloud or fully
+offline with Ollama + Neo4j), binds it to 127.0.0.1, and asks before every
+download. Panel and MiroFish count as ONE kind of evidence: never demand,
+never corroboration of each other.
+
+**Also in v3.9 — validate the idea before you scope it.** The new
+`validate` skill (also offered once as the first step of `asdr` and
+`discover`) runs desk research first — real reviews, forums, pricing pages,
+search signals, each with a URL — then the synthetic panel built from it,
+and MiroFish only if you want it. The product-owner writes a proceed /
+pivot / stop recommendation (`docs/00a-idea-validation.md`) with every
+claim cited; the critic and the judge decide. Synthetic evidence can never
+count as demand, the team's hypotheses never reach a persona (checked in
+every brief), and every validation ends with cheap real-world tests and pass
+thresholds. MiroFish (AGPL-3.0) is never bundled; see `docs/COMPANIONS.md`.
 
 **What's new in v3.4 — the product has to work end to end, and you can watch
 it.** A new **product-manager** agent writes the feature list and the
@@ -289,6 +323,7 @@ release   →  Documentation + Release-Manager → Changelog + Deploy guide
 | Skill | What it does |
 |---|---|
 | `asdr` | **Full workflow** — strategic layer + execution harness + release gates |
+| `validate` | **Idea validation** — desk evidence + a synthetic persona panel (scenarios, follow-ups, flags) + optional MiroFish → proceed / pivot / stop, objections, real-world tests + critic + judge (v3.9) |
 | `longhorizon` | **Execution only** — Planner → Generator ↔ Evaluator loop |
 | `discover` | **Discovery** — brief, requirements, use cases, feature list, process flows, test cases + critic + judge |
 | `architect` | **Architecture** — solution + AI + security + devops + critic + judge |
@@ -301,7 +336,7 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 
 ---
 
-## Agents (18)
+## Agents (19)
 
 ### Triad + integrity roles (new in v3 / v3.1)
 | Agent | Role |
@@ -325,6 +360,7 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 | `documentation` | README, guides, API docs, handover, user manuals from test screenshots |
 | `risk-manager` | Final release gate and classification |
 | `release-manager` | Changelog, release notes, deploy checklist |
+| `panelist` | Plays one persona on the validation panel from a single prepared input file (v3.9) |
 
 ### Execution layer
 | Agent | Role |
@@ -338,13 +374,13 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v3.8.0)
+.claude-plugin/plugin.json   ← plugin manifest (v3.9.0)
 README.md                    ← this file
-CHANGELOG.md                 ← full v2.1 → v3 → … → v3.8 change log
-agents/                      ← 18 agent definitions (incl. stage-planner, stage-qa,
+CHANGELOG.md                 ← full v2.1 → v3 → … → v3.9 change log
+agents/                      ← 19 agent definitions (incl. stage-planner, stage-qa,
                                product-integrity-qa, product-manager)
-skills/                      ← 7 orchestrator skills (asdr, discover, architect,
-                               longhorizon, riskgate, release, assess)
+skills/                      ← 8 orchestrator skills (asdr, validate, discover,
+                               architect, longhorizon, riskgate, release, assess)
 scripts/
   init_asdr.py               ← project initializer (seeds harness + rigor dial + matrix)
   next_action.py             ← sprint state machine (self-healing circuit breakers)
@@ -352,7 +388,11 @@ scripts/
   trace.py                   ← append-only trace log
   validate_contract.py       ← contract structure gate
   validate_sprints.py        ← sprint schema gate (high-precision tech denylist)
-  validate_verdict.py        ← decision / eval / risk / qa / integrity block gate
+  validate_verdict.py        ← decision / eval / risk / qa / integrity / validation block gate
+  mirofish_validate.py       ← drives a MiroFish instance for the validate skill (v3.8)
+  panel.py                   ← synthetic panel state machine: briefs, checks, digest, follow-ups, scenarios, flags, walkthrough (v3.9)
+  mirofish_stack.py          ← installs/starts/stops a pinned MiroFish locally (v3.9)
+  validation_questions.py    ← shared questions and lists for panel and MiroFish (v3.9)
   validate_critique.py       ← critique structure + counts + floor gate
   validate_traceability.py   ← traceability matrix: drift, orphans, coverage (v3.1)
   emit_facts.py              ← measured facts: diff, census, assertions, tests (v3.2)
@@ -411,10 +451,10 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (213 tests)
+tests/                       ← python3 -m unittest discover -s tests (275 tests)
 ```
 
-## The 18 agents at a glance
+## The 19 agents at a glance
 
 **Triad + integrity (v3 / v3.1):** `stage-planner` sets each stage's acceptance
 checklist, the specialist executor builds to it, `stage-qa` grades it
@@ -426,6 +466,9 @@ the vision/roadmap/requirements every sprint (drift + regression).
 (feature list, end-to-end process flows), `solution-architect`,
 `ai-architect`, `security-compliance`, `devops` (Docker/CI + git-workflow + E2E),
 `critic`, `judge`, `documentation`, `risk-manager`, `release-manager`.
+
+**Validation (1):** `panelist` plays one persona per invocation, from one
+input file, so personas stay independent (v3.9).
 
 **Execution (3):** `planner` (user-visible sprints), `generator` (contract +
 build), `evaluator` (adversarial QA + cross-sprint regression; the only role

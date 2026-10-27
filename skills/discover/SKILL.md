@@ -6,7 +6,7 @@ description: >
   before moving to architecture or coding. Trigger phrases: "discover", "product discovery", "define requirements",
   "write a product brief", "plan my software", "what should I build", "let's scope this out".
 metadata:
-  version: "3.8.0"
+  version: "3.9.0"
 ---
 
 # Discover — Strategic Discovery Orchestrator
@@ -63,9 +63,20 @@ The critic and judge still run at the end of each phase in every rigor mode.
 3. Fallback: create `docs/` and `.harness/templates/`, copy the plugin's
    templates in.
 
+## Phase 1b — Idea validation (optional)
+
+If `docs/00a-idea-validation.md` exists, pass it as an extra input to the
+product-owner in Phase 2. If it does not, and the user has not already
+decided, offer the `validate` skill once (simulation via MiroFish when
+`.harness/companions.json` shows `mirofish.installed: true` — run
+`detect_companions.py` first if that file is missing — desk-only
+otherwise); a judge `no-go` in `docs/decision-validation.md` stops
+discovery until the user overrides it.
+
 ## Phase 2 — Product discovery
 
-Invoke **product-owner** with: the user's idea verbatim, output
+Invoke **product-owner** with: the user's idea verbatim (plus
+`docs/00a-idea-validation.md` when it exists), output
 `docs/01-product-brief.md`, template
 `.harness/templates/product-brief.md`. Run this stage via the Stage execution
 protocol (executor: product-owner, stage-id: product-brief, artifact:
@@ -98,6 +109,18 @@ and `docs/02d-process-flows.md` (template
 protocol (stage-ids `features`, `process-flows`). The flows are the
 end-to-end journeys — trigger to outcome, every step, every role handoff,
 the exception paths — and the PF-00 lifecycle map of how they connect.
+
+## Phase 3b+ — Persona walkthrough of the flows (only after `validate`)
+
+If the `validate` skill built a panel (`docs/validation/panel/roster.json`),
+a sample of its personas walks every process flow step by step. Run it with `python3 .harness/scripts/panel.py walkthrough-next` (it
+prints SKIP when no validated panel exists — then skip silently). For each
+`WALKTHROUGH` task invoke **panelist** with ONLY its input and output paths;
+repeat until `DONE`, then pass `docs/validation/panel/walkthrough-summary.md`
+to the product-manager as input for revising the flows (friction to fix,
+steps where personas gave up). It is simulated: it finds friction, it does
+not predict usage, and it never overrides what real users or the client
+said.
 
 ## Phase 3c — Test cases
 

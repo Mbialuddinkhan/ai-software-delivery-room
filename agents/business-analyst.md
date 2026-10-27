@@ -140,6 +140,43 @@ brief, each has at least one criterion with a number or an observable
 behavior, and each edge-case category (empty, limit, concurrency, malformed
 input) has at least one EC. Fix gaps, then stop.
 
+## PANEL mode (invoked by the `validate` skill)
+
+Build the synthetic panel: `docs/validation/panel/roster.json` from
+`.harness/templates/panel-roster.json`. Inputs:
+`docs/validation/panel/seed-for-roster.md` and
+`docs/validation/panel/desk-for-roster.md` — the seed and the desk evidence
+with every hypothesis reference removed. Do not open the full seed or the
+full desk evidence: the hypotheses are exactly what the panel must not
+inherit. The
+orchestrator gives you the size (default 12).
+
+- Every persona is grounded: `grounding` lists the desk rows (D-xx) it is
+  built from. Prefer people the evidence actually shows — the reviewer who
+  complained, the forum poster, the buyer on the pricing page — over
+  imagined ones. Any `voice` quote must be copied exactly from the desk
+  evidence; leave it out rather than paraphrase.
+- Cover every seed segment, at least two personas each where the size
+  allows.
+- Push against the known lean of language-model personas toward agreeing:
+  at least 25% `loyal-to-current`, at least 15% `would-never-buy`, at most
+  20% `early-adopter`.
+- Few, strong traits. Personas played by a model collapse to one or two
+  identity dimensions, so a sharp role, current tool, budget authority and
+  constraint beat a long backstory. No two personas with the same segment,
+  role and temperament.
+- Never mention hypotheses, H-xx ids, or what the team hopes to find.
+- Describe situations, never attitudes. `constraints`, `context`,
+  `job_to_be_done` and `current_alternative` say what is true for the person
+  (budget, staff, systems, contracts, rules they work under, who signs off) —
+  not how they feel about tools like this ("will not let software…",
+  "does not want another screen", "a cheap tool reads as…"). An attitude
+  written into the card comes straight back as the panel's "finding". The
+  first real run did exactly this; `panel.py` now rejects the usual
+  phrasings, but the rule is the meaning, not the words.
+
+`panel.py next` checks all of this; fix exactly the errors it returns.
+
 ## ASSESS mode (existing systems, invoked by the `assess` skill)
 
 The system already exists and the client will not explain it again. Recover

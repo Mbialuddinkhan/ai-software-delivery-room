@@ -8,6 +8,14 @@ Templates live in `.harness/templates/`.
 
 | # | Document | Path | Agent | Template |
 |---|---|---|---|---|
+| 0a-s | Validation seed + simulation requirement (validate only) | `docs/validation/seed.md`, `docs/validation/requirement.md` | product-owner (SEED) | validation-seed.md |
+| 0a-d | Desk evidence (validate only) | `docs/validation/desk-evidence.md` | product-owner (DESK) | validation-desk-evidence.md |
+| 0a-m | MiroFish outputs (generated, validate only) | `docs/validation/mirofish/{run,report,interviews}-<n>.*`, `uploaded-<seed>`; facts under `mirofish` in `.harness/validation.json` | `mirofish_validate.py` | — |
+| 0a-p | Synthetic panel (validate only) | `docs/validation/panel/`: `config.json`, `stimulus.md`, `stimulus-SC-xx.md`, `scenarios.json` (product-owner, STIMULUS); `roster.json` (business-analyst, PANEL); generated `seed-for-roster.md`, `inputs/*.md`, `digest.md`, `followups/selection.json`; `responses/<scenario>/r<n>-Pxx.json`, `followups/Pxx.json` (panelist); facts under `panel` in `.harness/validation.json` | product-owner, business-analyst, panelist, `panel.py` | panel-stimulus.md, panel-scenarios.json, panel-roster.json |
+| 0a-w | Persona walkthrough of the flows (generated) | `docs/validation/panel/walkthroughs/Pxx.json`, `walkthrough-summary.md`; facts under `walkthrough` | panelist, `panel.py walkthrough-next` | — |
+| 0a-l | MiroFish launcher state (outside the project) | `~/.asdr/mirofish/state.json`, `~/.asdr/mirofish/<flavor>-<sha>/` | `mirofish_stack.py` | — |
+| 0a | Idea validation | `docs/00a-idea-validation.md` | product-owner (VALIDATE) | idea-validation.md |
+| 0a-c | Validation critique + decision | `docs/critique-validation.md`, `docs/decision-validation.md` | critic, judge | critique.md, decision.md |
 | 1 | Product brief | `docs/01-product-brief.md` | product-owner | product-brief.md |
 | 1b | Business case | `docs/01b-business-case.md` | product-owner | business-case.md |
 | 0b | Roadmap | `docs/00b-roadmap.md` | product-owner | roadmap.md |
@@ -58,6 +66,11 @@ Per-sprint integrity snapshots land at `docs/integrity-<sprint>.md`.
 
 | Stage id | Executor agent | Artifact path | Tier |
 |---|---|---|---|
+| `idea-seed` | product-owner | docs/validation/seed.md | med (validate only; `--no-plan` under standard) |
+| `desk-evidence` | product-owner | docs/validation/desk-evidence.md | high (validate only) |
+| `panel-stimulus` | product-owner | docs/validation/panel/stimulus.md | med (validate only; `--no-plan` under standard) |
+| `panel-roster` | business-analyst | docs/validation/panel/roster.json | med (validate only; `--no-plan` under standard) |
+| `idea-validation` | product-owner | docs/00a-idea-validation.md | high (validate only) |
 | `product-brief` | product-owner | docs/01-product-brief.md | high |
 | `business-case` | product-owner | docs/01b-business-case.md | high |
 | `roadmap` | product-owner | docs/00b-roadmap.md | med |

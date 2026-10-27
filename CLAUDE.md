@@ -10,8 +10,8 @@ into other projects. Keep that distinction when editing.
 |---|---|
 | `.claude-plugin/plugin.json` | Plugin manifest (name, version) — the version users see |
 | `.claude-plugin/marketplace.json` | The `asdr` marketplace: ASDR (source `./`, no `version` — `plugin.json` is the single source) plus SHA-pinned companions `ui-ux-pro-max` (dependency) and `ponytail` (off by default) |
-| `agents/*.md` | The 18 agent definitions (frontmatter `name` must equal the filename) |
-| `skills/*/SKILL.md` | The 6 orchestrator skills; `metadata.version` tracks the plugin version. `skills/asdr/references/` holds the file map, stage table, companion rules and the testing/manuals guide the asdr skill reads on demand |
+| `agents/*.md` | The 19 agent definitions (frontmatter `name` must equal the filename) |
+| `skills/*/SKILL.md` | The 8 orchestrator skills; `metadata.version` tracks the plugin version. `skills/asdr/references/` holds the file map, stage table, companion rules and the testing/manuals guide the asdr skill reads on demand |
 | `scripts/*.py` | The state machine, validators, context-discipline and companion/update scripts; copied into each project's `.harness/scripts/` by `init_asdr.py`. No hooks: ASDR makes no network call outside a run |
 | `templates/` | Fill-in templates (and folders such as `templates/e2e/{playwright,cypress,selenium}`); copied into each project's `.harness/templates/` |
 | `examples/sample-app/` | TaskBoard, the reference project: product docs 02–02e, `[TC-xx]` tests in all three frameworks with saved logins and accessibility checks, tours, `manual.json`. CI runs it end to end; its copies of the e2e templates must stay identical (a test checks) |

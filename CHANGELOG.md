@@ -3,6 +3,228 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [3.9.0] — a native synthetic panel learned from MiroFish, and a MiroFish launcher
+
+### Added
+- **Synthetic panel (`scripts/panel.py`, new `panelist` agent).** The default
+  simulation lane of `validate`; no install, no extra accounts, works in
+  Cowork. A state machine like `next_action.py`: `panel.py next` does the
+  deterministic work and prints the next agent task(s).
+  - *Grounded in evidence first* (MiroFish's graph-from-documents idea, without
+    the graph store): the business-analyst builds `roster.json` from the seed
+    without its hypotheses and the desk evidence; every persona cites desk
+    rows (D-xx), and any quote it carries must appear verbatim in
+    `desk-evidence.md`.
+  - *Quotas against the known lean of LLM respondents toward agreement:*
+    ≥ 25% loyal to their current tool, ≥ 15% would never buy, ≤ 20% early
+    adopters; every seed segment covered; few, strong traits.
+  - *Independence:* each panelist reads ONE generated brief
+    (`inputs/*.md`) — persona card, real quotes, the stimulus, the questions,
+    the JSON to write — checked to contain no hypothesis id or wording.
+  - *One round of social exposure, measured:* an anonymous, shuffled digest
+    of round-1 objections (no ids, no tallies); round 2 records declared and
+    actual stance changes. No further rounds.
+  - *"What if" scenarios* (up to 3: price, pitch, a competitor's move) on the
+    same personas; `deltas` report same-persona shifts and objection changes.
+  - *Follow-up interviews* of the personas with the strongest, most varied
+    objections (fixed probes; the persona sees its own earlier answers).
+  - *Spread and flags:* intent, price reaction, objection categories, fair
+    price median/range, by segment; flags `implausible_positivity`,
+    `herding`, `homogeneous`, `thin_segments`; under `paranoid`, a second
+    independent panel and `panel.py compare` → `panel_variance`.
+  - *Persona walkthrough* (`panel.py walkthrough-next`): in `discover`/`asdr`,
+    a segment-spread sample walks every process flow step by step; friction,
+    severity and drop-offs go to `walkthrough-summary.md` for the
+    product-manager. Skipped when no validated panel exists.
+- **MiroFish launcher (`scripts/mirofish_stack.py`):** `doctor`, `up`,
+  `status`, `logs`, `down`, `purge`. Clones the commit pinned in
+  `upstream.json` (original `666ghj/MiroFish` = cloud, or
+  `nikmcfly/MiroFish-Offline` = Neo4j + Ollama) into `~/.asdr/mirofish/`,
+  builds it locally, and binds every port to 127.0.0.1 through a compose
+  override (`!override`, Compose ≥ 2.24.4; verified with `docker compose
+  config` against both pinned compose files). Keys only from environment
+  variables, `.env` mode 600, output redacted, Neo4j password generated and
+  reused. Offline on macOS uses the host's Ollama (Docker has no Apple GPU).
+  `up`/`purge` refuse without `--yes`. ASDR still contains no MiroFish code.
+- `check_updates.py`: `git-commit` pins — reports when upstream has moved
+  past the pin and what changed; users move only when the maintainer
+  re-pins.
+- `scripts/validation_questions.py`: one set of questions, probes and closed
+  lists shared by the panel and MiroFish, and the hypothesis-stripping and
+  leak checks.
+- Templates `panel-stimulus.md`, `panel-scenarios.json`, `panel-roster.json`;
+  product-owner STIMULUS mode, business-analyst PANEL mode, critic checks
+  for synthetic evidence; dashboard rows for desk evidence, roster and the
+  walkthrough.
+
+### Changed
+- `validate`: desk evidence now runs before the panel (personas are built
+  from it); lanes are desk + panel always, MiroFish optional (Claude Code
+  only; in Cowork, desk + panel). Panel and MiroFish are treated as ONE kind
+  of evidence everywhere: their agreement is not corroboration, absolute
+  panel shares are not findings, scenario conclusions come from within-panel
+  deltas, every raised flag is answered.
+- `mirofish_validate.py`: sends `Accept-Language: en` (the original answers
+  in Chinese by default); writes under the `mirofish` key of
+  `.harness/validation.json` instead of replacing the file; records the
+  flavour and capability differences when the launcher started it.
+- `validate_verdict.py --type validation` checks `evidence_class` ∈
+  {desk-only, panel+desk, mirofish+desk, panel+mirofish+desk}.
+
+### Fits the 3.8 rules (this release sits on top of 3.8.0)
+- `validate` uses 3.8's stage protocol (batches under lite/standard, no
+  stage planner in standard, Opus everywhere under paranoid), logs every
+  agent run with `log_agent_run.py` (panelists included), and decides with
+  `decide.py` — the judge only when the critique has a Critical or High
+  finding — then `check_required_changes.py`.
+- `panelist` runs on Sonnet: many calls, no judgement. The sample run below
+  used the session's model; the Sonnet panel is not yet measured against it.
+- `estimate_run.py --mode validate --panel-size --scenarios --rounds
+  --followups` prices a validation before the user picks the panel size;
+  the panelist figure (~16k tokens per answer) is measured with the
+  registered `panelist` agent. MiroFish runs are not counted (they spend the user's own LLM
+  account).
+- `detect_companions.py` reports both 3.8's cloud tooling and MiroFish.
+
+### Fixed after the first real panel run
+A full `validate` run on a sample idea ("a $19/month WhatsApp tool that
+answers small clinics' patient enquiries after hours"): real desk research,
+8 personas played by real Claude subagents, base + a $49 scenario, two
+rounds, two follow-up interviews, then synthesis, critic and judge. The
+judge returned a reasoned no-go with cheap real-world tests first. What the
+run exposed, each now pinned by a test:
+- **The roster planted the findings.** The critic showed that four persona
+  cards stated attitudes ("will not let software talk to patients…", "a
+  cheap tool reads as not enterprise-ready") that came straight back as the
+  panel's top objections. `panel.py` now rejects attitude phrasings in the
+  card fields (`OPINION_MARKERS`) and the business-analyst's PANEL mode says
+  to describe situations, not attitudes. Re-running with corrected cards:
+  the planted "another screen" and "not enterprise-ready" objections
+  disappeared; trust in automated replies to patients came up unprompted in
+  5 of 8 personas, so that theme survives the fix.
+- **Answers to an old card were kept.** After the roster changed, earlier
+  answers still counted. Briefs are now rewritten only when their content
+  changes, and an answer older than its brief is asked again (`stale`).
+- **Echo.** An objection that restates the persona's own card is the roster
+  talking: `panel.echo` lists those personas and `echo_heavy` is raised at
+  a third of the panel; product-owner and critic treat them as the desk row
+  behind the card, not as panel evidence.
+- **Noise in scenarios.** The $19 → $49 shift moved one persona in one run
+  and a different persona the other way in the re-run. Each delta now
+  carries `within_noise` (fewer than max(2, 15% of the panel) personas
+  moved), reported as "no detectable difference".
+- **A silent round 2.** No persona changed its mind after the digest, in
+  either run. `static_round2` says so instead of letting stability read as
+  conviction.
+- Panelists wrote prices as text ("19"); `fair_price` and `changed` are now
+  normalised instead of costing a re-run, and the brief says "plain number".
+- Intent shares were identical across the two runs (4 maybe / 4 no) even as
+  objections changed — confirming that the roster quotas set the shares and
+  that absolute shares must not be read as findings.
+
+### Fixed after an independent review
+- Hypotheses could still reach a persona: ids spelt `H1`/`H-1`, paraphrases,
+  the desk evidence's hypothesis column and Gaps section (which the roster
+  builder read, and which "real quotes" were matched against), and the
+  process flows in walkthrough briefs. Now: every brief is checked on every
+  `next` (`FIX-LEAK`, with the source to fix); the roster builder reads
+  `desk-for-roster.md` (no hypothesis column, no Gaps, no comments); voice
+  quotes must come from the "What it shows" cells; stimuli with template
+  comments or placeholders are refused. Zero false positives on the 52 real
+  briefs from the sample run.
+- A persona saw its own round-1 objection in "what other people said";
+  round-2 digests are now per persona.
+- Results stayed `complete` after the panel was reopened → `stale`.
+- `walkthrough-next` crashed without a panel instead of printing SKIP (its
+  test ran `init` first); `compare` accepted one panel twice; a removed
+  persona survived in the digest and follow-ups; `--size` was not enforced;
+  valid JSON of the wrong shape crashed `next`.
+- Launcher: on Linux the default offline setup could not reach the host's
+  Ollama (127.0.0.1-only) while `doctor` and `up` reported success — `up`
+  now checks Ollama from inside the backend container and `doctor` explains
+  the docker0 binding; the fork's NVIDIA reservation is dropped whenever no
+  NVIDIA runtime exists (not only on macOS); `--pull-models` pulls inside
+  the container in container mode; state is saved before anything can fail,
+  `purge` cleans up folders, containers, volumes and built images even
+  without state, and a folder at the wrong commit is moved to the pin.
+- `localhost` vs `127.0.0.1` no longer hides which flavour is running, and
+  `mirofish_validate.py`/`detect_companions.py` default to the launcher's URL.
+- `fair_price` carries `would_pay_nothing` and a "not willingness to pay"
+  label; "€1.200" reads as 1200.
+- Template §7 lists every flag, the echo personas and within-noise deltas.
+- Second review pass: the leak check now covers only what the team wrote
+  (card, stimulus, flows), never the panel's own answers in round-2 and
+  follow-up briefs — a persona raising a hypothesis unprompted is the signal,
+  and an earlier version could block the panel with nothing to fix; "H1
+  2027"-style half-years are not hypothesis ids; a stimulus that states the
+  hoped-for outcome gets a clear "describe what it does" error; `purge` also
+  removes the custom-tagged built image; container-mode `up` fails when the
+  Ollama container has no models instead of reporting success;
+  `scenarios.json` of the wrong shape is a fix, not a crash.
+
+### Not done
+- No run against a live MiroFish yet (needs the user's LLM/Zep keys or a
+  machine that can run a local model). The launcher was exercised with
+  stubbed `docker`/`git`; the overrides were validated with a real
+  `docker compose config`, not a real `up`. `doctor` was run for real on a
+  Linux sandbox (no Docker daemon, 8 GB RAM, no Ollama → three FAILs with
+  fixes); not yet on a Mac.
+- Panelist cost: the sample run invoked panelists as general-purpose agents
+  (the `panelist` type was not registered yet), about 81k tokens each. The
+  same brief through the registered `panelist` agent (Read/Write only) cost
+  about 16k — the difference is the general-purpose agent's tool
+  definitions. Always invoke panelists as the `panelist` agent: a 12-person
+  panel with one scenario, two rounds and three follow-ups is ~39 calls,
+  ~0.6M tokens for the panel (~3.2M the way the sample run did it).
+  If `static_round2` keeps firing for an idea, re-run with `--rounds 1`
+  and save the eight-to-twelve round-2 calls.
+
+### The `validate` skill this release introduces (built first as an unreleased 3.8 branch)
+
+#### Added
+- **`validate` skill.** Tests an idea before any scoping: the product-owner
+  writes a market seed (`docs/validation/seed.md`, template
+  `templates/validation-seed.md`) with falsifiable hypotheses H-xx; two
+  evidence lanes run in parallel — a MiroFish simulation and desk evidence
+  (`docs/validation/desk-evidence.md`, real sources with URL and date); the
+  product-owner synthesises `docs/00a-idea-validation.md` (template
+  `templates/idea-validation.md`) with a `recommendation: proceed | pivot |
+  stop` block; critic and judge decide (`docs/critique-validation.md`,
+  `docs/decision-validation.md`). Offered once as step 0 of `asdr` Phase 1
+  and Phase 1b of `discover`; a judge `no-go` stops before discovery. When
+  `docs/00a` exists the brief, business case and roadmap read it.
+- `scripts/mirofish_validate.py`: drives a user-run MiroFish backend over
+  HTTP — ontology → graph build → simulation create/prepare/start (rounds
+  capped, default 20) → wait until every platform has finished its rounds →
+  fixed validation interviews with an evenly spread agent sample (one
+  platform by default; a failed batch is recorded, not fatal) → close-env
+  (then `/stop` after a grace period) → report, which MiroFish only writes
+  for a finished run. Seed sections about hypotheses are stripped before
+  upload and the uploaded copy is kept. Saves ids after every step, so
+  `--resume` continues a run that hit its time limit; it falls back to the
+  project status when a restarted MiroFish has forgotten a task, and never
+  starts a run twice. Measured numbers go to `.harness/validation.json`
+  (`validation:<key>`), written `incomplete` before anything is spent and
+  `complete` at the end. Exit 2 unreachable, 3 a step failed or answered
+  unexpectedly, 4 time limit. Tested against an in-process fake of the API
+  that keeps the environment alive after the rounds, as MiroFish does.
+- Dashboard: the validation documents appear under "Validation".
+- `detect_companions.py` → `mirofish` (probes `$MIROFISH_URL/health`,
+  default localhost:5001, 1.5 s; `MIROFISH_URL=off` skips).
+- `validate_verdict.py --type validation`.
+- product-owner: SEED, DESK and VALIDATE modes, with WebSearch/WebFetch.
+
+#### Rules
+- Simulated evidence is synthetic opinion from personas built from our own
+  seed: it may surface objections and comparisons, never stand alone as
+  demand ("weakly supported" at most); desk evidence wins disagreements;
+  every validation ends with real-world tests and pass thresholds.
+- Nothing is uploaded to MiroFish (and so to the user's LLM provider and Zep
+  Cloud) without the user's yes; seeds never carry customer data,
+  credentials or named private individuals.
+- MiroFish is AGPL-3.0 and is never bundled, vendored or modified; ASDR
+  only calls a separately running instance.
+
 ## [3.8.0] — leaner runs; microservices and cloud portability by the user's decision
 
 ### Efficiency
@@ -78,7 +300,7 @@ Baseline is the shipped plugin at v2.0.0.
   (when it is invoked).
 
 ### Not in 3.8
-- Exporting ASDR to Codex CLI and Gemini CLI: 3.9.
+- Exporting ASDR to Codex CLI and Gemini CLI: a later release (3.9 became idea validation).
 
 ## [3.7.0] — parity with the old system, a client status report, and /assess hardened by a real run
 

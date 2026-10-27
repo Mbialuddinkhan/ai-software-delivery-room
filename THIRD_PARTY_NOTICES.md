@@ -52,3 +52,20 @@ design vocabulary. No AX code is included.
 The browser-test templates are written for Playwright (Apache-2.0), Cypress
 (MIT), Selenium (Apache-2.0) and axe-core (MPL-2.0). Projects install them
 with their own package managers; ASDR ships none of their code.
+
+## MiroFish — referred to, not bundled
+
+The `validate` skill calls a MiroFish instance the user installs and runs
+separately ([666ghj/MiroFish](https://github.com/666ghj/MiroFish),
+GNU AGPL-3.0; offline fork
+[nikmcfly/MiroFish-Offline](https://github.com/nikmcfly/MiroFish-Offline)).
+ASDR contains no MiroFish code and does not modify or redistribute it;
+`scripts/mirofish_validate.py` is ASDR's own MIT-licensed HTTP client, and
+`scripts/mirofish_stack.py` downloads the upstream source at a pinned commit
+from GitHub at the user's request, into a folder outside the project, and
+builds it unmodified (a compose override file only changes port bindings and
+the image tag). `scripts/panel.py` is an independent MIT-licensed
+implementation of the ideas, not of the code. If you
+modify MiroFish and offer it to others over a network, the AGPL's terms
+apply to your MiroFish deployment.
+

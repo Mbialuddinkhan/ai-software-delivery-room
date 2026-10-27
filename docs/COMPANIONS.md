@@ -9,12 +9,14 @@ How each one reaches the user:
 | Ponytail | Listed in the `asdr` marketplace, `defaultEnabled: false`, one command to install | Hooks affect every subagent; a user must opt in and scope it |
 | Graphify | Detected only (pip/uv tool, not a Claude plugin) | Cannot be a plugin dependency; ASDR offers `pip install graphifyy` on brownfield entry |
 | RTK | Detected, warned, never installed | Compresses evidence commands |
+| MiroFish | Detected; optionally installed at a pinned commit by `mirofish_stack.py` into `~/.asdr/mirofish/` and called over HTTP | AGPL-3.0, Python + Node + a graph store; cannot be a plugin dependency and is never vendored or patched |
 
 ASDR does not vendor any companion's code. `scripts/detect_companions.py`
 (Phase 0 step 4) finds what the host session has installed and writes
 `.harness/companions.json`; the orchestrator, generator, evaluator and
-stage-qa read that file. All four projects are MIT-licensed and update
-often, so vendoring would mean maintaining forks.
+stage-qa read that file. The plugin companions are MIT-licensed and update
+often, so vendoring would mean maintaining forks. MiroFish is AGPL-3.0, which
+is one more reason ASDR only ever talks to it over HTTP.
 
 ## UI UX Pro Max — design-system stage
 
@@ -139,6 +141,77 @@ If you keep it installed anyway: `detect_companions.py` warns, and the
 orchestrator reminds evaluator and stage-qa every invocation that only
 `facts:` keys are evidence. That rule already exists in v3.2; RTK just makes
 it load-bearing.
+
+## MiroFish — idea validation by swarm simulation (optional)
+
+Repo: https://github.com/666ghj/MiroFish (AGPL-3.0). Offline fork using
+Ollama + Neo4j instead of a cloud LLM and Zep Cloud:
+https://github.com/nikmcfly/MiroFish-Offline
+
+What it does: builds a knowledge graph from seed documents, generates
+agent personas from it, runs a Twitter/Reddit-style simulation on CAMEL-AI's
+OASIS, and writes a report; agents can be interviewed afterwards.
+
+**ASDR's own panel comes first.** Since v3.9 `validate` runs a native
+synthetic panel (`scripts/panel.py`) by default. It takes MiroFish's useful
+ideas — evidence-grounded personas, memory, one measured round of social
+exposure, "what if" scenarios, follow-up interviews — without its scale or
+infrastructure. MiroFish is the optional heavy lane.
+
+**Let ASDR run it (Claude Code on your machine):**
+
+```bash
+python3 .harness/scripts/mirofish_stack.py doctor --flavor offline      # or cloud
+python3 .harness/scripts/mirofish_stack.py up --flavor offline          # prints what it will download; add --yes once you agree
+python3 .harness/scripts/mirofish_stack.py down                          # stop; `purge --yes` removes everything
+```
+
+- `cloud` = the original, at the pinned commit. Set `MIROFISH_LLM_API_KEY`,
+  `MIROFISH_LLM_BASE_URL`, `MIROFISH_LLM_MODEL`, `MIROFISH_ZEP_API_KEY` in your
+  shell first; the seed goes to that provider and Zep Cloud.
+- `offline` = the fork, at its pinned commit: Neo4j in Docker and your own
+  Ollama (on a Mac, Docker cannot use the GPU, so ASDR points the container at
+  the Ollama app instead of running Ollama in Docker). The fork states 16 GB RAM
+  minimum, 32 GB recommended; `--model qwen2.5:7b` for smaller machines.
+  `--pull-models` pulls the models after you agree — check their sizes on
+  ollama.com/library first.
+- Every port is bound to 127.0.0.1. The API has no authentication; never
+  expose it.
+- Not available from Cowork: the sandbox has no Docker and `localhost` there
+  is not your computer.
+
+**Or run it yourself (Docker is quickest):**
+
+```bash
+git clone https://github.com/666ghj/MiroFish && cd MiroFish
+cp .env.example .env     # LLM_API_KEY / LLM_BASE_URL / LLM_MODEL_NAME (any OpenAI-format API), ZEP_API_KEY
+docker compose up -d     # backend on :5001, UI on :3000
+export MIROFISH_URL=http://localhost:5001   # only if not the default
+python3 .harness/scripts/mirofish_validate.py --check
+```
+
+How ASDR uses it: `detect_companions.py` probes `$MIROFISH_URL/health`;
+the `validate` skill writes a market seed, asks the user before uploading
+it, and `mirofish_validate.py` drives the API end to end (rounds capped,
+resumable) and records `.harness/validation.json`.
+
+What to expect from it, plainly:
+
+- **It is synthetic opinion.** The personas come from our own seed, so a
+  seed that argues for the product produces agents that agree. The critic is
+  told to look for exactly that. Use it to find objections, confusion and
+  competitor comparisons before a real customer conversation, not to size
+  demand or price.
+- **It is expensive and slow.** Every persona and every round is LLM calls;
+  MiroFish's own README advises starting under 40 rounds. ASDR defaults to
+  20 and one run.
+- **Your seed leaves the machine.** It goes to the LLM provider in
+  MiroFish's `.env` and to Zep Cloud (unless you run the offline fork).
+- **Licence.** ASDR contains no MiroFish code. If you modify MiroFish and
+  serve it to others over a network, the AGPL applies to that deployment.
+
+Hard rule: simulated numbers are `validation:` keys, never `facts:` keys,
+and no hypothesis is "supported" on simulation alone.
 
 ## AX (agentexecutor.io) — a runtime target, not a companion
 

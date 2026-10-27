@@ -101,6 +101,17 @@ class TestEstimate(Tmp):
         self.assertEqual(t["critic"][1], 50_000)
         self.assertTrue(t["critic"][3].startswith("measured here"))
 
+    def test_validate_mode_counts_the_panel(self):
+        _, base = self.est("--mode", "validate", "--panel-size", "12")
+        _, more = self.est("--mode", "validate", "--panel-size", "12", "--scenarios", "1")
+        _, one = self.est("--mode", "validate", "--panel-size", "12", "--rounds", "1")
+        # a scenario adds a full panel of answers; dropping round 2 removes one
+        self.assertAlmostEqual(more["standard"]["agent_runs"] - base["standard"]["agent_runs"], 12, 0)
+        self.assertAlmostEqual(base["standard"]["agent_runs"] - one["standard"]["agent_runs"], 12, 0)
+        # with the registered panelist agent (~16k a call) the panel is the cheap
+        # part; the Opus authoring and review runs dominate
+        self.assertLess(base["standard"]["tokens_sonnet"], base["standard"]["tokens_opus"])
+
     def test_assess_mode_scales_with_size(self):
         _, small = self.est("--mode", "assess", "--kloc", "10")
         _, big = self.est("--mode", "assess", "--kloc", "80")
@@ -116,7 +127,7 @@ class TestEstimate(Tmp):
             if m == "sonnet":
                 sonnet.add(f.stem)
         self.assertEqual(sonnet, {"stage-planner", "stage-qa", "product-integrity-qa", "documentation",
-                                  "release-manager", "planner"})
+                                  "release-manager", "planner", "panelist"})
         for judgement in ("critic", "judge", "security-compliance", "solution-architect", "generator", "evaluator"):
             self.assertEqual(er.ROLES[judgement][0], "opus")
 

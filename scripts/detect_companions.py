@@ -26,6 +26,10 @@ Companions:
             Found by name in MCP and plugin configuration; the orchestrator
             also checks its own tool list (mcp__* names). Never installed by
             ASDR — the user adds them.
+  mirofish  666ghj/MiroFish (AGPL-3.0) — swarm simulation engine the user
+            runs as a separate service. Used by the `validate` skill over
+            HTTP only; never bundled. Probed at $MIROFISH_URL/health
+            (default http://localhost:5001; MIROFISH_URL=off skips it).
 """
 import argparse
 import json
@@ -34,6 +38,9 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import validation_questions as vq  # noqa: E402
 
 HOME = Path.home()
 CLAUDE = HOME / ".claude"
@@ -144,6 +151,45 @@ def detect_cloud():
     return out
 
 
+def detect_mirofish():
+    """A running MiroFish backend the user started themselves.
+
+    Only ever probes the user's own URL ($MIROFISH_URL, default localhost),
+    with a short timeout; MIROFISH_URL=off skips the probe entirely.
+    """
+    home = Path(os.environ.get("ASDR_MIROFISH_HOME", HOME / ".asdr" / "mirofish"))
+    try:
+        launched = json.loads((home / "state.json").read_text())
+    except (OSError, ValueError):
+        launched = {}
+    url = os.environ.get("MIROFISH_URL") or (launched.get("url") if launched.get("running")
+                                             else None) or "http://localhost:5001"
+    url = url.strip()
+    if url.lower() in ("", "off", "none", "0"):
+        return {"installed": False, "url": None, "reason": "MIROFISH_URL=off"}
+    try:
+        from urllib import request
+        with request.urlopen(url.rstrip("/") + "/health", timeout=1.5) as resp:
+            ok = resp.status == 200 and b"ok" in resp.read(200).lower()
+    except Exception:
+        ok = False
+    res = {"installed": ok, "url": url,
+           **({} if ok else {"reason": "no MiroFish backend answering /health"})}
+    # Started by mirofish_stack.py? Then we know the flavour and the pin.
+    home = Path(os.environ.get("ASDR_MIROFISH_HOME", HOME / ".asdr" / "mirofish"))
+    try:
+        st = json.loads((home / "state.json").read_text())
+        res["launcher"] = {k: st.get(k) for k in ("flavor", "commit", "url", "running")}
+        if vq.same_endpoint(st.get("url"), url):
+            res["flavor"] = st.get("flavor")
+        elif not ok and st.get("running") is False:
+            res["reason"] += f"; the ASDR launcher has a stopped {st.get('flavor')} stack " \
+                             "(`mirofish_stack.py up --flavor …` restarts it)"
+    except (OSError, ValueError):
+        pass
+    return res
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", default=".harness/companions.json")
@@ -155,6 +201,7 @@ def main() -> int:
         "graphify": detect_graphify(),
         "rtk": detect_rtk(),
         "cloud": detect_cloud(),
+        "mirofish": detect_mirofish(),
         "warnings": [],
     }
 

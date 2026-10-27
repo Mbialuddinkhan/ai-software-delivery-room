@@ -12,6 +12,7 @@ Phase 0 step 5. Full install notes and the reasoning behind each rule:
 | Build ladder (built in) | generator BUILD mode | `templates/build-ladder.md`; YAGNI objections go in NEGOTIATE, never skip a ratified criterion |
 | Ponytail (optional) | generator only | Listed in the `asdr` marketplace, disabled by default; needs `PONYTAIL_SUBAGENT_MATCHER='^generator$'` |
 | Graphify | brownfield entry, post-sprint `--update` | Navigation aid only; never a measurement source |
+| MiroFish (optional, separate service) | `validate` skill, Phase 3b | Detected at `$MIROFISH_URL/health`. Already running, or installed and started by `mirofish_stack.py` (pinned commit, built locally, ports on 127.0.0.1, `--yes` only after the user agrees; Claude Code only, never Cowork). AGPL-3.0: never bundled or patched. Same kind of evidence as the native panel — never demand, never corroboration of the panel |
 | RTK | none (warned, not used) | Compresses evidence commands; `facts:` keys are the only measured numbers |
 
 ## Rules in the sprint loop

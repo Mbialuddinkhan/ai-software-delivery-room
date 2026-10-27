@@ -2,7 +2,7 @@
 """Validate an ASDR machine-readable verdict block.
 
 Usage:
-  python3 validate_verdict.py <file> [--type decision|eval|risk]
+  python3 validate_verdict.py <file> [--type decision|eval|risk|qa|integrity|validation]
 
 The orchestrator parses a fenced ```yaml block at the end of three document
 kinds — the judge's decision, the evaluator's eval report, and the
@@ -46,7 +46,17 @@ SPECS = {
         "required": ["integrity", "uncovered_requirements", "drifted_requirements",
                      "broken_requirements", "orphan_sprints", "reason"],
     },
+    "validation": {
+        "field": "recommendation",
+        "allowed": {"proceed", "pivot", "stop"},
+        "required": ["recommendation", "evidence_class", "hypotheses_supported",
+                     "hypotheses_refuted", "top_objections", "real_world_tests",
+                     "reason"],
+    },
 }
+
+
+EVIDENCE_CLASSES = {"desk-only", "panel+desk", "mirofish+desk", "panel+mirofish+desk"}
 
 
 def extract_block(text):
@@ -66,6 +76,8 @@ def parse_scalars(block):
 
 
 def infer_type(fields):
+    if "recommendation" in fields:
+        return "validation"
     if "integrity" in fields:
         return "integrity"
     if "classification" in fields:
@@ -88,7 +100,7 @@ def main() -> int:
         kind = args[i + 1] if i + 1 < len(args) else None
         del args[i:i + 2]
     if not args:
-        print("ERROR: usage: validate_verdict.py <file> [--type decision|eval|risk]")
+        print("ERROR: usage: validate_verdict.py <file> [--type decision|eval|risk|qa|integrity|validation]")
         return 1
     path = Path(args[0])
     if not path.exists():
@@ -127,6 +139,12 @@ def main() -> int:
             errors.append(
                 f"ERROR: '{headline}' is '{val}'; must be one of "
                 f"{sorted(spec['allowed'])}")
+
+    if kind == "validation" and "evidence_class" in fields:
+        ec = fields["evidence_class"].strip().strip('"').strip("'")
+        if ec not in EVIDENCE_CLASSES:
+            errors.append(f"ERROR: evidence_class is '{ec}'; must be one of "
+                          f"{sorted(EVIDENCE_CLASSES)}")
 
     # Any surviving <angle-bracket> placeholder anywhere in the block is unfilled.
     for key, val in fields.items():

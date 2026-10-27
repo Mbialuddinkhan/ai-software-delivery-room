@@ -116,6 +116,40 @@ def installed_pypi(pkg_import):
         return None
 
 
+def launcher_commit(name):
+    """Commit of a MiroFish stack started by mirofish_stack.py, if any."""
+    home = Path(os.environ.get("ASDR_MIROFISH_HOME", Path.home() / ".asdr" / "mirofish"))
+    try:
+        st = json.loads((home / "state.json").read_text())
+    except (OSError, ValueError):
+        return None
+    flavor = {"mirofish": "cloud", "mirofish-offline": "offline"}.get(name)
+    return st.get("commit") if st.get("flavor") == flavor else None
+
+
+def git_commit_status(name, spec, installed, fetcher=fetch):
+    """('update', entry) | ('up_to_date', entry) | ('skipped', reason) for a
+    commit-pinned upstream (MiroFish). Compares the PIN with upstream main:
+    users only move when the maintainer re-pins."""
+    if not installed:
+        return "skipped", "not installed"
+    try:
+        cmp_ = json.loads(fetcher(spec["compare_url"].format(commit=spec["commit"])))
+    except Exception as e:
+        return "skipped", f"upstream unreachable: {e.__class__.__name__}"
+    ahead = int(cmp_.get("ahead_by") or 0)
+    if ahead <= 0:
+        return "up_to_date", {"name": name, "installed": installed[:7]}
+    msgs = [c.get("commit", {}).get("message", "").splitlines()[0]
+            for c in (cmp_.get("commits") or [])][-8:]
+    return "update", {
+        "name": name, "installed": installed[:7],
+        "latest": f"{ahead} commit(s) newer than the pin {spec['commit'][:7]}",
+        "optional": True, "benefits": "\n".join(f"- {m}" for m in msgs if m),
+        "update_command": spec["update_command"], "pinned_note": spec.get("pinned_note"),
+    }
+
+
 def run(plugin_root):
     upstream = json.loads((HERE / "upstream.json").read_text())
     upstream.pop("_comment", None)
@@ -123,6 +157,13 @@ def run(plugin_root):
     report = {"checked_at": int(time.time()), "updates": [], "up_to_date": [], "skipped": []}
 
     for name, spec in upstream.items():
+        if spec["kind"] == "git-commit":
+            kind, val = git_commit_status(name, spec, launcher_commit(name))
+            if kind == "skipped":
+                report["skipped"].append({"name": name, "reason": val})
+            else:
+                report["updates" if kind == "update" else "up_to_date"].append(val)
+            continue
         # installed
         if name == "ai-software-delivery-room" and plugin_root:
             try:

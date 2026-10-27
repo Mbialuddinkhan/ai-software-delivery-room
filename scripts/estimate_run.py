@@ -51,6 +51,10 @@ ROLES = {
     "product-integrity-qa": ("sonnet", 120_000,  7, "assumed"),
     "documentation":        ("sonnet", 150_000, 10, "assumed"),
     "release-manager":      ("sonnet",  90_000,  6, "assumed"),
+    # One persona answer: ~16k tokens, ~17 s, measured with the registered
+    # `panelist` agent (Read/Write tools only). The same brief through a
+    # general-purpose agent, which carries every tool, cost ~73k (Oct 2026).
+    "panelist":             ("sonnet",  16_000, 0.3, "measured (panelist agent, one run)"),
 }
 LEVELS = ["lite", "standard", "paranoid", "3.7-standard"]
 
@@ -168,6 +172,40 @@ def count_assess(level: str, a) -> dict:
     return runs
 
 
+def validate_stages():
+    return [("idea-seed", "med", "product-owner"), ("desk-evidence", "high", "product-owner"),
+            ("panel-stimulus", "med", "product-owner"), ("panel-roster", "med", "business-analyst"),
+            ("idea-validation", "high", "product-owner")]
+
+
+def count_validate(level: str, a) -> dict:
+    """The validate skill (v3.9): authoring stages, the panel, critic and decision.
+    A MiroFish run is not counted — it spends the user's own LLM account."""
+    runs = {}
+
+    def add(role, n):
+        if n:
+            runs[role] = runs.get(role, 0) + n
+    st = validate_stages()
+    if level in ("lite", "standard"):
+        for executor, sts in batches(st):
+            tier = "high" if any(t_ == "high" for _, t_, _ in sts) else "med"
+            for k, n in stage_runs(level, tier).items():
+                add(executor if k == "exec" else k, n)
+    else:
+        for _, tier, executor in st:
+            for k, n in stage_runs(level, tier).items():
+                add(executor if k == "exec" else k, n)
+    size = a.panel_size
+    add("panelist", size * (1 + a.scenarios) + (size if a.rounds == 2 else 0) + a.followups)
+    add("panelist", 0.1 * size)                  # re-asks for invalid or stale answers
+    r = review_runs(level)
+    add("critic", r["critic"])
+    add("judge", r["judge"])
+    add("product-owner", r["fix"])
+    return runs
+
+
 def role_table(runs_file: Path) -> dict:
     t = {k: list(v) for k, v in ROLES.items()}
     try:
@@ -213,7 +251,11 @@ def cost(runs: dict, table: dict, a, mode: str) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Estimate agent runs, tokens and hours per rigor level.")
-    ap.add_argument("--mode", choices=["build", "assess"], default="build")
+    ap.add_argument("--mode", choices=["build", "assess", "validate"], default="build")
+    ap.add_argument("--panel-size", type=int, default=12, help="validate: personas (8-30)")
+    ap.add_argument("--scenarios", type=int, default=0, help="validate: what-if scenarios (0-3)")
+    ap.add_argument("--rounds", type=int, choices=[1, 2], default=2, help="validate: panel rounds")
+    ap.add_argument("--followups", type=int, default=3, help="validate: follow-up interviews")
     ap.add_argument("--sprints", type=int, default=4)
     ap.add_argument("--services", type=int, default=1, help="1 = monolith; >1 = microservices")
     ap.add_argument("--ui", action="store_true")
@@ -232,13 +274,17 @@ def main() -> int:
     table = role_table(Path(a.runs))
     res = {}
     for lv in LEVELS:
-        runs = count_build(lv, a) if a.mode == "build" else count_assess(lv, a)
+        runs = (count_build(lv, a) if a.mode == "build" else count_assess(lv, a)
+                if a.mode == "assess" else count_validate(lv, a))
         res[lv] = cost(runs, table, a, a.mode)
     base = res["3.7-standard"]["tokens"] or 1
     if not a.json:
         shape = (f"{a.sprints} sprints, {a.services} service{'s' if a.services != 1 else ''}"
                  + (", UI" if a.ui else "") + (", AI" if a.ai else "") + (", cloud" if a.cloud else "")
-                 if a.mode == "build" else f"assessment of about {a.kloc:g}k lines")
+                 if a.mode == "build" else f"assessment of about {a.kloc:g}k lines"
+                 if a.mode == "assess" else
+                 f"idea validation: a {a.panel_size}-person panel, {a.scenarios} scenario(s), "
+                 f"{a.rounds} round(s), {a.followups} follow-up(s); MiroFish not counted")
         print(f"Estimate for {shape} — all figures are estimates.\n")
         hdr = "| Rigor | Agent runs | Tokens | of which Sonnet | Hours | vs 3.7 standard |"
         if "usd" in res["standard"]:

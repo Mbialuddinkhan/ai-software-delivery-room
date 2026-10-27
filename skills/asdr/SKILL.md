@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "3.8.0"
+  version: "3.9.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -310,6 +310,16 @@ invocation prompt must contain: (a) the input file paths to read, (b) the
 output path, (c) the template path, (d) the user's idea verbatim for the
 first two agents.
 
+0. **Idea validation (optional).** If `docs/00a-idea-validation.md` does not
+   exist, ask the user once whether to validate the idea before scoping it
+   (say whether MiroFish simulation is available, from
+   `.harness/companions.json` → `mirofish.installed`; desk-only otherwise).
+   Default is no when the user asked to run end-to-end without stopping. On
+   yes, read `PLUGIN_ROOT/skills/validate/SKILL.md` and run its Phases 1–5
+   (Phase 0 is already done; its stage table and rules apply) and
+   honour `docs/decision-validation.md`: `no-go` stops here with the reasons
+   and §6 tests; `go` continues. When `docs/00a-idea-validation.md` exists,
+   pass it (row 0a) as an input to the product-owner in step 1.
 1. **product-owner** — pass the idea verbatim + row 1 paths. Run this stage
    via the Stage execution protocol (executor: product-owner, stage-id:
    product-brief, artifact: docs/01-product-brief.md). The product-owner ALSO
@@ -327,6 +337,15 @@ first two agents.
    It writes the feature list and the end-to-end process flows (with the PF-00
    lifecycle map). Run each via the Stage execution protocol (stage-ids
    `features`, `process-flows`).
+2c+. **Persona walkthrough** (only if `validate` ran and built a panel).
+   Run it with `python3 .harness/scripts/panel.py walkthrough-next` (it
+   prints SKIP when no validated panel exists — then skip silently). For each
+   `WALKTHROUGH` task invoke **panelist** with ONLY its input and output paths;
+   repeat until `DONE`, then pass `docs/validation/panel/walkthrough-summary.md`
+   to the product-manager as input for revising the flows (friction to fix,
+   steps where personas gave up). It is simulated: it finds friction, it does
+   not predict usage, and it never overrides what real users or the client
+   said.
 2d. **business-analyst** (test cases) — inputs rows 2, 2b, 2c, 2d + row 2e
    paths. Stage-id `test-cases`. Then run
    `python3 .harness/scripts/validate_product_map.py --require-coverage`; send ERROR lines to the

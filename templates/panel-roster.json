@@ -1,0 +1,20 @@
+{
+  "_comment": "Save as docs/validation/panel/roster.json. Written by: business-analyst (PANEL mode) from docs/validation/panel/seed-for-roster.md (the seed WITHOUT its hypotheses) and docs/validation/desk-evidence.md. Rules checked by panel.py: 8-30 personas (default 12); every seed segment S-xx present (2+ each, or a thin_segment flag); stance_prior shares: loyal-to-current >= 25%, would-never-buy >= 15%, early-adopter <= 20%; no two personas with the same segment + role + temperament; every persona cites >= 1 desk row id (D-xx) in grounding; any 'voice' quote must appear verbatim in the desk evidence. Keep each persona to a few strong traits: LLM personas collapse to one or two identity dimensions, so long backstories are wasted. Never mention hypotheses or H-xx ids. Enums: budget_authority decides|influences|none; tech_comfort low|medium|high; temperament sceptical|pragmatic|cost-driven|risk-averse|curious|indifferent|impatient; stance_prior loyal-to-current|open|would-never-buy|early-adopter.",
+  "personas": [
+    {
+      "id": "P01",
+      "segment": "S-01",
+      "role": "<job title>",
+      "context": "<company size, region, setting>",
+      "job_to_be_done": "<what they are trying to get done>",
+      "current_alternative": "<what they use or do today>",
+      "budget_authority": "decides",
+      "tech_comfort": "medium",
+      "temperament": "pragmatic",
+      "stance_prior": "loyal-to-current",
+      "constraints": "<budget, time, regulation, staff>",
+      "grounding": ["D-01"],
+      "voice": ["<optional: a quote copied exactly from the desk evidence>"]
+    }
+  ]
+}

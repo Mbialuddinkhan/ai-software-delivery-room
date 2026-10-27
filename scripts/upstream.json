@@ -30,5 +30,25 @@
     "manifest_url": "https://pypi.org/pypi/graphifyy/json",
     "changelog_url": "https://raw.githubusercontent.com/Graphify-Labs/graphify/main/CHANGELOG.md",
     "update_command": "python3 -m pip install -U graphifyy --break-system-packages"
+  },
+  "mirofish": {
+    "kind": "git-commit",
+    "optional": true,
+    "license": "AGPL-3.0",
+    "repo": "https://github.com/666ghj/MiroFish",
+    "commit": "7657031ac01184afe2cb220f5ee3545573b5e843",
+    "compare_url": "https://api.github.com/repos/666ghj/MiroFish/compare/{commit}...main",
+    "update_command": "Maintainer: re-verify scripts/mirofish_validate.py against the new commit, then re-pin `commit` here. Users get it with the next ASDR release; `mirofish_stack.py purge --yes` then `up` switches an installed stack.",
+    "pinned_note": "Pinned by commit; ASDR builds this exact source with Docker. A newer upstream is not used until the maintainer re-pins."
+  },
+  "mirofish-offline": {
+    "kind": "git-commit",
+    "optional": true,
+    "license": "AGPL-3.0",
+    "repo": "https://github.com/nikmcfly/MiroFish-Offline",
+    "commit": "313fe642853ff9fff05e3ecae2e439886c2d29f4",
+    "compare_url": "https://api.github.com/repos/nikmcfly/MiroFish-Offline/compare/{commit}...main",
+    "update_command": "Maintainer: re-verify scripts/mirofish_validate.py against the new commit, then re-pin `commit` here. Users get it with the next ASDR release; `mirofish_stack.py purge --yes` then `up` switches an installed stack.",
+    "pinned_note": "Pinned by commit; ASDR builds this exact source with Docker. A newer upstream is not used until the maintainer re-pins."
   }
 }

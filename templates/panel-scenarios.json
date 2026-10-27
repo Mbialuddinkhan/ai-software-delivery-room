@@ -1,0 +1,7 @@
+{
+  "_comment": "Save as docs/validation/panel/scenarios.json (optional; without it the panel runs the base scenario only). Written by: product-owner. Base plus at most 3 'what if' variants. Each variant changes ONE thing in a copy of stimulus.md. The same personas answer every scenario, so the comparison is within-persona — the most trustworthy number a synthetic panel produces.",
+  "scenarios": [
+    {"id": "base", "stimulus": "docs/validation/panel/stimulus.md", "label": "as described"},
+    {"id": "SC-01", "stimulus": "docs/validation/panel/stimulus-SC-01.md", "label": "<what changes, e.g. $29 instead of $19>"}
+  ]
+}
