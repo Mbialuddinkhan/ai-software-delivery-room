@@ -27,6 +27,20 @@ starting late skips stages, never the evidence later gates check. Each missing
 document is written by its owner agent in INTAKE mode, from the user's
 documents where they exist; the set is then challenged by one critic pass.
 
+A resumed run that began before 4.0 may lack documents. ASDR knows a
+project's origin from .harness/origin.json (stamped by init_asdr.py from 4.1
+on), else from the record it replaces (every 4.0 run records its start);
+when it cannot tell (a 4.0.x resume record), it sets origin_unknown and the
+user answers (`choose resume --began-before 4.0`). `choose resume` lists them in entry.json `legacy_gaps`
+with `began_before: "4.0"`, each with a kind: `gate` (a release gate reads it:
+brief, requirements, use cases, feature list, flows, test cases,
+architecture), `missing` (the run should have had it), or `optional` (added
+by a later ASDR: architecture options and portability in 3.8, the
+configurable-decisions register in 4.0). A register the user does not write
+is skipped by validate_configurability.py --gate, not demanded. A run that
+began on 4.0 or later has no legacy gaps; its earlier start is kept as
+`resumed_from`.
+
 `catchup` re-checks the recorded start (re-reading what the product needs —
 a UI, AI, microservices — from the documents written since): exit 0 when
 nothing is missing, 2 while something is (each listed), 1 when no start was
@@ -89,6 +103,14 @@ DESIGN = [("docs/03c-architecture-options.md", "architecture options and your de
 PHASE_DECISION = {"discover": "docs/decision-discovery.md", "design": "docs/decision-architecture.md"}
 INTAKE_DECISION = "docs/decision-intake.md"
 BUILT = ("built:sprints", "every sprint built and passed (this cannot be caught up: build first)", "build")
+# Documents a release gate reads (validate_product_map.py --gate; the riskgate prerequisites).
+GATE_READS = {"docs/01-product-brief.md", "docs/02-requirements.md", "docs/02b-use-cases.md",
+              "docs/02c-features.md", "docs/02d-process-flows.md", "docs/02e-test-cases.md",
+              "docs/03-architecture.md"}
+# Documents a later ASDR added: a run that began earlier never had them.
+INTRODUCED = {"docs/02c-features.md": "3.4", "docs/02d-process-flows.md": "3.4", "docs/02e-test-cases.md": "3.4",
+              "docs/03b-design-system.md": "3.3", "docs/03c-architecture-options.md": "3.8",
+              "docs/03d-portability.md": "3.8", "docs/03e-services.md": "3.8", "docs/03f-configuration.md": "4.0"}
 
 VALIDATORS = {
     "design": ["validate_product_map.py --require-coverage"],
@@ -316,6 +338,67 @@ def missing(root: Path, start: str, surf: set) -> list:
     return out
 
 
+def legacy_gaps(root: Path, surf: set) -> list:
+    """Documents a resumed pre-4.0 run does not have: gate-read first, then missing, then optional."""
+    out = []
+    for p, n, o in required("build", surf):
+        if exists(root, p):
+            continue
+        kind = "gate" if p in GATE_READS else "optional" if p in INTRODUCED else "missing"
+        note = {"gate": "a release gate reads it: write it now so the remaining sprints are tested against it",
+                "missing": "the run should have it: write it before the final gates",
+                "optional": (f"added in ASDR {INTRODUCED.get(p)}; optional for this run"
+                             + ("; without it the release gate skips the settings check"
+                                if p.endswith("03f-configuration.md") else ""))}[kind]
+        out.append({"path": p, "what": n, "owner": o, "kind": kind, "gate": kind == "gate",
+                    "introduced": INTRODUCED.get(p), "note": note})
+    order = {"gate": 0, "missing": 1, "optional": 2}
+    return sorted(out, key=lambda m: order[m["kind"]])
+
+
+def version_tuple(v) -> tuple:
+    try:
+        return tuple(int(x) for x in str(v).split(".")[:3])
+    except ValueError:
+        return ()
+
+
+def resume_record(root: Path, surf: set, prior: dict, began_flag: "str | None" = None) -> dict:
+    """legacy_gaps / began_before / resumed_from / origin_unknown for `choose resume`, decided from the
+    project's origin stamp (.harness/origin.json, v4.1+) or else from the record this choice replaces."""
+    rec = {}
+    prior = prior if isinstance(prior, dict) else {}
+    pstart = prior.get("start")
+    if pstart and pstart != "resume":
+        sk = prior.get("skipped")
+        rec["resumed_from"] = {"start": pstart, "skipped": sk if isinstance(sk, list) else [], "at": prior.get("at")}
+    elif isinstance(prior.get("resumed_from"), dict):
+        rec["resumed_from"] = prior["resumed_from"]
+    origin = read_json(root / ".harness" / "origin.json", {})
+    known = version_tuple(origin.get("asdr_version")) if isinstance(origin, dict) else ()
+    if began_flag:                                     # the user said so (Resume protocol)
+        began = began_flag
+    elif known:
+        began = "4.0" if known < (4, 0, 0) else None
+    elif pstart and pstart != "resume":                # only 4.0+ records a start
+        began = None
+    elif pstart == "resume":
+        if prior.get("began_before"):
+            began = prior["began_before"]
+        elif "legacy_gaps" not in prior:               # a 4.0.x resume record: the origin is unknown
+            rec["origin_unknown"] = True
+            rec["legacy_gaps"] = legacy_gaps(root, surf)
+            return rec
+        else:
+            began = None
+    else:
+        began = "4.0"                                  # no start record and no stamp: began before 4.0
+    rec["legacy_gaps"] = legacy_gaps(root, surf) if began else []
+    if began:
+        rec["began_before"] = began
+    return rec
+
+
 def recommend(prompt: str, root: Path) -> dict:
     s = scan(root)
     sig = signals(prompt)
@@ -446,6 +529,8 @@ def main() -> int:
     ap.add_argument("--by", default="")
     ap.add_argument("--local-only", action="store_true",
                     help="the product runs only on the user's own machines: no portability decision")
+    ap.add_argument("--began-before", choices=["4.0"],
+                    help="choose resume: the user says this project began before ASDR 4.0 (when the origin is unknown)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
     root = Path(a.root)
@@ -481,6 +566,8 @@ def main() -> int:
                "skipped": skipped(a.start), "catch_up": missing(root, a.start, surf), "prompt": prompt[:4000],
                "local_only": a.local_only, "surfaces": sorted(surf), "user_docs": res["scan"]["user_docs"],
                "validators": VALIDATORS.get(a.start, []), "continue_at": CONTINUE_AT[a.start]}
+        if a.start == "resume":
+            rec.update(resume_record(root, surf, read_json(entry_file, {}), a.began_before))
         try:
             entry_file.parent.mkdir(parents=True, exist_ok=True)
             entry_file.write_text(json.dumps(rec, indent=2) + "\n")
@@ -492,6 +579,16 @@ def main() -> int:
             print("Catch up first, in this order:")
             for m in rec["catch_up"]:
                 print(f"  - {m['what']} -> {m['path']} ({how(m)})")
+        gaps = rec.get("legacy_gaps") or []
+        if rec.get("origin_unknown"):
+            print("ASDR cannot tell whether this run began before 4.0. Ask the user; if it did, run "
+                  "`entry_point.py choose resume --began-before 4.0`. Until then every release check applies.")
+        if gaps:
+            print(("This run began before ASDR 4.0; it" if rec.get("began_before") else "This run") +
+                  " does not have these documents (ask the user):")
+            for m in gaps:
+                tag = {"gate": "[before release]", "missing": "[missing]", "optional": "[optional]"}[m["kind"]]
+                print(f"  - {tag} {m['what']} -> {m['path']} ({m['owner']}, INTAKE mode): {m['note']}")
         print(f"Then continue at: {rec['continue_at']}")
         print("ENTRY: " + json.dumps({"cmd": "choose", **rec}))
         return 0

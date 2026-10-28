@@ -12,7 +12,7 @@
       "name": "ai-software-delivery-room",
       "displayName": "AI Software Delivery Room",
       "source": "./",
-      "description": "Start where you choose: ASDR recommends the start point and converts your own documents. Idea validation \u2192 brief \u2192 flows \u2192 architecture \u2192 sprints with contract-first builds, live browser tests and evaluator-only sign-off. Architecture, cloud and which decisions become settings are yours to decide, with costs. A per-role model plan (economy / balanced / maximum). Dashboards, client reports; assesses existing systems. Installs UI UX Pro Max.",
+      "description": "Start where you choose: ASDR recommends the start point and converts your own documents. Idea validation \u2192 brief \u2192 flows \u2192 architecture \u2192 sprints with contract-first builds, live browser tests and evaluator-only sign-off. Architecture, cloud and which decisions become settings are yours to decide, with costs. A per-role model plan (economy / balanced / maximum). Dashboards, client reports; assesses existing systems. Exports to Codex and Gemini CLIs. Installs UI UX Pro Max.",
       "category": "development",
       "tags": [
         "sdlc",

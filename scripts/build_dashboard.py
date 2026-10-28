@@ -233,6 +233,57 @@ PHASES = [  # (key in progress.json, label, gate document, gate kind, weight for
 ]
 
 
+SKIPPED_PHASE_DOCS = {"discover": ("docs/decision-discovery.md", "docs/critique-discovery.md"),
+                      "design": ("docs/decision-architecture.md", "docs/critique-architecture.md")}
+
+
+def start_note(root: Path, path: str):
+    """How a late start or a resumed earlier run explains a missing canonical document (v4.1):
+    ("text", "passed" | "failed" | "skipped" | "neutral"), or None when the start does not explain it."""
+    en = read_json(root / ".harness" / "entry.json", {})
+    if not isinstance(en, dict):
+        return None
+    start, skipped = en.get("start"), en.get("skipped")
+    rf = en.get("resumed_from")
+    if start == "resume" and isinstance(rf, dict):          # a 4.0+ late start, resumed: keep what it skipped
+        start, skipped = rf.get("start"), rf.get("skipped")
+    skipped = skipped if isinstance(skipped, list) else []
+    if start in ("design", "build", "release"):
+        for ph in skipped:
+            if path not in SKIPPED_PHASE_DOCS.get(ph, ()):
+                continue
+            intake = root / "docs" / "decision-intake.md"
+            if not intake.is_file():
+                return ("due: the intake review (decision-intake.md)", "skipped")
+            v = verdict_of(intake)
+            if v == "no-go":
+                return ("intake review · no-go", "failed")
+            prog = read_json(root / ".harness" / "progress.json", {})
+            fresh = True
+            if not isinstance(prog, dict) or prog.get("phase") in (None, "strategic"):
+                # While the catch-up is open, a document written after the review is unreviewed (the start
+                # chooser's rule). Later edits (setting tests, scope changes) go through their own gates.
+                try:
+                    import entry_point as _ep
+                    surf = set(en.get("surfaces") or []) if isinstance(en.get("surfaces"), list) else set()
+                    fresh = _ep.reviewed(root, ph, surf)
+                except Exception:                             # noqa: BLE001 — no chooser: trust the file
+                    fresh = True
+            return ((f"covered by the intake review{' · ' + v if v else ''}", "passed") if fresh
+                    else ("due: documents changed after the intake review", "skipped"))
+    if en.get("start") == "resume" and isinstance(en.get("legacy_gaps"), list):
+        for g in en["legacy_gaps"]:
+            if not isinstance(g, dict) or g.get("path") != path:
+                continue
+            kind = g.get("kind") or ("gate" if g.get("gate") else "optional")
+            if kind == "gate":
+                return ("not in this run yet · needed before release", "skipped")
+            if kind == "optional":
+                return (f"not in this run (added in ASDR {g.get('introduced')})" if g.get("introduced")
+                        else "not in this run (began on an earlier ASDR)", "neutral")
+    return None
+
+
 def verdict_of(path: Path):
     if not path.is_file():
         return None
@@ -909,6 +960,8 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
             fin = max((t_.get("done") for t_ in times.values() if t_.get("done")), default=None) if st == "done" else None
         else:
             vs = [(Path(g).name, verdict_of(root / g)) for g in gates]
+            if k == "strategic" and any(v is None for _, v in vs) and (root / "docs/decision-intake.md").is_file():
+                vs.append(("decision-intake.md", verdict_of(root / "docs/decision-intake.md")))
             gate = "; ".join(f"{n}: {v}" for n, v in vs if v) or "—"
             fin = max((mtime(root / g) for g in gates if (root / g).exists()), default=None) if st == "done" else None
         prow.append([e(lbl), pill(st, {"done": "passed", "current": "skipped", "upcoming": "neutral"}[st]),
@@ -1158,6 +1211,8 @@ def build(root: Path, now: dt.datetime, ctx: "dict | None" = None) -> str:
             upd = when(mtime(p))
         elif path in OPTIONAL:
             st, upd = pill("only if needed", "neutral"), "—"
+        elif start_note(root, path):
+            st, upd = pill(*start_note(root, path)), "—"
         else:
             reached = [k for k, *_ in PHASES].index({"Validation": "strategic", "Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
                                                        "Final gates": "final-gates", "Release": "done"}[ph]) < ci
@@ -1528,6 +1583,11 @@ def build_client(root: Path, now: dt.datetime, brand: dict, ctx: dict) -> str:
             s_, upd = st("ready", "passed"), day(mtime(p_))
         elif path in OPTIONAL:
             continue
+        elif start_note(root, path):
+            _txt, kind = start_note(root, path)
+            if kind == "neutral":
+                continue
+            s_, upd = (st("covered by the review", "passed") if kind == "passed" else st("outstanding", "skipped")), "—"
         else:
             reached = [k for k, *_ in PHASES].index({"Validation": "strategic", "Discovery": "strategic", "Architecture": "strategic", "Planning": "planning",
                                                        "Final gates": "final-gates", "Release": "done"}[ph]) < c["ci"]

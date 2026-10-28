@@ -8,7 +8,7 @@ description: >
   system", "audit our existing app", "review this codebase", "legacy system", "take over this project",
   "what's wrong with our software", "modernise".
 metadata:
-  version: "4.0.1"
+  version: "4.1.0"
 ---
 
 # Assess — understand an existing system and say what to do with it

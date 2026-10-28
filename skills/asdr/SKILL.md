@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "4.0.1"
+  version: "4.1.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -93,9 +93,10 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
 
        python3 .harness/scripts/estimate_run.py --sprints <n> [--ui] [--ai] --rigor standard [--start <start>] --compare-plans
 
-   (`--start` for Discovery, Design, Build or Release gate; for Validate add a
-   second estimate with `--mode validate`; Assess has its own estimate in the
-   assess skill; for Resume leave it out.)
+   (`--start` for Discovery, Design, Build or Release gate; for Resume
+   `--start resume`, which counts the sprints left in sprints.json, the
+   gate-read catch-up and the final gates; for Validate add a second estimate
+   with `--mode validate`; Assess has its own estimate in the assess skill.)
 
    Add `--price-opus/--price-sonnet/--price-haiku/--price-fable` (USD per
    million tokens, blended) when the user wants money figures; prices are not
@@ -192,6 +193,28 @@ If `.harness/progress.json` already exists with phase ≠ `strategic` or a
 non-null sprint, this is a resumed run: tell the user where the project
 stands (phase, sprint, attempt), run `next_action.py`, and continue from
 there. Never restart phases that already produced approved documents.
+
+A run that began before ASDR 4.0 may lack documents: `entry_point.py
+choose resume` lists them in `.harness/entry.json` `legacy_gaps` with
+`began_before: "4.0"` (v4.1; a 4.0+ run has none and keeps its earlier start
+as `resumed_from`). When it prints that it cannot tell (`origin_unknown`),
+ask the user whether the project began before ASDR 4.0; if yes, run
+`entry_point.py choose resume --began-before 4.0`. Each gap has a `kind`.
+Before the next sprint, ask the user once with AskUserQuestion:
+- **`gate`** (brief, requirements, use cases, feature list, process flows,
+  test cases, architecture): a release gate reads it
+  (`validate_product_map.py --gate`, the riskgate prerequisites), so
+  recommend writing it now, in INTAKE mode from the approved documents, then
+  one critic pass and `decide.py` as in the catch-up below; the remaining
+  sprints are then tested against it. Skipped, the release can be rated no
+  better than Not ready.
+- **`missing`**: a document the run should already have had; write it
+  before the final gates.
+- **`optional`** (added by a later ASDR: architecture options and
+  portability in 3.8, the configurable-decisions register in 4.0): offer,
+  never require. Without `docs/03f-configuration.md` the release gate skips
+  the settings check for this run.
+Log the answer with `log_question.py`.
 
 ### Starting late: the catch-up (v4.0)
 

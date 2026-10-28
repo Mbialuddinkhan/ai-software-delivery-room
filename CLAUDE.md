@@ -16,6 +16,7 @@ into other projects. Keep that distinction when editing.
 | `templates/` | Fill-in templates (and folders such as `templates/e2e/{playwright,cypress,selenium}`); copied into each project's `.harness/templates/` |
 | `examples/sample-app/` | TaskBoard, the reference project: product docs 02–02e, `[TC-xx]` tests in all three frameworks with saved logins and accessibility checks, tours, `manual.json`. CI runs it end to end; its copies of the e2e templates must stay identical (a test checks) |
 | `.github/workflows/ci.yml` | Release gate: unit tests, validate, both install paths, sample e2e, `.plugin` asset on a version tag |
+| `scripts/export_targets.py`, `dist/` | The Codex CLI and Gemini CLI exports (v4.1): generated from `agents/` and `skills/` with a host adapter on each; `dist/` is git-ignored output. Change the source, never the export |
 | `docs/` | Operating manual, triad design, context-architecture review, `COMPANIONS.md`, `PUBLISHING.md` |
 | `tests/` | Unit tests for the scripts — `python3 -m pytest -q tests` (or `python3 -m unittest discover tests`) |
 

@@ -6,7 +6,7 @@ description: >
   to have passed first. Trigger phrases: "release", "package the release", "prepare release",
   "release notes", "create changelog", "final release".
 metadata:
-  version: "4.0.1"
+  version: "4.1.0"
 ---
 
 # Release — Release Packaging Orchestrator

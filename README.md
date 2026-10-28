@@ -1,10 +1,34 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.0.1
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.1.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
+
+**What's new in v4.1 — ASDR in Codex CLI and Gemini CLI, and resuming older runs.**
+
+- **Codex CLI and Gemini CLI.** `python3 scripts/export_targets.py codex
+  --install` puts ASDR's 8 skills in `~/.agents/skills` (as `asdr`,
+  `asdr-discover`, `asdr-validate`, ...) and its 19 roles in `~/.codex/agents`
+  as Codex custom agents; `python3 scripts/export_targets.py gemini --install`
+  builds a Gemini CLI extension (skills, one subagent per role with Gemini's
+  tool names, `/asdr` and `/asdr:<skill>` commands) and runs Gemini's own
+  installer, which asks you to trust the folder. Each exported skill and agent
+  starts with a short adapter: where the ASDR files are, how to hand work to a
+  role, how to ask you, and which Claude-only features to skip. Roles inherit
+  your session's model unless you export with `--models` (your CLI's model
+  ids for ASDR's tiers) and `--plan`. Checked with Codex CLI 0.165 (19 roles
+  and 8 skills listed) and Gemini CLI 0.66 (19 subagents and 8 skills loaded).
+- **Resuming a run that began before 4.0.** Resume now lists the documents
+  the run lacks: the ones a release gate reads (brief, requirements, use cases,
+  features, flows, test cases, architecture) are recommended first, documents
+  it should already have are flagged, and only what a later ASDR added is
+  optional; the settings check is skipped if you do not write a settings
+  register. A 4.0 run that resumes keeps every check. The
+  estimate counts the sprints left (`--start resume`), and the dashboard
+  explains these gaps instead of calling them missing. Found on the first real
+  4.0 run, a build paused at sprint 2.
 
 **What's new in v4.0 — start where you are, pay for the models you need, and
 choose which decisions stay changeable.**
@@ -296,6 +320,16 @@ and add it in the Claude desktop app, or accept the `.plugin` package when
 Claude hands it to you in chat. Then trigger a skill (e.g. ask to "run the
 full ASDR workflow" or use the trigger phrases below).
 
+**Codex CLI / Gemini CLI** (v4.1). From a clone of this repo:
+
+```bash
+python3 scripts/export_targets.py codex --install    # then, in a project: codex, and type $asdr …
+python3 scripts/export_targets.py gemini --install   # then, in a project: gemini, and type /asdr …
+```
+
+Without `--install` the exports are written to `dist/codex` and `dist/gemini`.
+Nothing is published anywhere; re-run the exporter after pulling a new version.
+
 **Or copy into a project** and run the initializer:
 
 ```bash
@@ -468,6 +502,7 @@ scripts/
   entry_point.py             ← recommends where a run starts; records the choice and its catch-up (v4.0)
   model_plan.py              ← economy / balanced / maximum: the model per role, with fallbacks (v4.0)
   validate_configurability.py ← configure / prepare / decide-once decisions, settings tested per value (v4.0)
+  export_targets.py          ← ASDR for Codex CLI (skills + custom agents) and Gemini CLI (an extension) (v4.1)
 templates/                   ← fill-in templates: contract, plan, qa-report,
                                eval-report, critique, decision, security-baseline,
                                roadmap, business-case, use-cases, traceability,
@@ -490,7 +525,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (339 tests)
+tests/                       ← python3 -m unittest discover -s tests (384 tests)
 ```
 
 ## The 19 agents at a glance

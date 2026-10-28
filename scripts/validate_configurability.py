@@ -30,7 +30,10 @@ business-analyst) and --gate make it an error.
 --gate (release): a pending decision, a review date in the past, or a setting
 test case not passing in the latest results (.harness/product-map.json) fails.
 A project designed before 4.0 has no docs/03f-configuration.md; --gate then
-SKIPs with exit 0 (a 4.0 design always writes it).
+SKIPs with exit 0 (a 4.0 design always writes it). That includes a run
+resumed under 4.0 that began earlier (.harness/entry.json start "resume",
+began_before "4.0", the register among its optional legacy_gaps) whose
+user chose not to write it.
 
 Exit 0  decided and complete -> writes .harness/configuration.json
 Exit 2  waiting for the user's decisions, or for the business-analyst's tests
@@ -122,8 +125,18 @@ def main() -> int:
         text = Path(a.doc).read_text()
     except OSError:
         v4 = any(Path(a.harness, f).exists() for f in ("entry.json", "models.json"))
-        if a.gate and not v4:
-            print(f"SKIP: {a.doc} not found — a project designed before 4.0 has no configurable decisions")
+        try:
+            entry = json.loads(Path(a.harness, "entry.json").read_text())
+        except (OSError, ValueError):
+            entry = {}
+        entry = entry if isinstance(entry, dict) else {}
+        gaps = entry.get("legacy_gaps") if isinstance(entry.get("legacy_gaps"), list) else []
+        resumed_legacy = (entry.get("start") == "resume" and bool(entry.get("began_before")) and any(
+            isinstance(g, dict) and str(g.get("path", "")).endswith("03f-configuration.md")
+            and g.get("kind", "optional") == "optional" for g in gaps))
+        if a.gate and (not v4 or resumed_legacy):
+            print(f"SKIP: {a.doc} not found — a project designed before 4.0 has no configurable decisions"
+                  + (" (resumed under 4.0; the user did not write the register)" if resumed_legacy else ""))
             print("CONFIG: " + json.dumps({"ok": True, "decided": True, "skipped": True}))
             return 0
         print(f"ERROR: {a.doc} not found — the solution-architect writes it from "

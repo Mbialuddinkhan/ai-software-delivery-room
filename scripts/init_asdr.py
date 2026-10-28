@@ -113,6 +113,19 @@ def main() -> int:
         cloud.write_text(json.dumps(c, indent=2) + "\n")
 
     progress = root / ".harness" / "progress.json"
+    # Which ASDR started this project (v4.1): known only for a project initialised
+    # fresh by 4.1 or later; an older project is stamped "unknown" (null) once.
+    origin = root / ".harness" / "origin.json"
+    if not origin.exists():
+        try:
+            ver = json.loads((source / ".claude-plugin" / "plugin.json").read_text()).get("version")
+        except (OSError, ValueError, AttributeError):
+            ver = None
+        fresh = not progress.exists()
+        origin.write_text(json.dumps({"asdr_version": ver if fresh else None,
+                                      "note": "initialised fresh" if fresh else
+                                      "project existed before 4.1; the version that started it is unknown"},
+                                     indent=2) + "\n")
     if not progress.exists():
         progress.write_text(json.dumps(PROGRESS_SEED, indent=2) + "\n")
 

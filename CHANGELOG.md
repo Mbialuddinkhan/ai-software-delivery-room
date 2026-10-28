@@ -3,6 +3,81 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [4.1.0] — ASDR in Codex CLI and Gemini CLI, and resuming runs from older versions
+
+- **Use ASDR in Codex CLI and Gemini CLI.** One command exports the skills and
+  the 19 roles to either tool and installs them; your Claude setup is unchanged.
+  Each role keeps its rules: the builder still never signs off its own work.
+- **Resume older projects properly.** A project started before 4.0 is told
+  which documents it lacks: the ones the release gate checks are recommended
+  now, documents it should already have are flagged, and only what a later
+  ASDR added is optional; the settings check is skipped instead of blocking
+  the release. A 4.0 project that resumes keeps every check.
+- **Estimates for a resumed run** count only the sprints left; a release-gate
+  start now counts the documents it has to convert.
+- **Clearer dashboard** on late starts and resumed runs: covered or optional
+  documents are no longer shown as missing.
+
+### Added
+- `scripts/export_targets.py codex|gemini|both [--out] [--install] [--plan] [--models]`:
+  - Codex: a bundle with a portable `plugin.json`, the skills renamed `asdr`,
+    `asdr-discover`, ... (Agent Skills: the name matches the folder), one
+    custom-agent TOML per role (`name`, `description`, `developer_instructions`;
+    Codex reads files through its shell, so every role keeps it and a role with
+    no Bash in Claude is told to use it only to read and search), and the
+    scripts, templates and docs. `--install` copies it to `~/.asdr/codex`
+    (PLUGIN_ROOT), the skills to `~/.agents/skills`, the agents to
+    `~/.codex/agents`.
+  - Gemini: an extension `asdr` (`gemini-extension.json`, `GEMINI.md`, skills,
+    `agents/asdr-<role>.md` with Claude's tools mapped to `read_file`,
+    `write_file`, `replace`, `run_shell_command`, `glob`, `grep_search`,
+    `google_web_search`, `web_fetch`, turn and time limits per role, and
+    `/asdr` + `/asdr:<skill>` commands). `--install` runs
+    `gemini extensions install` (after uninstalling an earlier ASDR export),
+    which asks the user to trust the folder; a failed install is an error.
+  - A host adapter heads every exported skill and agent (PLUGIN_ROOT, how to
+    invoke a role, how to ask the user, Claude-only features to skip).
+  - Models: inherited from the session unless `--models opus=<id>,sonnet=<id>,...`
+    and `--plan`. Install never overwrites a skill, agent or folder the exporter
+    did not write (a marker in each, per host); `--force` replaces foreign
+    `asdr*` skill folders and `asdr-*.toml` files only. A `--root` that is, or
+    contains, the home folder, `~/.codex` or `~/.agents/skills` is refused.
+  - Verified with the real CLIs: Codex CLI 0.165 lists the 19 roles as agent
+    types and the 8 skills; Gemini CLI 0.66 validates the extension and loads
+    its 19 subagents (22 agents with the 3 built-in) and 8 skills.
+- `entry_point.py choose resume` on a run with no earlier `entry.json` (it began
+  before 4.0) records `began_before: "4.0"` and `legacy_gaps`, each with a kind:
+  `gate` (01, 02, 02b, 02c, 02d, 02e, 03 — read by `validate_product_map.py
+  --gate` and the riskgate prerequisites), `missing`, or `optional` (03c/03d/03e
+  from 3.8, 03f from 4.0, 03b from 3.3). A 4.0+ run has none and keeps its
+  earlier start as `resumed_from`. When the origin cannot be told (a 4.0.x
+  resume record) it sets `origin_unknown`, every check applies, and the user
+  answers with `choose resume --began-before 4.0`. The asdr skill's Resume
+  protocol asks the user once.
+- `init_asdr.py` stamps `.harness/origin.json` once: the ASDR version that
+  started a fresh project, `null` for a project that existed before 4.1, so a
+  project started with `/discover` or `/longhorizon` is never taken for a
+  pre-4.0 one.
+- `estimate_run.py --start resume [--sprints-file sprints.json]`: the sprints
+  not yet done (torn-down ones excluded; an empty plan counts as 4), the INTAKE
+  catch-up of missing gate-read documents, the final gates.
+
+### Fixed
+- `validate_configurability.py --gate` failed a run resumed under 4.0 that was
+  designed earlier (once `entry.json` or `models.json` existed it no longer
+  looked pre-4.0); it now skips only when the record says `began_before` 4.0
+  and the register is an optional legacy gap, and still checks a register that
+  was written.
+- `estimate_run.py`: a release-gate start counted no catch-up.
+- `build_dashboard.py`: on a late start the discovery and architecture
+  decisions show "covered by the intake review" (or "due") instead of
+  "missing" (or "due" while the catch-up is open and documents changed after
+  that review), the phase
+  gate shows the intake verdict, a resumed late start keeps that cover, and a
+  resumed run's optional gaps are not "missing"; the client report follows.
+- CI: actions moved to their Node 24 majors (checkout, setup-node,
+  setup-python and upload-artifact v7; action-gh-release v3).
+
 ## [4.0.1] — the release checks run green again
 
 - **The automatic checks pass again.** GitHub moved its standard test machines

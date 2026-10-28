@@ -8,7 +8,7 @@ description: >
   "validate my idea", "idea validation", "will people want this", "simulate the market reaction",
   "test this idea before we build", "is this worth building", "what would customers say".
 metadata:
-  version: "4.0.1"
+  version: "4.1.0"
 ---
 
 # Validate — Idea Validation Orchestrator

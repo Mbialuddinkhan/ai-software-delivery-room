@@ -28,7 +28,11 @@ v4.0: --plan prices each role on the model the model plan gives it (without
 --start counts only the work from that start point, plus the catch-up: each
 skipped stage's documents are converted from the user's own documents (INTAKE
 mode, assumed at 60% of writing them) and checked by one critic pass;
---compare-starts prints one row per start point.
+--compare-starts prints one row per start point. --start resume (v4.1)
+counts only what is left of an earlier run: the sprints not yet done in
+--sprints-file (sprints.json; --sprints overrides), the INTAKE catch-up of any
+gate-read document the run does not have (feature list, process flows, test
+cases), and the final gates. A release start counts its catch-up too.
 
 No prices are built in (they change); pass --price-<model> in USD per million
 tokens (a blended input/output figure) for every model the plan uses to get a
@@ -76,6 +80,23 @@ ROLES = {
 LEVELS = ["lite", "standard", "paranoid", "3.7-standard"]
 MODEL_NAMES = ["fable", "opus", "sonnet", "haiku"]
 STARTS = ["discover", "design", "build", "release"]
+RESUME_GATE_DOCS = [("docs/01-product-brief.md", "product-owner"), ("docs/02-requirements.md", "business-analyst"),
+                    ("docs/02b-use-cases.md", "business-analyst"), ("docs/02c-features.md", "product-manager"),
+                    ("docs/02d-process-flows.md", "product-manager"), ("docs/02e-test-cases.md", "business-analyst"),
+                    ("docs/03-architecture.md", "solution-architect")]   # what the release gates read
+NOT_LEFT = ("done", "passed", "complete", "completed", "torn-down", "torn_down", "replaced", "cancelled", "canceled")
+
+
+def sprints_left(path: str):
+    """Sprints in sprints.json not yet done (the active one counts in full), or None."""
+    try:
+        d = json.loads(Path(path).read_text())
+    except (OSError, ValueError):
+        return None
+    s = d.get("sprints", []) if isinstance(d, dict) else d
+    if not isinstance(s, list) or not s:            # no plan yet: unknown, not zero
+        return None
+    return sum(1 for x in s if isinstance(x, dict) and str(x.get("status", "")).lower() not in NOT_LEFT)
 INTAKE_FACTOR = 0.6           # converting the user's documents vs writing them from scratch (assumption)
 
 
@@ -149,9 +170,25 @@ def count_build(level: str, a, start: str = "discover") -> dict:
         if n:
             runs[role] = runs.get(role, 0) + n
     d_st, a_st, f_st = stages(a.ui, a.ai, a.cloud, a.services)
+    if start == "resume":                 # what is left of an earlier run (v4.1)
+        owners = [o for doc, o in RESUME_GATE_DOCS if not Path(doc).is_file()]
+        for o in dict.fromkeys(owners):
+            add(o, INTAKE_FACTOR)
+        if owners and level != "lite":
+            add("critic", 1)
+        for _, tier, executor in f_st:
+            for k, n in stage_runs(level, tier).items():
+                add(executor if k == "exec" else k, n)
+        add("product-integrity-qa", 1 if level == "lite" else 1 + a.sprints)
+        attempts = 1.3
+        add("generator", a.sprints * (1 + attempts))
+        add("evaluator", a.sprints * (1 + attempts))
+        add("risk-manager", 1)
+        add("release-manager", 1)
+        return runs
     full = {"discover": [d_st, a_st], "design": [a_st], "build": [], "release": []}[start]
     skipped = {"discover": [], "design": [d_st], "build": [d_st, a_st], "release": [d_st, a_st]}[start]
-    if skipped and start != "release":
+    if skipped:
         for phase in skipped:            # catch-up: one INTAKE run per owner batch, then one critic pass
             for executor, _sts in batches([x for x in phase if x[2] != "user"]):
                 add(executor, INTAKE_FACTOR)
@@ -320,14 +357,16 @@ def main() -> int:
     ap.add_argument("--scenarios", type=int, default=0, help="validate: what-if scenarios (0-3)")
     ap.add_argument("--rounds", type=int, choices=[1, 2], default=2, help="validate: panel rounds")
     ap.add_argument("--followups", type=int, default=3, help="validate: follow-up interviews")
-    ap.add_argument("--sprints", type=int, default=4)
+    ap.add_argument("--sprints", type=int, help="sprints to build (default 4; for --start resume: those left)")
+    ap.add_argument("--sprints-file", default="sprints.json", help="--start resume reads the sprints left from it")
     ap.add_argument("--services", type=int, default=1, help="1 = monolith; >1 = microservices")
     ap.add_argument("--ui", action="store_true")
     ap.add_argument("--ai", action="store_true")
     ap.add_argument("--cloud", action="store_true", help="a portability / cloud stage is needed")
     ap.add_argument("--kloc", type=float, default=15, help="assess: thousands of lines in the system")
     ap.add_argument("--rigor", choices=["lite", "standard", "paranoid"], default="standard")
-    ap.add_argument("--start", choices=STARTS, default="discover", help="build: where the run starts (v4.0)")
+    ap.add_argument("--start", choices=STARTS + ["resume"], default="discover",
+                    help="build: where the run starts (v4.0); resume = what is left of an earlier run (v4.1)")
     ap.add_argument("--compare-starts", action="store_true", help="build: one row per start point")
     ap.add_argument("--plan", choices=["economy", "balanced", "maximum"], help="model plan (v4.0)")
     ap.add_argument("--top", choices=["opus", "fable"], default="opus")
@@ -340,6 +379,9 @@ def main() -> int:
     ap.add_argument("--runs", default=".harness/agent-runs.jsonl")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
+    left = sprints_left(a.sprints_file) if a.start == "resume" and a.sprints is None else None
+    if a.sprints is None:
+        a.sprints = left if left is not None else 4
 
     table = role_table(Path(a.runs))
     models = plan_models(a)
@@ -355,9 +397,12 @@ def main() -> int:
         for st in STARTS:
             starts[st] = cost(count(a.rigor, a, st), table, a, a.mode, models)
     if not a.json:
-        shape = (f"{a.sprints} sprints, {a.services} service{'s' if a.services != 1 else ''}"
+        shape = (f"{a.sprints} sprint{'s' if a.sprints != 1 else ''}{' left' if a.start == 'resume' else ''}, "
+                 f"{a.services} service{'s' if a.services != 1 else ''}"
                  + (", UI" if a.ui else "") + (", AI" if a.ai else "") + (", cloud" if a.cloud else "")
-                 + (f", starting at {a.start}" if a.start != "discover" else "")
+                 + (f", starting at {a.start}" if a.start not in ("discover", "resume") else "")
+                 + (f", resuming an earlier run (from {a.sprints_file})" if a.start == "resume" and left is not None
+                    else ", resuming an earlier run" if a.start == "resume" else "")
                  if a.mode == "build" else f"assessment of about {a.kloc:g}k lines"
                  if a.mode == "assess" else
                  f"idea validation: a {a.panel_size}-person panel, {a.scenarios} scenario(s), "
