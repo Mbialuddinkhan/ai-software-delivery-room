@@ -1,5 +1,5 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.0.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.0.1
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
@@ -410,7 +410,7 @@ Trigger phrases like "build me…", "let's build…", "run the delivery room",
 ## Package contents
 
 ```
-.claude-plugin/plugin.json   ← plugin manifest (v4.0.0)
+.claude-plugin/plugin.json   ← plugin manifest (v4.0.1)
 README.md                    ← this file
 CHANGELOG.md                 ← full v2.1 → v3 → … → v4.0 change log
 agents/                      ← 19 agent definitions (incl. stage-planner, stage-qa,
@@ -490,7 +490,7 @@ docs/
   CONTEXT_ARCHITECTURE.md    ← the v3.2 context-discipline review and plan
   COMPANIONS.md              ← companion install/scoping rules (v3.3)
   PUBLISHING.md              ← marketplace layout, release checklist, tagging (v3.3)
-tests/                       ← python3 -m unittest discover -s tests (337 tests)
+tests/                       ← python3 -m unittest discover -s tests (339 tests)
 ```
 
 ## The 19 agents at a glance

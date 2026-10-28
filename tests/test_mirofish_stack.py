@@ -99,7 +99,10 @@ class StackBase(unittest.TestCase):
         self.env = {"PATH": f"{self.bin}:/usr/bin:/bin", "HOME": str(self.d),
                     "ASDR_MIROFISH_HOME": str(self.home), "STUB_LOG": str(self.log),
                     "STUB_DIR": str(self.d), "STUB_PY": PY,
-                    "STUB_HEALTH_PORT": str(self.port), "ASDR_MIROFISH_RAM_GB": "32"}
+                    "STUB_HEALTH_PORT": str(self.port), "ASDR_MIROFISH_RAM_GB": "32",
+                    # Hosted CI runners have well under the 20 GB the offline
+                    # flavour needs; the real check is tested on its own below.
+                    "ASDR_MIROFISH_DISK_GB": "100"}
 
     def tearDown(self):
         pid = self.d / "server.pid"
@@ -168,6 +171,26 @@ class TestDoctor(StackBase):
                                   "--ollama-url", "http://127.0.0.1:9")
         self.assertEqual(code, 2)
         self.assertIn("Ollama not answering", out)
+
+    def test_low_disk_fails_offline_and_warns_cloud(self):
+        oll = FakeOllama(["qwen2.5:14b", "nomic-embed-text"])
+        try:
+            code, out, _ = self.stack("doctor", "--flavor", "offline", *self.ports(),
+                                      "--ollama-url", oll.url, env={"ASDR_MIROFISH_DISK_GB": "14"})
+        finally:
+            oll.close()
+        self.assertEqual(code, 2)
+        self.assertIn("FAIL  14 GB free disk (need 20, recommended 50)", out)
+        code, out, _ = self.stack("doctor", "--flavor", "cloud", *self.ports(),
+                                  env={"ASDR_MIROFISH_DISK_GB": "14"})
+        self.assertIn("WARN  14 GB free disk (need 10, recommended 20)", out)
+
+    def test_real_disk_is_read_without_the_override(self):
+        e = {"ASDR_MIROFISH_DISK_GB": ""}
+        code, out, _ = self.stack("doctor", "--flavor", "cloud", *self.ports(), "--json", env=e)
+        disk = [c for c in json.loads(out) if "free disk" in c["check"]]
+        self.assertEqual(len(disk), 1)
+        self.assertIn(disk[0]["level"], ("PASS", "WARN", "FAIL"))
 
 
 class TestUpDown(StackBase):

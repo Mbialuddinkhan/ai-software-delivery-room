@@ -1,6 +1,6 @@
 {
   "name": "ai-software-delivery-room",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Multi-agent software delivery for Claude. Starts where you choose (it recommends the best start point and converts your own documents); idea validation with a synthetic persona panel; discovery with flows and test cases; architecture, cloud and configurable decisions you make, with costs; sprints with independent QA and live browser tests; a per-role model plan to cut cost; reports, manuals, a dashboard; assessments of existing systems.",
   "author": {
     "name": "Bilal Khan",

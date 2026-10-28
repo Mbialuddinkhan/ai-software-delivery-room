@@ -3,6 +3,28 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [4.0.1] — the release checks run green again
+
+- **The automatic checks pass again.** GitHub moved its standard test machines
+  to Ubuntu 26.04; the browser test tool in the sample app cannot install
+  there yet, so every check now runs on Ubuntu 24.04 until it can.
+- **The MiroFish health check no longer depends on the test machine's disk.**
+  Two tests failed on GitHub's machines (under 20 GB free); the disk check now
+  takes an override for tests, and has its own tests.
+- No change to how ASDR runs a project.
+
+### Fixed
+- `scripts/mirofish_stack.py`: `ASDR_MIROFISH_DISK_GB` overrides the free-disk
+  reading (as `ASDR_MIROFISH_RAM_GB` does for memory); the stack tests set it,
+  and two new tests cover the low-disk FAIL / WARN and the real reading.
+- `.github/workflows/ci.yml`: every job pinned to `ubuntu-24.04` (Playwright
+  1.56 does not recognise Ubuntu 26.04, so `playwright install --with-deps`
+  stopped at once); "Publish report" runs only when the suites ran, so a
+  set-up failure is reported once instead of twice.
+- `docs/PUBLISHING.md`: push at most three tags at a time — GitHub starts no
+  workflow for a push of more than three tags, which is why 3.9.0 / 4.0.0 got
+  no release run and no `.plugin` asset.
+
 ## [4.0.0] — start where you are, a model plan per role, and configurable decisions you choose
 
 - **Choose where the run starts.** `/asdr` recommends a start point from your

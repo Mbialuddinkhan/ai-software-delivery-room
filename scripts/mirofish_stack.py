@@ -133,6 +133,14 @@ def mem_gb():
     return None
 
 
+def disk_gb(path):
+    """Free space where the stack lives, in GB."""
+    override = os.environ.get("ASDR_MIROFISH_DISK_GB")  # for tests / unusual hosts
+    if override:
+        return float(override)
+    return shutil.disk_usage(path).free / 2 ** 30
+
+
 def http_json(url, timeout=3):
     with request.urlopen(url, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8") or "{}")
@@ -214,7 +222,7 @@ def doctor(a):
             add("FAIL", f"port {p} is in use", "stop what uses it or choose another --port/--ui-port")
 
     HOME.mkdir(parents=True, exist_ok=True)
-    free = shutil.disk_usage(HOME).free / 2 ** 30
+    free = disk_gb(HOME)
     need, rec = (10, 20) if a.flavor == "cloud" else (20, 50)   # offline: the fork's README
     add("FAIL" if free < need else "WARN" if free < rec else "PASS",
         f"{free:.0f} GB free disk (need {need}, recommended {rec})",

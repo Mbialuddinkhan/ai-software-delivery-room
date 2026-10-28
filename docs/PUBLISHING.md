@@ -84,6 +84,8 @@ Team rollout without per-user steps — commit to a project's
    `claude plugin tag --push` → creates `ai-software-delivery-room--v3.3.0`
    (it refuses if plugin.json and the marketplace entry disagree or the
    tree is dirty). Also fine: `git tag ai-software-delivery-room--v3.3.0 && git push --tags`.
+   Push at most three tags in one `git push`: GitHub starts no workflow for a
+   push that creates more than three tags, so the release job never runs.
 7. CI (`.github/workflows/ci.yml`) runs on the push and the tag: unit
    tests, `claude plugin validate`, the marketplace install with
    `ui-ux-pro-max`, the Cowork manifest rules, and the sample app in
