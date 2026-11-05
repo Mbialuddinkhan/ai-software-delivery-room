@@ -1,0 +1,3 @@
+{"schema":1,"commit":"abc1234","diff":{"src/booking.ts":{"added":40,"removed":2,"net_nonblank":80}},
+ "census":{"unit":4,"integration":2,"e2e":1,"source":6,"total":13},
+ "tests":{"exit_ok":true,"passed":7,"failed":0},"assertions":{},"notes":[]}

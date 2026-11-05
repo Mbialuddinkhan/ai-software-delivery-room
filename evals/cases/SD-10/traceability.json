@@ -1,0 +1,4 @@
+{"version":1,"last_updated":"2026-11-01","outcomes":[{"outcome_id":"O-01","text":"Bookings happen"}],
+ "use_cases":[{"uc_id":"UC-01","text":"User books a slot","requirements":["FR-01"]}],
+ "requirements":[
+   {"req_id":"FR-01","text":"User can book a slot","status":"broken","sprints":["sprint-01"],"tests":["TC-01"]}]}

@@ -1,0 +1,4 @@
+{"id":"SD-A2","defect":"an unauthenticated internal route that returns any clinic's patient conversations by caller-chosen id (auth bypass / IDOR)",
+ "category":"architecture","layer":"agent","files":["architecture.md"],
+ "reviewer_roles":["security-compliance","critic"],
+ "notes":"caught = the review flags /internal/conversations as unauthenticated access to patient data"}

@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "4.1.0"
+  version: "4.2.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -30,9 +30,20 @@ passed>`.
   `docs/03-architecture.md` exist
 - Tests exist in the repo (look in `.harness/tests/` and the project's
   test directory)
+- **Secrets gate (v4.2):** `python3 .harness/scripts/check_secrets.py docs
+  .harness --gate` exits 0 — evidence must prove a credential was handled
+  without becoming a copy of it. A finding is fixed (remove the value,
+  reference where it lives) or allowlisted as a confirmed false positive in
+  `.harness/secrets-allowlist.txt`; never weakened by deleting the evidence.
 
 If anything is missing, print the blocklist and stop — classifying an
 unfinished build would only produce a false answer.
+
+After the classification, bring the record up to date (v4.2):
+`python3 .harness/scripts/decision_log.py collect` (every gate decision with
+its rationale lands in `docs/decision-log.md`), and when the user wants spend
+figures, `python3 .harness/scripts/cost_report.py [--price-<model> …]` turns
+the run log into `docs/cost-report.md` — measured costs, not estimates.
 
 Subagents share none of your context: every invocation prompt must contain
 input paths, output path, and template path.

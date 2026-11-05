@@ -3,6 +3,52 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [4.2.0] — proof the checks work, a secrets gate, one decision log, real cost reports, founder mode
+
+- **The checks are now measured, not claimed.** A seeded-defect eval suite
+  (`evals/`) plants known defects — an impossible contract, a leaked key in
+  evidence, a cooked critique, an uncovered requirement — and publishes what
+  the validators catch (`evals/CATCH-RATES.md`; currently 11/11 mechanical,
+  plus a clean control that must stay quiet). A defect caught at the last
+  release that escapes now blocks the tag, in CI.
+- **Nothing secret leaves in your documents.** `check_secrets.py` fails the
+  release gate when a credential appears in docs or evidence (redacted
+  output, allowlist for confirmed false positives, gitleaks as an extra
+  layer when installed).
+- **Every decision in one place.** `docs/decision-log.md`: what was decided
+  at each gate, the options seen, the rationale, who and when — backfilled
+  from the run's own records, readable top to bottom by a client.
+- **Costs from the run, not the estimate.** `cost_report.py` turns the run
+  log into per-stage, per-role, per-model (and per-client) spend for
+  proposals and invoices.
+- **Founder mode.** `set_profile.py founder`: lite rigor + economy models +
+  buyer-justified-first scope in one step — the evaluator, secrets gate and
+  no-go stops stay on. `enterprise` switches back any time.
+
+### Added
+- `evals/run_seeded.py` (run | `--gate` | `--update-baseline` | `--live` |
+  `record` | `--release`), 11 mechanical cases + SD-C1 control + 3 agent-layer
+  cases (missing requirement → critic; auth bypass/IDOR → security-compliance;
+  off-contract scope creep → evaluator), `evals/README.md`, baseline +
+  escape-log (brief 8.1/8.2). CI runs the suite with `--gate`.
+- `scripts/check_secrets.py` — riskgate prerequisite + PUBLISHING pre-tag
+  step (brief 8.3).
+- `scripts/decision_log.py` (`add`, idempotent `collect`) wired into the asdr
+  skill's gates and riskgate (brief 4.3).
+- `scripts/cost_report.py` — prices supplied per model (`--price-<model>` or
+  `.harness/prices.json`), unpriced models flagged, never silently zero
+  (brief 3.4).
+- `scripts/set_profile.py` + asdr Phase 0 founder shortcut (brief 7.2).
+- `docs/VERIFICATION-MODEL.md` — the one-page verification model (brief 4.4).
+- `docs/IMPROVEMENT-BRIEF.md` — the work order re-baselined against 4.1.0,
+  with the shipped/open split and the standing do-not-do list.
+- `tests/test_batch_a.py` (14 tests; suite now 398).
+
+### Fixed while testing
+- The secrets scanner missed a bare `token = "…"` assignment (only
+  `auth_token`/`access_token` were listed) — found by this release's own
+  test, which is the suite doing its job.
+
 ## [4.1.0] — ASDR in Codex CLI and Gemini CLI, and resuming runs from older versions
 
 - **Use ASDR in Codex CLI and Gemini CLI.** One command exports the skills and

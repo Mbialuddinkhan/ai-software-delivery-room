@@ -6,7 +6,7 @@ description: >
   discovery docs to already exist. Trigger phrases: "architect", "design the architecture",
   "system design", "technical blueprint", "design the system", "create architecture docs".
 metadata:
-  version: "4.1.0"
+  version: "4.2.0"
 ---
 
 # Architect — Architecture Orchestrator

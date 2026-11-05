@@ -69,6 +69,14 @@ Team rollout without per-user steps — commit to a project's
    ~12 lines of that section are what `check_updates.py` shows users as
    "what it adds", so lead with benefits, not internals.
 3. Bump `metadata.version` in every `skills/*/SKILL.md` to match.
+3b. **Eval + secrets gates (v4.2):** `python3 evals/run_seeded.py --gate
+   --release vX.Y.Z` — a previously caught defect that now escapes blocks the
+   tag; the release line lands in `evals/escape-log.md`. Then
+   `python3 scripts/check_secrets.py docs --gate` on the repo's own docs
+   (`evals/cases/` holds seeded secrets ON PURPOSE — never "fix" those).
+   If this release changed a validator, re-run with `--update-baseline` and
+   commit the new `evals/baseline.json` deliberately, with the reason in the
+   commit message.
 4. Validate: `claude plugin validate .` (checks marketplace.json and the
    local plugin's plugin.json). Then
    `claude plugin validate ./skills` and `./agents` for frontmatter.

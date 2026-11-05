@@ -1,0 +1,3 @@
+{"id":"SD-05","defect":"two criteria that contradict each other (a regex forbids a value another criterion requires)",
+ "category":"contract","layer":"mechanical","seeded_in":"contract.md",
+ "check":{"argv":["python3","{SCRIPTS}/preflight_contract.py","{CASE}/contract.md"],"must_match":"P05"}}

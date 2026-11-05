@@ -1,0 +1,3 @@
+{"id":"SD-C1","defect":"NONE — clean contract (negative control; the gate must stay quiet)",
+ "category":"control","layer":"mechanical","seeded_in":"contract.md","control":true,
+ "check":{"argv":["python3","{SCRIPTS}/preflight_contract.py","{CASE}/contract.md","--facts","{CASE}/facts.json"]}}

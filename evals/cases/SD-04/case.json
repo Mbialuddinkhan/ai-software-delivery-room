@@ -1,0 +1,3 @@
+{"id":"SD-04","defect":"floor on a cost metric that a strictly better implementation would fail",
+ "category":"contract","layer":"mechanical","seeded_in":"contract.md",
+ "check":{"argv":["python3","{SCRIPTS}/preflight_contract.py","{CASE}/contract.md"],"must_match":"P06"}}

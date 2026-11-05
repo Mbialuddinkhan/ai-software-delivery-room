@@ -1,0 +1,15 @@
+{
+ "id": "SD-02",
+ "defect": "numeric bound with no measured-fact citation and no derivation",
+ "category": "contract",
+ "layer": "mechanical",
+ "seeded_in": "contract.md",
+ "check": {
+  "argv": [
+   "python3",
+   "{SCRIPTS}/preflight_contract.py",
+   "{CASE}/contract.md"
+  ],
+  "must_match": "P01"
+ }
+}

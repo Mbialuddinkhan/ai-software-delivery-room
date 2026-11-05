@@ -1,0 +1,3 @@
+{"id":"SD-08","defect":"decision document shipped with the template's unfilled placeholder verdict",
+ "category":"review","layer":"mechanical","seeded_in":"decision.md",
+ "check":{"argv":["python3","{SCRIPTS}/validate_verdict.py","{CASE}/decision.md","--type","decision"],"must_match":"ERROR"}}

@@ -1,0 +1,4 @@
+{"id":"SD-A1","defect":"the brief promises test-result status handling and data-protection handling; the requirements silently drop both",
+ "category":"discovery","layer":"agent","files":["product-brief.md","requirements.md"],
+ "reviewer_roles":["critic"],
+ "notes":"caught = the review names the missing test-result requirement OR the missing data-protection requirement as a finding"}

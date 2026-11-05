@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "4.1.0"
+  version: "4.2.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -87,6 +87,17 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    `.harness/dashboard.json` (`environments`, `repos`, `links`). List test
    login role names only; credentials stay in environment variables.
 
+5b2. **Founder shortcut (v4.2).** When the user is a solo founder or
+   pre-seed team validating with a real buyer ("demo for my first customer",
+   "cheapest way to prove this"), offer the founder profile instead of the
+   two questions in 5c: `python3 .harness/scripts/set_profile.py founder
+   --rationale "<their words>"` sets rigor=lite + the economy plan + a
+   buyer-justified-first scope note in one step, and logs the choice. Say
+   plainly what stays ON: the evaluator still signs every sprint, the secrets
+   gate still runs, a no-go still stops. Upgrading later is
+   `set_profile.py enterprise`. If they take it, skip 5c's two questions and
+   continue at the estimate (`--rigor lite`).
+
 5c. **Rigor, model plan and cost.** Estimate the run from the idea (sprints:
    small 2–3, medium 4–6, large 7+; add `--ui` / `--ai` when the idea has
    them; services stay 1 until the architecture decision):
@@ -122,6 +133,14 @@ run `python3 .harness/scripts/next_action.py` and do exactly what it says.
    the estimate again with `--rigor <choice> --set-budget`. Re-estimate after
    the architecture and portability decisions (`--services <n> --cloud`) and
    tell the user if it moved by more than 20%.
+
+   After every gate the user passes (start point, rigor, model plan,
+   architecture option, portability, contract ratification, release), run
+   `python3 .harness/scripts/decision_log.py collect` — and for a gate the
+   collector cannot see (a one-off choice made in conversation), `decision_log.py
+   add --decision … --chosen … --rationale "<the user's why>"`. The client
+   report and any future maintainer read `docs/decision-log.md` top to bottom
+   (v4.2).
 
 5d. **Test cloud.** Ask once: "Which cloud should ASDR deploy to for testing?"
    — AWS, Azure, Google Cloud, or None (local only). Say what that means:

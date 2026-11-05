@@ -1,0 +1,3 @@
+{"id":"SD-09","defect":"a requirement no sprint ever covered reaching the release gate",
+ "category":"traceability","layer":"mechanical","seeded_in":"traceability.json",
+ "check":{"argv":["python3","{SCRIPTS}/validate_traceability.py","{CASE}/traceability.json","--sprints","{CASE}/sprints.json","--gate"],"must_match":"uncovered|ERROR"}}

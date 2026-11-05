@@ -1,0 +1,103 @@
+{
+  "generated": "2026-11-05T07:45:09+00:00",
+  "mechanical": {
+    "total": 11,
+    "caught": 11,
+    "rate": 1.0,
+    "cases": [
+      {
+        "id": "SD-01",
+        "defect": "criterion asks the builder to transcribe command output (grades the environment)",
+        "caught": true,
+        "detail": "exit=1, match[P04]=yes"
+      },
+      {
+        "id": "SD-02",
+        "defect": "numeric bound with no measured-fact citation and no derivation",
+        "caught": true,
+        "detail": "exit=1, match[P01]=yes"
+      },
+      {
+        "id": "SD-03",
+        "defect": "criterion asserts zero-delta over a file its own mandated edit must change (mathematically forced)",
+        "caught": true,
+        "detail": "exit=1, match[P03]=yes"
+      },
+      {
+        "id": "SD-04",
+        "defect": "floor on a cost metric that a strictly better implementation would fail",
+        "caught": true,
+        "detail": "exit=1, match[P06]=yes"
+      },
+      {
+        "id": "SD-05",
+        "defect": "two criteria that contradict each other (a regex forbids a value another criterion requires)",
+        "caught": true,
+        "detail": "exit=1, match[P05]=yes"
+      },
+      {
+        "id": "SD-06",
+        "defect": "live credentials pasted into evidence as proof of work",
+        "caught": true,
+        "detail": "exit=1, match[SECRET]=yes"
+      },
+      {
+        "id": "SD-07",
+        "defect": "critique whose summary block claims 9 findings while the document contains 2",
+        "caught": true,
+        "detail": "exit=1, match[ERROR]=yes"
+      },
+      {
+        "id": "SD-08",
+        "defect": "decision document shipped with the template's unfilled placeholder verdict",
+        "caught": true,
+        "detail": "exit=1, match[ERROR]=yes"
+      },
+      {
+        "id": "SD-09",
+        "defect": "a requirement no sprint ever covered reaching the release gate",
+        "caught": true,
+        "detail": "exit=1, match[uncovered|ERROR]=yes"
+      },
+      {
+        "id": "SD-10",
+        "defect": "a previously working requirement now marked broken (regression) present mid-run",
+        "caught": true,
+        "detail": "exit=1, match[broken|ERROR]=yes"
+      },
+      {
+        "id": "SD-C1",
+        "defect": "NONE \u2014 clean contract (negative control; the gate must stay quiet)",
+        "caught": true,
+        "detail": "exit=0 (control: 0 = no false positive)"
+      }
+    ]
+  },
+  "agent": {
+    "cases": [
+      {
+        "id": "SD-A1",
+        "defect": "the brief promises test-result status handling and data-protection handling; the requirements silently drop both",
+        "roles": {
+          "critic": null
+        }
+      },
+      {
+        "id": "SD-A2",
+        "defect": "an unauthenticated internal route that returns any clinic's patient conversations by caller-chosen id (auth bypass / IDOR)",
+        "roles": {
+          "security-compliance": null,
+          "critic": null
+        }
+      },
+      {
+        "id": "SD-A3",
+        "defect": "off-contract scope creep: the build adds a patient mass-messaging endpoint and a metrics endpoint the ratified contract never authorised",
+        "roles": {
+          "evaluator": null
+        }
+      }
+    ],
+    "recorded": 0
+  }
+}

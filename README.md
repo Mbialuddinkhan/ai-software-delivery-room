@@ -1,10 +1,23 @@
 # AI Software Delivery Room
-## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.1.0
+## Claude Code / Cowork Plugin + Agentic SDLC Harness · v4.2.0
 
 A complete plug-and-play system that turns Claude (Claude Code, Cowork, Cursor,
 Windsurf, etc.) into a disciplined **AI Software Delivery Room** — preventing the
 most common AI coding failures: context loss, self-grading, hallucinated
 completion, feature drift, security gaps, and broken production releases.
+
+**What's new in v4.2 — proof the checks work, and the business trail.**
+The repo now carries a seeded-defect eval suite: known defects planted in
+sample artifacts, catch rates published in `evals/CATCH-RATES.md` (11/11
+mechanical at release, agent roles measured live per release), and a
+regression gate in CI — "independent check at every stage" is measured, not
+claimed (`docs/VERIFICATION-MODEL.md` is the one-page model). A secrets gate
+fails any release whose docs or evidence carry a credential. Every gate
+decision lands in one `docs/decision-log.md` with its rationale, and
+`cost_report.py` turns the run log into per-stage, per-client spend —
+measured, not estimated. New `set_profile.py founder` mode: lite rigor +
+economy models + buyer-justified scope in one step, with every sign-off gate
+still on.
 
 **What's new in v4.1 — ASDR in Codex CLI and Gemini CLI, and resuming older runs.**
 

@@ -1,0 +1,3 @@
+{"id":"SD-07","defect":"critique whose summary block claims 9 findings while the document contains 2",
+ "category":"review","layer":"mechanical","seeded_in":"critique.md",
+ "check":{"argv":["python3","{SCRIPTS}/validate_critique.py","{CASE}/critique.md"],"must_match":"ERROR"}}

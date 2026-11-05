@@ -1,0 +1,3 @@
+{"id":"SD-06","defect":"live credentials pasted into evidence as proof of work",
+ "category":"evidence","layer":"mechanical","seeded_in":"docs/evidence.md",
+ "check":{"argv":["python3","{SCRIPTS}/check_secrets.py","{CASE}/docs","--gate"],"must_match":"SECRET"}}
