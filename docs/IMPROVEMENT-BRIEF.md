@@ -29,21 +29,18 @@ commits and the changelog.
 | 4.4 verification one-pager | `docs/VERIFICATION-MODEL.md` |
 | 7.2 founder mode | `set_profile.py founder|enterprise` — lite rigor + economy plan + buyer-justified-first scope; review and gates stay on |
 
-## Open — next releases
+## Shipped in v4.3
 
-**4.3 — blast-radius gating + cross-family second opinion**
-- 4.1/4.2 per-stage blast-radius tags (`low|medium|high`; high = data, auth,
-  money, PII, outbound, production deploys) driving check depth and an
-  `awaiting-human` stage state with a dashboard queue. Low-risk stages never
-  queue; "gate everything" is the failure mode to avoid.
-- 3.2 reviewer on a second model family — scoped honestly: inside Claude
-  Code the reviewer cannot BE another family, so the evaluator/stage-qa
-  attach a second opinion by shelling out to the Codex/Gemini CLI (4.1
-  exports; `detect_companions.py` knows when they exist), `SINGLE_PROVIDER`
-  warning otherwise. Measured by the agent-layer eval cases per family
-  before any stronger claim is published.
-- Gate to tag: seeded-defect suite green incl. new radius cases; fault-run
-  with the CLI absent shows the warning.
+| Item | What landed |
+|---|---|
+| 4.1/4.2 blast-radius gating | `blast_radius.py`: per-criterion `(radius:)` tags floored against the trigger list (auth, money, PII, deletion, migrations, production, outbound); under-declaration is a blocking error; one human gate per high-radius contract, approval/defer recorded with rationale in the decision log; `gate-check` exits 2 while pending; legacy projects skip, never block. State in `.harness/blast-radius.json` — the sprint state machine untouched |
+| 3.2 cross-family second opinion | `second_opinion.py`: Gemini/Codex CLI review as ADVISORY evidence on high-radius stages; evaluator must address every concern (agree or rebut); `SINGLE_PROVIDER` recorded when no second family exists; role boundaries unchanged — eval cases per family measure it before stronger claims |
+| Eval cases | SD-11 (under-declared money criterion) + SD-C2 control; mechanical 13/13 |
+
+Not shipped from the original 4.2 scope: the dashboard queue panel (the
+`gate-check` queue output and the skill wiring carry it for now).
+
+## Open — next releases
 
 **4.4 — product design rules + buyer justification**
 - 6.1 decision-boundary table (agent-design §14: LLM extracts/proposes,

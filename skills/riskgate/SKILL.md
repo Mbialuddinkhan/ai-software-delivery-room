@@ -6,7 +6,7 @@ description: >
   before the release skill. Trigger phrases: "risk gate", "riskgate", "classify my release",
   "is this ready to ship", "final review", "pre-release check", "run risk assessment".
 metadata:
-  version: "4.2.0"
+  version: "4.3.0"
 ---
 
 # Risk Gate — Pre-Release Classification Orchestrator
@@ -38,6 +38,14 @@ passed>`.
 
 If anything is missing, print the blocklist and stop — classifying an
 unfinished build would only produce a false answer.
+
+Release blast radius (v4.3, decision 10.5): the risk-manager's
+classification sets the release's radius. When the release touches data,
+auth, money, PII or outbound sends (`python3
+.harness/scripts/blast_radius.py gate-check` shows any high-radius sprint,
+or the risk review says so), the release itself is a human gate: the user
+approves or defers with a rationale before the `release` skill runs, and the
+decision is recorded. A release of only low-radius work needs no extra gate.
 
 After the classification, bring the record up to date (v4.2):
 `python3 .harness/scripts/decision_log.py collect` (every gate decision with

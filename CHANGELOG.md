@@ -3,6 +3,43 @@
 All notable changes to the AI Software Delivery Room in this improvement pass.
 Baseline is the shipped plugin at v2.0.0.
 
+## [4.3.0] — risk decides the depth: blast-radius gating and a second model family
+
+- **Risky work now waits for you — safe work never does.** Every acceptance
+  criterion carries a blast radius; anything touching data, auth, money, PII,
+  deletion, migrations, production or outbound sends is HIGH no matter what
+  it declares (under-declaring is a blocking error). A contract with high
+  criteria needs ONE recorded human approval — with your rationale, in the
+  decision log — before the build starts. Low-risk sprints never queue.
+- **A second model family checks the risky work.** On high-radius sprints,
+  an installed Gemini or Codex CLI reviews the build as advisory evidence
+  the evaluator must address point by point — different family, different
+  blind spots. No second CLI? The run proceeds and says so
+  (`SINGLE_PROVIDER` in the run warnings) instead of pretending.
+- Sign-off authority is unchanged: the opinion is evidence, never a vote.
+
+### Added
+- `scripts/blast_radius.py` (`classify --write`, `gate-check` [exit 2 =
+  awaiting human], `approve`/`defer` with required rationale → decision log).
+  State in `.harness/blast-radius.json`; pre-4.3 projects skip, never block.
+  Contract template: `(radius: low|medium|high)` per criterion (brief 4.1/4.2).
+- `scripts/second_opinion.py` (gemini → codex order per decision 10.2;
+  truncation-capped input; timeout/exit failures degrade to a recorded
+  warning; never gates). Evaluator EVALUATE step 5c addresses the opinion;
+  `detect_companions.py` reports `gemini_cli`/`codex_cli` (brief 3.2).
+- Eval cases SD-11 (money criterion declared low → floor error) and SD-C2
+  (clean control) — mechanical 13/13; tests
+  `tests/test_blast_radius_and_second_opinion.py` (7; suite now 405).
+- riskgate: release itself is a human gate when any high-radius sprint
+  shipped (decision 10.5); asdr/longhorizon wire classify → gate-check →
+  second opinion into the sprint loop.
+
+### Design note (role boundaries, per the repo charter)
+The human gate adds a decision the HUMAN owns on high-radius contracts; no
+agent gained or lost authority. The second opinion is recorded in
+`docs/VERIFICATION-MODEL.md` as advisory evidence precisely so the
+evaluator's sole sign-off right stays intact.
+
 ## [4.2.0] — proof the checks work, a secrets gate, one decision log, real cost reports, founder mode
 
 - **The checks are now measured, not claimed.** A seeded-defect eval suite

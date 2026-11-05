@@ -6,7 +6,7 @@ description: >
   exist or the user wants to jump straight to building. Trigger phrases: "long horizon", "start coding",
   "run the harness", "planner generator evaluator", "build with sprints", "just start building".
 metadata:
-  version: "4.2.0"
+  version: "4.3.0"
 ---
 
 # Long Horizon — Execution Harness Orchestrator
@@ -110,6 +110,29 @@ ratification (`Status: ratified`), max 4 negotiation rounds then
 force-ratify, attempt > 5 forces a planner split, two teardowns stops for
 the human. If state looks wrong, fix the state files and rerun the script;
 do not improvise the sequence.
+
+**Blast radius and the human gate (v4.3).** At ratification, classify the
+contract and honor the gate before any build starts:
+
+    python3 .harness/scripts/blast_radius.py classify <contract path> --write
+    python3 .harness/scripts/blast_radius.py gate-check --sprint <sprint-id>
+
+A classify ERROR (a criterion under-declared below its floor — auth, money,
+PII, deletion, migrations, production, outbound) goes back to the generator
+like any pre-flight error. `gate-check` exit 2 means AWAITING HUMAN: show the
+user the listed high-radius criteria and ask for approve or defer WITH a
+rationale (the script records it in the decision log); never build past a
+pending gate, and never queue a gate for a sprint with no high criteria.
+On a high-radius sprint, after the build and before the evaluator, attach a
+cross-family second opinion when a second CLI exists:
+
+    python3 .harness/scripts/second_opinion.py --artifact <changed files or build summary> \
+        --stage <sprint-id> --checklist <contract path>
+
+It degrades to a recorded `SINGLE_PROVIDER` warning when no gemini/codex CLI
+is installed (`.harness/companions.json` knows). The evaluator addresses the
+opinion in its report; it is evidence, not a vote — sign-off authority is
+unchanged.
 
 Browser tests: if `.harness/test-config.json` exists, the evaluator runs
 `python3 .harness/scripts/run_tests.py` every sprint (add `--live` when the

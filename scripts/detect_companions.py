@@ -202,6 +202,14 @@ def main() -> int:
         "rtk": detect_rtk(),
         "cloud": detect_cloud(),
         "mirofish": detect_mirofish(),
+        # v4.3: second model families for second_opinion.py (brief 3.2).
+        # Their absence is NOT a warning here — an optional companion missing
+        # is normal (uupm and mirofish behave the same); second_opinion.py
+        # records SINGLE_PROVIDER at the moment a second opinion is wanted.
+        "gemini_cli": {"installed": bool(shutil.which("gemini")),
+                       "path": shutil.which("gemini")},
+        "codex_cli": {"installed": bool(shutil.which("codex")),
+                      "path": shutil.which("codex")},
         "warnings": [],
     }
 

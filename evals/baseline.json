@@ -1,8 +1,8 @@
 {
-  "generated": "2026-11-05T07:45:09+00:00",
+  "generated": "2026-11-05T10:53:31+00:00",
   "mechanical": {
-    "total": 11,
-    "caught": 11,
+    "total": 13,
+    "caught": 13,
     "rate": 1.0,
     "cases": [
       {
@@ -66,8 +66,20 @@
         "detail": "exit=1, match[broken|ERROR]=yes"
       },
       {
+        "id": "SD-11",
+        "defect": "a money-touching criterion declared radius: low to dodge the human gate (under-declaration below the floor)",
+        "caught": true,
+        "detail": "exit=1, match[floor]=yes"
+      },
+      {
         "id": "SD-C1",
         "defect": "NONE \u2014 clean contract (negative control; the gate must stay quiet)",
+        "caught": true,
+        "detail": "exit=0 (control: 0 = no false positive)"
+      },
+      {
+        "id": "SD-C2",
+        "defect": "NONE \u2014 correctly declared low/medium contract (negative control; classify must pass and queue no human gate)",
         "caught": true,
         "detail": "exit=0 (control: 0 = no false positive)"
       }

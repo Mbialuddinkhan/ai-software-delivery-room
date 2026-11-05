@@ -151,6 +151,15 @@ Example row:
 
 | 3 | Wrong password shows "Invalid credentials" | PASS | Error message shown, fields not leaked | `curl -s -d 'pw=x' /login` → `{"error":"Invalid credentials"}` |
 
+5c. Second opinion (v4.3) — when `.harness/second-opinions/so-<sprint>.md`
+   exists, read it and address EVERY concern it raises in your report: agree
+   (and grade accordingly) or rebut with evidence, by name. It is advisory
+   evidence from a different model family, not a vote — you remain the only
+   role that can pass this sprint, and "the second opinion was fine" without
+   the file quoted is not addressing it. If the file reports
+   SINGLE_PROVIDER/UNAVAILABLE, note in the report that this sprint was
+   reviewed within one model family.
+
 6. Cross-sprint regression — after grading this sprint's criteria, run the
    ENTIRE accumulated test suite, not just this sprint's: every spec in
    `.harness/tests/` and the project's own test dir, and every browser suite

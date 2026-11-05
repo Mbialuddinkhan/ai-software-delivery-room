@@ -66,6 +66,17 @@ that was caught at the last release and escapes now blocks the tag. Reviewer
 agents are measured the same way, live, per release — and the table says
 "not yet measured" until they are, instead of guessing.
 
-*Planned next (4.3): per-stage blast-radius tags in the sprint contract
-driving check depth and the human-gate queue mechanically — today the table
-above is applied through the rigor dial and the release gates.*
+Since 4.3 the blast-radius table is enforced mechanically, not by judgement
+in the moment: every acceptance criterion carries a declared radius,
+`blast_radius.py` floors declarations against the trigger list (a criterion
+touching auth, money, PII, deletion, migrations, production or outbound
+sends is high whatever it claims — under-declaring is a blocking error), a
+contract with any high criterion waits for ONE recorded human approval with
+its rationale before the build starts, and high-radius work gets a
+**cross-family second opinion**: a locally installed Gemini or Codex CLI
+reviews the artifact and the deciding reviewer must address every concern —
+agree or rebut, in writing. When no second family is installed the run
+proceeds and says so (`SINGLE_PROVIDER` in the run warnings), instead of
+pretending. Role boundaries are unchanged by design: the second opinion is
+evidence, never a vote — the evaluator alone passes a sprint, the judge
+alone resolves a phase, the human alone accepts a high-radius risk.

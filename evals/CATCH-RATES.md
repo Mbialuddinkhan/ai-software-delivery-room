@@ -1,6 +1,6 @@
 # Catch rates — seeded-defect eval suite
 
-_Generated 2026-11-05T07:50:24+00:00 by `evals/run_seeded.py`. Every row is a KNOWN defect seeded into a sample artifact; 'caught' means the named layer flagged it with no hints._
+_Generated 2026-11-05T10:55:25+00:00 by `evals/run_seeded.py`. Every row is a KNOWN defect seeded into a sample artifact; 'caught' means the named layer flagged it with no hints._
 
 ## Mechanical layer (validators and gates — runs in CI)
 
@@ -16,9 +16,11 @@ _Generated 2026-11-05T07:50:24+00:00 by `evals/run_seeded.py`. Every row is a KN
 | SD-08 | decision document shipped with the template's unfilled placeholder verdict | yes |
 | SD-09 | a requirement no sprint ever covered reaching the release gate | yes |
 | SD-10 | a previously working requirement now marked broken (regression) present mid-run | yes |
+| SD-11 | a money-touching criterion declared radius: low to dodge the human gate (under-declaration below the floor) | yes |
 | SD-C1 | NONE — clean contract (negative control; the gate must stay quiet) | yes |
+| SD-C2 | NONE — correctly declared low/medium contract (negative control; classify must pass and queue no human gate) | yes |
 
-**Mechanical catch rate: 11/11 (100%)**
+**Mechanical catch rate: 13/13 (100%)**
 
 ## Agent layer (reviewer roles — run live, recorded per release)
 

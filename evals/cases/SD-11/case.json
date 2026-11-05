@@ -1,0 +1,3 @@
+{"id":"SD-11","defect":"a money-touching criterion declared radius: low to dodge the human gate (under-declaration below the floor)",
+ "category":"blast-radius","layer":"mechanical","seeded_in":"contract.md",
+ "check":{"argv":["python3","{SCRIPTS}/blast_radius.py","classify","{CASE}/contract.md"],"must_match":"floor"}}

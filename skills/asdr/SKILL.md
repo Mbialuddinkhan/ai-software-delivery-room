@@ -7,7 +7,7 @@ description: >
   multi-agent SDLC. Trigger phrases: "build me", "I want to create", "let's build",
   "full ASDR", "start a new software project", "run the delivery room".
 metadata:
-  version: "4.2.0"
+  version: "4.3.0"
 ---
 
 # ASDR — Full Workflow Orchestrator
@@ -708,6 +708,18 @@ the attempt and negotiation counters from artifacts on disk as well as from
 `progress.json`, so a missed manual increment can no longer disable a
 circuit breaker. Do not improvise around it: if you think the state is
 wrong, fix the state files, rerun the script, and follow it.
+
+**Blast radius and the human gate (v4.3).** At every ratification run
+`python3 .harness/scripts/blast_radius.py classify <contract> --write`, then
+`blast_radius.py gate-check --sprint <id>` before the build. A classify
+ERROR goes back to the generator; `gate-check` exit 2 means AWAITING HUMAN —
+show the user the high-radius criteria (data, auth, money, PII, deletion,
+production, outbound), take approve or defer with a rationale, which the
+script records in the decision log. Low-radius sprints never queue. On a
+high-radius sprint, run `second_opinion.py --artifact <build summary>
+--stage <id> --checklist <contract>` before the evaluator — a cross-family
+advisory the evaluator must address, with a recorded `SINGLE_PROVIDER`
+warning when no gemini/codex CLI exists. Sign-off authority is unchanged.
 
 State fields: `references/file-map.md` → State field reference.
 

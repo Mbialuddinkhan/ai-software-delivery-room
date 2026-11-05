@@ -53,6 +53,16 @@ which otherwise costs a full negotiation round.
 
 ## Acceptance criteria
 
+<!-- BLAST RADIUS (v4.3): every criterion carries a radius — append
+"(radius: low|medium|high)" to the line, or inherit the default, medium.
+Declarations are floored, not trusted: text touching auth, money, PII,
+deletion, migrations, production deploys or outbound sends is HIGH whatever
+it declares (blast_radius.py classify errors on an under-declaration).
+A contract with any high criterion needs ONE recorded human approval before
+the build starts, and gets a cross-family second opinion when a second CLI
+is installed. Low-radius criteria never queue for a human. -->
+
+
 ### Happy path
 
 1. <single testable assertion>

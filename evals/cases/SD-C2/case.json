@@ -1,0 +1,3 @@
+{"id":"SD-C2","defect":"NONE — correctly declared low/medium contract (negative control; classify must pass and queue no human gate)",
+ "category":"control","layer":"mechanical","seeded_in":"contract.md","control":true,
+ "check":{"argv":["python3","{SCRIPTS}/blast_radius.py","classify","{CASE}/contract.md"]}}
